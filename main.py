@@ -19,7 +19,7 @@ from tools.file_processor import process_file # Added for file processing
 from tools.pdf_to_word import handle_pdf_to_word # Added for PDF to Word tool
 from tools.word_to_pdf import handle_word_to_pdf # Added for Word to PDF tool
 from tools.image_to_pdf import handle_image_to_pdf # Added for Image to PDF tool
-from tools.pdf_splitter import handle_split_pdf # Added for PDF splitter tool
+from tools.split import handle_split_pdf # Added for PDF splitter tool
 from tools.pdf_merger import handle_merge_pdf # Added for PDF merger tool
 from tools.document_compressor import handle_compress_document # Added for document compression tool
 

@@ -1,4 +1,3 @@
-
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -9,6 +8,7 @@ from utils.premium_utils import is_premium
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ async def handle_compress_document(update: Update, context: ContextTypes.DEFAULT
                 f"• Compressed: {format_file_size(compressed_size)}\n"
                 f"• Saved: {compression_ratio:.1f}%"
             )
-            
+
             if not is_premium(user_id):
                 caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
 
@@ -118,7 +118,6 @@ def compress_pdf(input_file, output_file):
     except Exception as e:
         logger.error(f"Error during PDF compression: {e}")
         # If compression fails, copy original file
-        import shutil
         shutil.copy2(input_file, output_file)
 
 def add_pdf_watermark(file_path):
@@ -158,16 +157,26 @@ def format_file_size(size_bytes):
     """Format file size in human readable format."""
     if size_bytes == 0:
         return "0B"
-    
+
     size_names = ["B", "KB", "MB", "GB"]
     i = 0
     while size_bytes >= 1024 and i < len(size_names) - 1:
         size_bytes /= 1024.0
         i += 1
-    
+
     return f"{size_bytes:.1f}{size_names[i]}"
 
 # Alias for backwards compatibility
 async def handle_compress_pdf(update, context):
-    """Alias for handle_compress_document."""
-    return await handle_compress_document(update, context)
+    """Handle PDF compression, indicating feature is coming soon."""
+    try:
+        # If the update is a callback query, edit the message
+        if isinstance(update, Update) and update.callback_query:
+            await update.callback_query.edit_message_text("🗜️ PDF compression feature coming soon!")
+        # If it's a regular message, reply to it
+        elif isinstance(update, Update) and update.message:
+            await update.message.reply_text("🗜️ PDF compression feature coming soon!")
+        else:
+            logger.warning("Received an unknown update type for handle_compress_pdf")
+    except Exception as e:
+        logger.error(f"Error in compress handler: {e}")

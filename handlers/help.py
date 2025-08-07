@@ -1,4 +1,3 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -72,6 +71,11 @@ async def handle_help_callbacks(update: Update, context: ContextTypes.DEFAULT_TY
             await show_referrals_help(query)
         elif data == "help_contact":
             await show_contact_help(query)
+        elif data == "main_menu":
+            await help_command(update, context) # Re-call help_command to show the main menu
+        elif data == "help_menu": # Handle returning from sub-menus
+            await help_command(update, context)
+
 
     except Exception as e:
         logger.error(f"Error handling help callback: {e}")

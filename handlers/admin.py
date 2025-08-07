@@ -492,7 +492,7 @@ async def restart_bot(query, context):
     except Exception as e:
         logger.error(f"Error showing restart confirmation: {e}")
 
-async def start_broadcast(query, context, target_type):
+async def start_broadcast(context: ContextTypes.DEFAULT_TYPE, target_type: str):
     """Start broadcast message process."""
     try:
         target_descriptions = {
@@ -501,18 +501,28 @@ async def start_broadcast(query, context, target_type):
             "free": "Free Users Only"
         }
 
-        keyboard = [[InlineKeyboardButton("🏠 Back to Broadcast", callback_data="admin_broadcast")]]
+        keyboard = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         context.user_data['broadcast_target'] = target_type
 
-        await query.edit_message_text(
-            f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
-            f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
-            f"Type your message and send it. The broadcast will start immediately.",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+        # Use edit_message_text if called from a callback query, otherwise reply_text
+        # This part assumes start_broadcast is called from handle_admin_callbacks
+        # If it could be called directly, we'd need a way to check query existence.
+        # For now, assuming it's always a callback.
+        query = context.callback_query # Access query object if available
+        if query:
+            await query.edit_message_text(
+                f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
+                f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
+                f"Type your message and send it. The broadcast will start immediately.",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+        else:
+             # Fallback for when this might be called differently, though unlikely given context
+            logger.error("start_broadcast called without a query object.")
+
 
     except Exception as e:
         logger.error(f"Error starting broadcast: {e}")

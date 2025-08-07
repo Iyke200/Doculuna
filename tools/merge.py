@@ -146,6 +146,9 @@ async def handle_merge_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle PDF merge requests - wrapper function for callbacks."""
     await handle_merge(update, context)
 
+# Export the main function as well
+__all__ = ['handle_merge', 'handle_merge_pdf', 'merge_pdfs']
+
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:

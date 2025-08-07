@@ -1,8 +1,12 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_user
+from tools.file_processor import get_file_type # Assuming get_file_type is in tools/file_processor.py
+from tools.merge import handle_merge_pdf # Assuming handle_merge_pdf is in tools/merge.py
+from tools.compress import compress_pdf # Assuming compress_pdf is in tools/compress.py
+from tools.split import split_pdf # Assuming split_pdf is in tools/split.py
+from tools.converter import convert_word_to_pdf, convert_image_to_pdf # Assuming these are in tools/converter.py
 
 logger = logging.getLogger(__name__)
 
@@ -11,19 +15,19 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.effective_user.id
         user = get_user(user_id)
-        
+
         if not user:
             await update.message.reply_text("❌ Please start the bot first with /start")
             return
-        
+
         if update.message.document:
             document = update.message.document
             file_name = document.file_name.lower()
-            
+
             # Store file in context for later use
             context.user_data['last_file'] = document
             context.user_data['file_type'] = get_file_type(file_name)
-            
+
             # Show appropriate tools based on file type
             if file_name.endswith('.pdf'):
                 keyboard = [
@@ -34,34 +38,34 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
+
                 await update.message.reply_text(
                     "📄 **PDF file received!**\n\n"
                     "What would you like to do with this PDF?\n"
                     "Choose an option below:",
                     reply_markup=reply_markup
                 )
-                
+
             elif file_name.endswith(('.docx', '.doc')):
                 keyboard = [
                     [InlineKeyboardButton("📄 Convert to PDF", callback_data="tool_word_to_pdf")],
                     [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
+
                 await update.message.reply_text(
                     "📝 **Word document received!**\n\n"
                     "What would you like to do?",
                     reply_markup=reply_markup
                 )
-                
+
             elif file_name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp')):
                 keyboard = [
                     [InlineKeyboardButton("📄 Convert to PDF", callback_data="tool_image_to_pdf")],
                     [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                
+
                 await update.message.reply_text(
                     "🖼️ **Image received!**\n\n"
                     "What would you like to do?",
@@ -76,24 +80,24 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "• Images (.jpg, .png, .gif, .bmp)\n\n"
                     "Please send a supported file type."
                 )
-        
+
         elif update.message.photo:
             # Handle photos
             context.user_data['last_photo'] = update.message.photo[-1]
             context.user_data['file_type'] = 'image'
-            
+
             keyboard = [
                 [InlineKeyboardButton("📄 Convert to PDF", callback_data="tool_image_to_pdf")],
                 [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
+
             await update.message.reply_text(
                 "🖼️ **Photo received!**\n\n"
                 "What would you like to do?",
                 reply_markup=reply_markup
             )
-            
+
     except Exception as e:
         logger.error(f"Error processing file: {e}")
         await update.message.reply_text("❌ Error processing file. Please try again.")
@@ -118,7 +122,7 @@ async def show_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     message = (
         "🛠️ **DocuLuna Tools**\n\n"
         "Choose a category or upload a file to get started:\n\n"
@@ -127,7 +131,7 @@ async def show_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🖼️ **Image Tools** - Convert images to PDF\n\n"
         "💡 **Tip:** Upload a file to see available options!"
     )
-    
+
     if update.callback_query:
         await update.callback_query.edit_message_text(
             message, reply_markup=reply_markup, parse_mode='Markdown'

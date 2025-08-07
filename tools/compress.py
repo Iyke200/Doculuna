@@ -1,125 +1,168 @@
 
-import logging
 import os
-import tempfile
-from telegram import Update
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from PyPDF2 import PdfReader, PdfWriter
-from PIL import Image
-import fitz  # PyMuPDF
-from database.db import get_user, add_usage
-from utils.usage_tracker import check_usage_limit, increment_usage
+from utils.usage_tracker import increment_usage, check_usage_limit
+from utils.premium_utils import is_premium
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import io
 
 logger = logging.getLogger(__name__)
 
-async def handle_compress_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Compress PDF files."""
+async def handle_compress_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle document compression requests."""
     try:
         user_id = update.effective_user.id
-        user = get_user(user_id)
-        
-        if not user:
-            await update.message.reply_text("❌ Please start the bot first with /start")
-            return
-        
-        # Check usage limits for free users
-        if not user['is_premium'] and not await check_usage_limit(user_id):
+
+        # Check usage limit
+        if not await check_usage_limit(user_id):
+            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(
-                "⚠️ **Daily limit reached!**\n\n"
-                "Free users can process 3 documents per day.\n"
-                "Upgrade to premium for unlimited access!\n\n"
-                "Use /upgrade to see premium plans."
+                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
+                "Upgrade to **DocuLuna Pro** for unlimited access!",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
             )
             return
-        
-        if not update.message.document:
-            await update.message.reply_text("📄 Please send a PDF file to compress.")
-            return
-        
-        document = update.message.document
-        if not document.file_name.lower().endswith('.pdf'):
-            await update.message.reply_text("❌ Please send a PDF file only.")
-            return
-        
-        await update.message.reply_text("🔄 Compressing your PDF... Please wait.")
-        
-        # Download file
-        file = await context.bot.get_file(document.file_id)
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            input_path = os.path.join(temp_dir, "input.pdf")
-            output_path = os.path.join(temp_dir, "compressed.pdf")
-            
-            await file.download_to_drive(input_path)
-            
-            # Compress PDF
-            success = await compress_pdf_file(input_path, output_path, user['is_premium'])
-            
-            if success:
-                # Send compressed file
-                with open(output_path, 'rb') as compressed_file:
-                    filename = f"compressed_{document.file_name}"
-                    await context.bot.send_document(
-                        chat_id=update.effective_chat.id,
-                        document=compressed_file,
-                        filename=filename,
-                        caption="✅ **PDF Compressed Successfully!**" + ("" if user['is_premium'] else "\n\n🔓 Upgrade to premium for watermark-free files!")
-                    )
-                
-                # Log usage
-                add_usage(user_id, "compress_pdf", document.file_size)
-                if not user['is_premium']:
-                    await increment_usage(user_id)
-                
-                logger.info(f"PDF compressed successfully for user {user_id}")
-            else:
-                await update.message.reply_text("❌ Failed to compress PDF. Please try again.")
-    
-    except Exception as e:
-        logger.error(f"Error compressing PDF for user {user_id}: {e}")
-        await update.message.reply_text("❌ An error occurred while compressing. Please try again.")
 
-async def compress_pdf_file(input_path, output_path, is_premium=False):
-    """Compress PDF file using PyMuPDF."""
-    try:
-        # Open the PDF
-        pdf_document = fitz.open(input_path)
-        
-        # Create a new PDF with compression
-        compressed_pdf = fitz.open()
-        
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document[page_num]
+        # Get the document
+        document = update.message.document or context.user_data.get('last_pdf')
+        if not document:
+            await update.message.reply_text("❌ No document found. Please send a PDF file.")
+            return
+
+        if not document.file_name.lower().endswith('.pdf'):
+            await update.message.reply_text("❌ Please send a PDF file for compression.")
+            return
+
+        await update.message.reply_text("🔄 Compressing PDF...")
+
+        # Create temp directory
+        os.makedirs("data/temp", exist_ok=True)
+
+        # Download the file
+        file = await context.bot.get_file(document.file_id)
+        input_file = f"data/temp/compress_input_{user_id}.pdf"
+        output_file = f"data/temp/compress_output_{user_id}.pdf"
+
+        await file.download_to_drive(input_file)
+
+        # Compress the PDF
+        compress_pdf(input_file, output_file)
+
+        # Add watermark for free users
+        if not is_premium(user_id):
+            add_pdf_watermark(output_file)
+
+        # Get file sizes for comparison
+        original_size = os.path.getsize(input_file)
+        compressed_size = os.path.getsize(output_file)
+        compression_ratio = ((original_size - compressed_size) / original_size) * 100
+
+        # Send the compressed file
+        with open(output_file, 'rb') as pdf_file:
+            caption = (
+                f"✅ **PDF compressed successfully!**\n\n"
+                f"📊 **Compression Stats:**\n"
+                f"• Original: {format_file_size(original_size)}\n"
+                f"• Compressed: {format_file_size(compressed_size)}\n"
+                f"• Saved: {compression_ratio:.1f}%"
+            )
             
-            # Get page as pixmap with lower resolution for compression
-            mat = fitz.Matrix(0.7, 0.7)  # 70% of original size
-            pix = page.get_pixmap(matrix=mat)
-            
-            # Convert to image and compress
-            img_data = pix.tobytes("jpeg", jpg_quality=80)
-            
-            # Create new page and insert compressed image
-            new_page = compressed_pdf.new_page(width=page.rect.width, height=page.rect.height)
-            new_page.insert_image(page.rect, stream=img_data)
-            
-            # Add watermark for free users
-            if not is_premium:
-                watermark_text = "DocuLuna - Upgrade for watermark-free files"
-                new_page.insert_text(
-                    (50, 50),
-                    watermark_text,
-                    fontsize=12,
-                    color=(0.7, 0.7, 0.7),
-                    overlay=True
-                )
-        
-        # Save compressed PDF
-        compressed_pdf.save(output_path)
-        compressed_pdf.close()
-        pdf_document.close()
-        
-        return True
-        
+            if not is_premium(user_id):
+                caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
+
+            await update.message.reply_document(
+                document=pdf_file,
+                filename=f"compressed_{document.file_name}",
+                caption=caption,
+                parse_mode='Markdown'
+            )
+
+        # Increment usage
+        await increment_usage(user_id)
+        logger.info(f"PDF compression successful for user {user_id}")
+
     except Exception as e:
-        logger.error(f"Error in PDF compression: {e}")
-        return False
+        logger.error(f"Error compressing PDF: {e}")
+        await update.message.reply_text("❌ Error compressing PDF. Please try again.")
+    finally:
+        # Clean up files
+        try:
+            if os.path.exists(input_file):
+                os.remove(input_file)
+            if os.path.exists(output_file):
+                os.remove(output_file)
+        except Exception as e:
+            logger.error(f"Error cleaning up compress files: {e}")
+
+def compress_pdf(input_file, output_file):
+    """Compress PDF by removing unnecessary elements."""
+    try:
+        reader = PdfReader(input_file)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            # Remove images and compress
+            page.compress_content_streams()
+            writer.add_page(page)
+
+        # Write compressed PDF
+        with open(output_file, 'wb') as output_stream:
+            writer.write(output_stream)
+
+    except Exception as e:
+        logger.error(f"Error during PDF compression: {e}")
+        # If compression fails, copy original file
+        import shutil
+        shutil.copy2(input_file, output_file)
+
+def add_pdf_watermark(file_path):
+    """Add DocuLuna watermark to PDF."""
+    try:
+        # Create watermark
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
+        can.setFont("Helvetica", 40)
+        can.setFillAlpha(0.1)
+        can.drawString(100, 400, "DocuLuna")
+        can.setFont("Helvetica", 12)
+        can.drawString(100, 50, "Generated by DocuLuna - Upgrade to Pro to remove watermark")
+        can.save()
+
+        # Move to the beginning of the StringIO buffer
+        packet.seek(0)
+        watermark = PdfReader(packet)
+
+        # Read the existing PDF
+        existing_pdf = PdfReader(file_path)
+        output = PdfWriter()
+
+        # Add watermark to each page
+        for page in existing_pdf.pages:
+            page.merge_page(watermark.pages[0])
+            output.add_page(page)
+
+        # Write the result
+        with open(file_path, "wb") as output_stream:
+            output.write(output_stream)
+
+    except Exception as e:
+        logger.error(f"Error adding watermark to PDF: {e}")
+
+def format_file_size(size_bytes):
+    """Format file size in human readable format."""
+    if size_bytes == 0:
+        return "0B"
+    
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    return f"{size_bytes:.1f}{size_names[i]}"

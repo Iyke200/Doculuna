@@ -77,6 +77,15 @@ def get_user(user_id):
         logger.error(f"Error fetching user {user_id}: {e}")
         return None
 
+def get_db_connection():
+    """Get database connection."""
+    import sqlite3
+    from config import DB_PATH
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def get_user_by_username(username):
     """Fetch user by username."""
     try:
@@ -161,6 +170,41 @@ def get_referral_stats(user_id):
     except Exception as e:
         logger.error(f"Error getting referral stats for user {user_id}: {e}")
         return 0
+
+def get_user(user_id):
+    """Get user by ID."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+            user = cursor.fetchone()
+            return dict(user) if user else None
+    except Exception as e:
+        logger.error(f"Error getting user {user_id}: {e}")
+        return None
+
+def add_user(user_id, username, first_name, last_name, referrer_id=None):
+    """Add new user to database."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO users (user_id, username, first_name, last_name, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (user_id, username, first_name, last_name))
+            
+            if referrer_id:
+                cursor.execute("""
+                    INSERT INTO referrals (referrer_id, referred_id, created_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                """, (referrer_id, user_id))
+            
+            conn.commit()
+            logger.info(f"Added new user {user_id}")
+            return True
+    except Exception as e:
+        logger.error(f"Error adding user {user_id}: {e}")
+        return False
 
 def check_daily_limits(user_id):
     """Check if user has exceeded daily limits."""

@@ -142,6 +142,10 @@ async def merge_pdfs(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
         except Exception as e:
             logger.error(f"Error cleaning up merge files: {e}")
 
+async def handle_merge_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle PDF merge requests - wrapper function for callbacks."""
+    await handle_merge(update, context)
+
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:

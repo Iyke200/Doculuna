@@ -38,7 +38,7 @@ os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
 
 # Define admin user IDs (replace with your actual admin IDs)
-ADMIN_USER_IDS = [123456789] # Example admin ID
+from config import ADMIN_USER_IDS
 
 async def error_callback(update, context):
     """Global error handler for the bot."""

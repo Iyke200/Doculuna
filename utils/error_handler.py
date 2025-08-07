@@ -48,4 +48,4 @@ def format_error_for_user(error):
     elif "permission" in str(error).lower():
         return "❌ Permission error. Please try again."
     else:
-        return "❌ An unexpected error occurred. Please try again later."
+        return "❌ An unexpected error occurred. Please try again."gain later."

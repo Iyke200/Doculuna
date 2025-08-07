@@ -1,37 +1,22 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from database.db import get_user, add_user, get_user_by_username
-from config import FREE_USAGE_LIMIT, REFERRAL_BONUS
+from database.db import add_user, get_user
 
 logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /start command."""
+    """Handle /start command."""
     try:
         user_id = update.effective_user.id
+        first_name = update.effective_user.first_name or "User"
         username = update.effective_user.username
-        first_name = update.effective_user.first_name
-        last_name = update.effective_user.last_name
 
-        # Check for referral code
-        referrer_id = None
-        if context.args:
-            referral_code = context.args[0]
-            if referral_code.startswith("ref_"):
-                referrer_id = int(referral_code.replace("ref_", ""))
-            else:
-                # Username-based referral
-                referrer = get_user_by_username(referral_code)
-                if referrer:
-                    referrer_id = referrer['user_id']
+        # Add user to database
+        add_user(user_id, first_name, username)
 
         # Check if user exists
         existing_user = get_user(user_id)
-
-        if not existing_user:
-            # New user
-            add_user(user_id, username, first_name, last_name, referrer_id)
 
         keyboard = [
             [InlineKeyboardButton("🛠️ Document Tools", callback_data="tools_menu")],

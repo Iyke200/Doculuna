@@ -91,11 +91,11 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
         elif data == "admin_restart":
             await restart_bot(query, context)
         elif data == "admin_broadcast_all":
-            await start_broadcast(query, context, "all")
+            await start_broadcast(context, "all")
         elif data == "admin_broadcast_premium":
-            await start_broadcast(query, context, "premium")
+            await start_broadcast(context, "premium")
         elif data == "admin_broadcast_free":
-            await start_broadcast(query, context, "free")
+            await start_broadcast(context, "free")
         elif data == "admin_test":
             await show_test_features(query, context)
         elif data == "admin_force_upgrade":

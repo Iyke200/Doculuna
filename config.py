@@ -1,64 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Telegram Bot Token
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8129574913:AAFTvBu_d4R4WDDTAYSJUxUwPhWgdozlbH4")
-
-# Usage limits for freemium model
-FREE_USAGE_LIMIT = 3  # Number of free uses per day
-REFERRAL_BONUS = 1   # Extra uses per successful referral
-
-# Pricing for premium subscriptions (in Naira)
-DAILY_PREMIUM_PRICE = 3500
-THREE_MONTH_PREMIUM_PRICE = 9000
-LIFETIME_PREMIUM_PRICE = 25000
-
-# Payment details
-PAYMENT_ACCOUNT = "9057203030"
-PAYMENT_BANK = "Moniepoint"
-PAYMENT_NAME = "Ebere Nwankwo"
-
-# Database configuration
-DB_PATH = "database/doculuna.db"
-
-# Logging configuration
-LOG_FILE = "doculuna.log"
-LOG_LEVEL = "DEBUG"
-
-# Abuse prevention
-MAX_DAILY_REQUESTS = 50  # Max requests per user per day
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB max file size
-
-# Admin configuration
-ADMIN_USER_IDS = [6857550239]  # Admin user IDs
-
-# Production settings
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-DEBUG = ENVIRONMENT == "development"
-
-# Rate limiting
-RATE_LIMIT_REQUESTS = 10
-RATE_LIMIT_WINDOW = 60  # seconds
-
-# File processing limits
-MAX_CONCURRENT_PROCESSES = 5
-PROCESSING_TIMEOUT = 300  # 5 minutes
-
-# Business analytics
-ANALYTICS_ENABLED = True
-BACKUP_INTERVAL_HOURS = 6
-
-# Marketing settings
-REFERRAL_REWARD_USES = 1
-WELCOME_SERIES_ENABLED = True
-RETENTION_CAMPAIGN_ENABLED = True
-
-# Security settings
-MAX_LOGIN_ATTEMPTS = 5
-SESSION_TIMEOUT_HOURS = 24
+# Bot Configuration
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 # Webhook settings (for production)
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
@@ -83,6 +30,7 @@ MAX_MERGE_FILES = 10
 
 # Usage Limits
 FREE_USAGE_LIMIT = 3
+PREMIUM_USAGE_LIMIT = 999999  # Unlimited
 REFERRAL_BONUS = 1
 
 # Premium Pricing (Nigerian Naira)
@@ -94,6 +42,13 @@ LIFETIME_PREMIUM_PRICE = 25000
 PAYMENT_ACCOUNT = "9057203030"
 PAYMENT_BANK = "Moniepoint"
 PAYMENT_NAME = "Ebere Nwankwo"
+
+# Payment Configuration
+PAYMENT_METHODS = {
+    "upi": "your-upi-id@bank",
+    "paytm": "9876543210",
+    "gpay": "9876543210"
+}
 
 # Admin Configuration
 ADMIN_USER_IDS = [6857550239]  # Replace with actual admin user IDs

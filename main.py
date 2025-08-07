@@ -226,3 +226,66 @@ async def handle_image_document(update, context):
 
 if __name__ == "__main__":
     main()
+import logging
+import os
+import sys
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from config import BOT_TOKEN, ADMIN_USER_IDS
+from database.db import init_database
+from handlers.start import start
+from handlers.help import help_command
+from handlers.referrals import referrals, handle_referral_callbacks
+from handlers.callbacks import handle_callbacks
+from handlers.admin import admin_panel
+from handlers.premium import premium_info
+from handlers.stats import stats_command
+
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+def main():
+    """Main function to run the bot."""
+    try:
+        # Initialize database
+        init_database()
+        
+        # Create application
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Add handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("referrals", referrals))
+        application.add_handler(CommandHandler("premium", premium_info))
+        application.add_handler(CommandHandler("admin", admin_panel))
+        application.add_handler(CommandHandler("stats", stats_command))
+        
+        # Add callback query handler
+        application.add_handler(CallbackQueryHandler(handle_callbacks))
+        
+        # Add message handlers for file processing
+        application.add_handler(MessageHandler(filters.Document.ALL, handle_file_upload))
+        application.add_handler(MessageHandler(filters.PHOTO, handle_photo_upload))
+        
+        # Start the bot
+        logger.info("Starting bot...")
+        application.run_polling(allowed_updates=["message", "callback_query"])
+        
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
+        sys.exit(1)
+
+async def handle_file_upload(update, context):
+    """Handle file uploads."""
+    await update.message.reply_text("File processing feature coming soon!")
+
+async def handle_photo_upload(update, context):
+    """Handle photo uploads."""
+    await update.message.reply_text("Photo processing feature coming soon!")
+
+if __name__ == "__main__":
+    main()

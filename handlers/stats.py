@@ -47,3 +47,47 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error showing stats for user {user_id}: {e}")
         await update.message.reply_text("❌ Error loading statistics. Please try again.")
+import logging
+from telegram import Update
+from telegram.ext import ContextTypes
+from database.db import get_user, get_all_users
+from config import ADMIN_USER_IDS
+
+logger = logging.getLogger(__name__)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show user or system stats."""
+    try:
+        user_id = update.effective_user.id
+        
+        if user_id in ADMIN_USER_IDS:
+            # Admin stats
+            users = get_all_users()
+            total_users = len(users)
+            premium_users = len([u for u in users if u['is_premium']])
+            
+            message = (
+                f"📊 **System Statistics**\n\n"
+                f"👥 Total Users: {total_users}\n"
+                f"💎 Premium Users: {premium_users}\n"
+                f"🆓 Free Users: {total_users - premium_users}\n"
+            )
+        else:
+            # User stats
+            user = get_user(user_id)
+            if user:
+                message = (
+                    f"📊 **Your Statistics**\n\n"
+                    f"👤 User ID: {user['user_id']}\n"
+                    f"💎 Status: {'Premium' if user['is_premium'] else 'Free'}\n"
+                    f"📈 Usage Count: {user['usage_count']}\n"
+                    f"👥 Referrals: {user['referral_count']}\n"
+                )
+            else:
+                message = "❌ User not found. Please use /start first."
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error showing stats: {e}")
+        await update.message.reply_text("❌ An error occurred.")

@@ -431,3 +431,65 @@ async def handle_payment_selection(update, context, callback_data):
         await update.callback_query.edit_message_text(
             message, reply_markup=reply_markup, parse_mode='Markdown'
         )
+import logging
+from telegram import Update
+from telegram.ext import ContextTypes
+from handlers.referrals import handle_referral_callbacks
+from handlers.help import handle_help_callbacks
+from handlers.admin import handle_admin_callbacks
+from handlers.premium import handle_premium_callbacks
+
+logger = logging.getLogger(__name__)
+
+async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Main callback handler that routes to specific handlers."""
+    try:
+        query = update.callback_query
+        data = query.data
+        
+        await query.answer()
+        
+        # Route to appropriate handler
+        if data.startswith("copy_referral_"):
+            await handle_referral_callbacks(update, context, data)
+        elif data.startswith("help_"):
+            await handle_help_callbacks(update, context, data)
+        elif data.startswith("admin_"):
+            await handle_admin_callbacks(update, context, data)
+        elif data.startswith("premium_"):
+            await handle_premium_callbacks(update, context, data)
+        elif data == "main_menu":
+            await show_main_menu(update, context)
+        else:
+            await query.edit_message_text("❌ Unknown command.")
+            
+    except Exception as e:
+        logger.error(f"Error handling callback: {e}")
+        try:
+            await query.edit_message_text("❌ An error occurred. Please try again.")
+        except:
+            pass
+
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the main menu."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Help", callback_data="help_menu")],
+        [InlineKeyboardButton("👥 Referrals", callback_data="referrals_menu")],
+        [InlineKeyboardButton("💎 Premium", callback_data="premium_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await update.callback_query.edit_message_text(
+            "🏠 **Main Menu**\n\nSelect an option:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except:
+        await update.message.reply_text(
+            "🏠 **Main Menu**\n\nSelect an option:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )

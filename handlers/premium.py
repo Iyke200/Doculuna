@@ -61,3 +61,69 @@ async def premium_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in premium status for user {user_id}: {e}")
         await update.message.reply_text("❌ An error occurred. Please try again later.")
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+from database.db import get_user
+
+logger = logging.getLogger(__name__)
+
+async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show premium information."""
+    try:
+        keyboard = [
+            [InlineKeyboardButton("💳 Upgrade Now", callback_data="premium_upgrade")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        message = (
+            "💎 **Premium Information**\n\n"
+            "**Free Plan:**\n"
+            "• 3 tool uses per day\n"
+            "• All tools available\n"
+            "• Standard processing speed\n\n"
+            "**Premium Plans:**\n"
+            "💳 Weekly: ₦1,000\n"
+            "💎 Monthly: ₦2,500\n\n"
+            "**Premium Benefits:**\n"
+            "• ✅ Unlimited tool usage\n"
+            "• ✅ Priority processing\n"
+            "• ✅ Larger file support\n"
+            "• ✅ Advanced features\n"
+            "• ✅ No daily limits\n\n"
+            "**Payment:**\n"
+            "Bank: Moniepoint\n"
+            "Account: 9057203030\n"
+            "Name: Ebere Nwankwo\n\n"
+            "Send payment screenshot to activate!"
+        )
+        
+        await update.message.reply_text(
+            message,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing premium info: {e}")
+        await update.message.reply_text("❌ An error occurred. Please try again.")
+
+async def handle_premium_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
+    """Handle premium-related callbacks."""
+    try:
+        query = update.callback_query
+        
+        if data == "premium_upgrade":
+            await query.edit_message_text(
+                "💎 **Upgrade to Premium**\n\n"
+                "To upgrade, please send payment to:\n\n"
+                "**Bank:** Moniepoint\n"
+                "**Account:** 9057203030\n"
+                "**Name:** Ebere Nwankwo\n\n"
+                "After payment, send the screenshot here for verification!"
+            )
+            
+    except Exception as e:
+        logger.error(f"Error handling premium callback: {e}")
+        await query.edit_message_text("❌ An error occurred.")

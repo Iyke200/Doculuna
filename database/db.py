@@ -129,6 +129,10 @@ def create_user(user_id, username=None, first_name=None, last_name=None, referre
     except Exception as e:
         logger.error(f"Error creating user {user_id}: {e}")
 
+def add_user(user_id, username=None, first_name=None, last_name=None, referred_by=None):
+    """Alias for create_user function."""
+    return create_user(user_id, username, first_name, last_name, referred_by)
+
 def get_all_users():
     """Get all users from database."""
     try:
@@ -238,3 +242,53 @@ def increment_user_usage(user_id):
         
     except Exception as e:
         logger.error(f"Error incrementing usage for user {user_id}: {e}")
+
+def get_user_by_username(username):
+    """Get user by username."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        
+        if result:
+            return {
+                'user_id': result[0],
+                'username': result[1],
+                'first_name': result[2],
+                'last_name': result[3],
+                'is_premium': bool(result[4]),
+                'premium_expires': result[5],
+                'referred_by': result[6],
+                'referral_count': result[7],
+                'usage_count': result[8],
+                'last_usage': result[9],
+                'created_at': result[10]
+            }
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting user by username {username}: {e}")
+        return None
+
+def get_referral_stats(user_id):
+    """Get referral statistics for a user."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT referral_count FROM users WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        
+        if result:
+            return result[0] or 0
+        return 0
+        
+    except Exception as e:
+        logger.error(f"Error getting referral stats for user {user_id}: {e}")
+        return 0

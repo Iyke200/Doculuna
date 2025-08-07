@@ -48,6 +48,127 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
                 await handle_pdf_to_word(update, context)
             else:
                 await query.edit_message_text("📄 Please upload a PDF file first.")
+        elif callback_data == "tool_word_to_pdf":
+            if 'last_file' in context.user_data:
+                context.user_data['document'] = context.user_data['last_file']
+                await handle_word_to_pdf(update, context)
+            else:
+                await query.edit_message_text("📄 Please upload a Word file first.")
+        elif callback_data == "tool_image_to_pdf":
+            if 'last_file' in context.user_data:
+                context.user_data['document'] = context.user_data['last_file']
+                await handle_image_to_pdf(update, context)
+            else:
+                await query.edit_message_text("📷 Please upload an image file first.")
+        elif callback_data == "tool_split_pdf":
+            if 'last_file' in context.user_data:
+                context.user_data['document'] = context.user_data['last_file']
+                await handle_split_pdf(update, context)
+            else:
+                await query.edit_message_text("📄 Please upload a PDF file first.")
+        elif callback_data == "tool_merge_pdf":
+            await handle_merge_pdf(update, context)
+        elif callback_data == "tool_compress_pdf":
+            if 'last_file' in context.user_data:
+                context.user_data['document'] = context.user_data['last_file']
+                await handle_compress_pdf(update, context)
+            else:
+                await query.edit_message_text("📄 Please upload a PDF file first.")
+        
+        # Referral callbacks
+        elif callback_data.startswith("copy_referral_"):
+            from handlers.referrals import handle_referral_callbacks
+            await handle_referral_callbacks(update, context, callback_data)
+        
+        # Premium callbacks
+        elif callback_data == "upgrade_pro":
+            from handlers.upgrade import upgrade
+            await upgrade(update, context)
+        
+        # Admin callbacks
+        elif callback_data.startswith("admin_"):
+            from handlers.admin import handle_admin_callbacks
+            await handle_admin_callbacks(update, context, callback_data)
+            
+    except Exception as e:
+        logger.error(f"Error handling callback query: {e}")
+        try:
+            await query.edit_message_text("❌ An error occurred. Please try again later.")
+        except:
+            pass
+
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the main menu."""
+    keyboard = [
+        [InlineKeyboardButton("🛠️ Document Tools", callback_data="tools_menu")],
+        [InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")],
+        [InlineKeyboardButton("👥 Referrals", callback_data="referrals_menu")],
+        [InlineKeyboardButton("❓ Help", callback_data="help_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await update.callback_query.edit_message_text(
+            "🏠 **Main Menu**\n\nChoose an option:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error showing main menu: {e}")
+
+async def show_pdf_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show PDF tools menu."""
+    keyboard = [
+        [InlineKeyboardButton("📝 Convert to Word", callback_data="tool_pdf_to_word")],
+        [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
+        [InlineKeyboardButton("🔗 Merge PDFs", callback_data="tool_merge_pdf")],
+        [InlineKeyboardButton("🗜 Compress PDF", callback_data="tool_compress_pdf")],
+        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await update.callback_query.edit_message_text(
+            "📄 **PDF Tools**\n\nSelect a tool:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error showing PDF tools menu: {e}")
+
+async def show_word_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show Word tools menu."""
+    keyboard = [
+        [InlineKeyboardButton("📄 Convert to PDF", callback_data="tool_word_to_pdf")],
+        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await update.callback_query.edit_message_text(
+            "📝 **Word Tools**\n\nSelect a tool:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error showing Word tools menu: {e}")
+
+async def show_image_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show Image tools menu."""
+    keyboard = [
+        [InlineKeyboardButton("📄 Convert to PDF", callback_data="tool_image_to_pdf")],
+        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await update.callback_query.edit_message_text(
+            "📷 **Image Tools**\n\nSelect a tool:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error showing Image tools menu: {e}").")
         
         elif callback_data == "tool_word_to_pdf":
             if 'last_file' in context.user_data:

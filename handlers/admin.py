@@ -47,10 +47,11 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error showing admin panel: {e}")
         await update.message.reply_text("❌ Error loading admin panel.")
 
-async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
+async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle admin callback queries."""
     try:
         query = update.callback_query
+        data = query.data
         user_id = query.from_user.id
 
         if user_id not in ADMIN_USER_IDS:
@@ -102,15 +103,24 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
         elif data == "admin_restart_confirm":
             await confirm_restart(query, context)
         elif data == "admin_panel":
-            fake_message = type('obj', (object,), {'reply_text': query.edit_message_text})
-            fake_update = type('obj', (object,), {'message': fake_message, 'effective_user': query.from_user})
+            # Simulate an update object for calling admin_panel
+            fake_update = type('obj', (object,), {'message': type('obj', (object,), {'reply_text': query.edit_message_text}), 'effective_user': query.from_user})
             await admin_panel(fake_update, context)
+        elif data == "admin_back": # Added for navigation consistency
+            await admin_panel(query, context) # Assuming admin_panel needs query for context
         else:
             await query.answer("🚧 Feature under development.", show_alert=True)
 
     except Exception as e:
         logger.error(f"Error handling admin callback: {e}")
-        await query.edit_message_text("❌ Admin error occurred.")
+        # Use edit_message_text for callback queries
+        if query and query.message:
+            await query.edit_message_text("❌ Admin error occurred.")
+        else:
+            # If query or query.message is None, we might be in a different context
+            # Log the error and potentially reply to message if available
+            logger.error(f"Could not edit message for admin callback error: {e}")
+
 
 async def show_payment_management(query, context):
     """Show payment management interface."""

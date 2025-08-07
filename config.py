@@ -97,3 +97,36 @@ PAYMENT_NAME = "Ebere Nwankwo"
 
 # Admin Configuration
 ADMIN_USER_IDS = [6857550239]  # Replace with actual admin user IDs
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Bot Configuration
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+
+# Usage Limits
+FREE_USAGE_LIMIT = 3
+PREMIUM_USAGE_LIMIT = 999999  # Unlimited
+
+# Referral System
+REFERRAL_BONUS = 1  # Days of premium per referral
+
+# Payment Configuration
+PAYMENT_METHODS = {
+    "upi": "your-upi-id@bank",
+    "paytm": "9876543210",
+    "gpay": "9876543210"
+}
+
+# Admin Configuration
+ADMIN_USER_IDS = [123456789]  # Replace with actual admin user IDs
+
+# File Configuration
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+TEMP_DIR = "data/temp"
+ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.gif']
+
+# Database Configuration
+DATABASE_URL = "database/doculuna.db"

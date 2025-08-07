@@ -15,6 +15,13 @@ from handlers.admin import admin_panel
 from handlers.callbacks import handle_callback_query
 from utils.error_handler import error_handler, log_error
 from utils.usage_tracker import check_usage_limit, increment_usage
+from tools.file_processor import process_file # Added for file processing
+from tools.pdf_to_word import handle_pdf_to_word # Added for PDF to Word tool
+from tools.word_to_pdf import handle_word_to_pdf # Added for Word to PDF tool
+from tools.image_to_pdf import handle_image_to_pdf # Added for Image to PDF tool
+from tools.pdf_splitter import handle_split_pdf # Added for PDF splitter tool
+from tools.pdf_merger import handle_merge_pdf # Added for PDF merger tool
+from tools.document_compressor import handle_compress_document # Added for document compression tool
 
 # Setup logging
 logging.basicConfig(
@@ -29,6 +36,9 @@ os.makedirs("data/temp", exist_ok=True)
 os.makedirs("payments", exist_ok=True)
 os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
+
+# Define admin user IDs (replace with your actual admin IDs)
+ADMIN_USER_IDS = [123456789] # Example admin ID
 
 async def error_callback(update, context):
     """Global error handler for the bot."""
@@ -83,35 +93,28 @@ def main():
         app.add_handler(CommandHandler("upgrade", upgrade))
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("admin", admin_panel))
-        
+
         # Import and add stats handler
         from handlers.stats import stats_command
         app.add_handler(CommandHandler("stats", stats_command))
-        
+
         # Admin-only commands
         from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message, force_upgrade_command
         app.add_handler(CommandHandler("grant_premium", grant_premium_command))
         app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
         app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
-        
-        # Message handler for broadcasts (must be last)
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
         # Register callback query handler
         app.add_handler(CallbackQueryHandler(handle_callback_query))
 
-        # Register document handlers
+        # Register message handlers for file processing
         app.add_handler(MessageHandler(
-            filters.Document.PDF & ~filters.COMMAND, 
-            handle_pdf_document
+            filters.Document.ALL & ~filters.COMMAND,
+            process_file
         ))
         app.add_handler(MessageHandler(
-            filters.Document.MimeType("application/vnd.openxmlformats-officedocument.wordprocessingml.document") & ~filters.COMMAND,
-            handle_word_document
-        ))
-        app.add_handler(MessageHandler(
-            (filters.PHOTO | filters.Document.MimeType("image/jpeg") | filters.Document.MimeType("image/png")) & ~filters.COMMAND,
-            handle_image_document
+            filters.PHOTO & ~filters.COMMAND,
+            process_file # Route photos to process_file as well
         ))
 
         logger.info("✓ All handlers registered")
@@ -154,7 +157,8 @@ async def handle_pdf_document(update, context):
         keyboard = [
             [InlineKeyboardButton("📝 Convert to Word", callback_data="tool_pdf_to_word")],
             [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
-            [InlineKeyboardButton("🔗 Merge with Others", callback_data="tool_merge_pdf")]
+            [InlineKeyboardButton("🔗 Merge with Others", callback_data="tool_merge_pdf")],
+            [InlineKeyboardButton("🗜 Compress PDF", callback_data="tool_compress_pdf")] # Added compression option
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -188,7 +192,6 @@ async def handle_word_document(update, context):
             )
             return
 
-        from tools.word_to_pdf import handle_word_to_pdf
         await handle_word_to_pdf(update, context)
         await increment_usage(user_id)
 
@@ -213,7 +216,6 @@ async def handle_image_document(update, context):
             )
             return
 
-        from tools.image_to_pdf import handle_image_to_pdf
         await handle_image_to_pdf(update, context)
         await increment_usage(user_id)
 
@@ -221,37 +223,6 @@ async def handle_image_document(update, context):
         logger.error(f"Error handling image document: {e}")
         await update.message.reply_text("❌ Error processing document. Please try again.")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages and file uploads."""
-    try:
-        user_id = update.effective_user.id
-        
-        # Handle admin broadcasts
-        if user_id in ADMIN_USER_IDS and context.user_data.get('broadcast_target'):
-            from handlers.admin import broadcast_message
-            await broadcast_message(update, context)
-            return
-        
-        # Handle payment submissions
-        if update.message.photo and update.message.caption:
-            await handle_payment_submission(update, context)
-            return
-        
-        # Handle file uploads for document tools
-        if update.message.document or update.message.photo:
-            from tools.file_processor import process_file
-            await process_file(update, context)
-            return
-        
-        # Default response for unhandled messages
-        await update.message.reply_text(
-            "👋 Hi! Use /start to see available options or /help for assistance."
-        )
-        
-    except Exception as e:
-        logger.error(f"Error handling message: {e}")
-        await update.message.reply_text("❌ An error occurred processing your message.")
 
 if __name__ == "__main__":
     main()
-

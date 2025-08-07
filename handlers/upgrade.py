@@ -2,7 +2,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_user, save_payment_request
-from config import WEEKLY_PREMIUM_PRICE, MONTHLY_PREMIUM_PRICE, PAYMENT_ACCOUNT, PAYMENT_BANK, PAYMENT_NAME
+from config import DAILY_PREMIUM_PRICE, THREE_MONTH_PREMIUM_PRICE, LIFETIME_PREMIUM_PRICE, PAYMENT_ACCOUNT, PAYMENT_BANK, PAYMENT_NAME
 import os
 from datetime import datetime
 

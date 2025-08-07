@@ -2,8 +2,10 @@
 import json
 import os
 from datetime import datetime, date
-from utils.premium_utils import is_premium
+from database.db import get_user
+import logging
 
+logger = logging.getLogger(__name__)
 USAGE_FILE = "data/usage.json"
 
 def load_usage_data():
@@ -13,7 +15,8 @@ def load_usage_data():
             with open(USAGE_FILE, 'r') as f:
                 return json.load(f)
         return {}
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error loading usage data: {e}")
         return {}
 
 def save_usage_data(data):
@@ -22,83 +25,105 @@ def save_usage_data(data):
         os.makedirs(os.path.dirname(USAGE_FILE), exist_ok=True)
         with open(USAGE_FILE, 'w') as f:
             json.dump(data, f, indent=2)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error saving usage data: {e}")
 
 async def check_usage_limit(user_id):
     """Check if user can use tools (premium users always can)."""
     try:
+        # Get user from database
+        user = get_user(user_id)
+        if not user:
+            return False
+        
         # Premium users have unlimited access
-        if is_premium(user_id):
+        if user['is_premium']:
             return True
         
-        usage_data = load_usage_data()
-        user_id_str = str(user_id)
-        today = date.today().isoformat()
+        # Check daily uses from database
+        return user['daily_uses'] > 0
         
-        if user_id_str not in usage_data:
-            usage_data[user_id_str] = {"date": today, "count": 0}
-            save_usage_data(usage_data)
-            return True
-        
-        user_usage = usage_data[user_id_str]
-        
-        # Reset count if it's a new day
-        if user_usage.get("date") != today:
-            user_usage["date"] = today
-            user_usage["count"] = 0
-            save_usage_data(usage_data)
-            return True
-        
-        # Check if under limit
-        return user_usage.get("count", 0) < 3
-        
-    except Exception:
-        return True  # Allow on error
+    except Exception as e:
+        logger.error(f"Error checking usage limit for user {user_id}: {e}")
+        return False
 
 async def increment_usage(user_id):
     """Increment user's usage count."""
     try:
+        # Get user from database
+        user = get_user(user_id)
+        if not user:
+            return False
+        
         # Don't count for premium users
-        if is_premium(user_id):
-            return
+        if user['is_premium']:
+            return True
         
-        usage_data = load_usage_data()
-        user_id_str = str(user_id)
-        today = date.today().isoformat()
+        # Database handles the decrement automatically via add_usage
+        return True
         
-        if user_id_str not in usage_data:
-            usage_data[user_id_str] = {"date": today, "count": 1}
-        else:
-            user_usage = usage_data[user_id_str]
-            if user_usage.get("date") != today:
-                user_usage["date"] = today
-                user_usage["count"] = 1
-            else:
-                user_usage["count"] = user_usage.get("count", 0) + 1
-        
-        save_usage_data(usage_data)
-        
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error incrementing usage for user {user_id}: {e}")
+        return False
 
 def get_usage_stats(user_id):
-    """Get user's usage statistics."""
+    """Get user's usage statistics from database."""
     try:
-        usage_data = load_usage_data()
-        user_id_str = str(user_id)
-        today = date.today().isoformat()
+        user = get_user(user_id)
+        if not user:
+            return {"count": 0, "remaining": 0}
         
-        if user_id_str not in usage_data:
-            return {"count": 0, "remaining": 3}
+        if user['is_premium']:
+            return {"count": 0, "remaining": "Unlimited"}
         
-        user_usage = usage_data[user_id_str]
+        remaining = user['daily_uses']
+        used = 3 - remaining
         
-        if user_usage.get("date") != today:
-            return {"count": 0, "remaining": 3}
+        return {"count": used, "remaining": remaining}
         
-        count = user_usage.get("count", 0)
-        return {"count": count, "remaining": max(0, 3 - count)}
+    except Exception as e:
+        logger.error(f"Error getting usage stats for user {user_id}: {e}")
+        return {"count": 0, "remaining": 0}
+
+def add_watermark_to_file(file_path, is_premium=False):
+    """Add watermark to files for free users."""
+    if is_premium:
+        return True
+    
+    try:
+        import fitz  # PyMuPDF
         
-    except Exception:
-        return {"count": 0, "remaining": 3}
+        if file_path.lower().endswith('.pdf'):
+            # Add watermark to PDF
+            pdf_document = fitz.open(file_path)
+            
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document[page_num]
+                
+                # Add watermark text
+                watermark_text = "DocuLuna Free - Upgrade for watermark-free files"
+                page.insert_text(
+                    (50, 50),
+                    watermark_text,
+                    fontsize=10,
+                    color=(0.8, 0.8, 0.8),
+                    overlay=True
+                )
+                
+                # Add watermark at bottom
+                page.insert_text(
+                    (50, page.rect.height - 30),
+                    "Get premium at t.me/DocuLunaBot",
+                    fontsize=8,
+                    color=(0.7, 0.7, 0.7),
+                    overlay=True
+                )
+            
+            pdf_document.save(file_path)
+            pdf_document.close()
+            
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error adding watermark: {e}")
+        return False

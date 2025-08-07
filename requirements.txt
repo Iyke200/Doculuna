@@ -8,3 +8,13 @@ reportlab
 docx2pdf
 pdf2docx
 PyPDF2
+docx2pdf
+pdf2docx
+Pillow
+PyMuPDF
+PyPDF2
+python-docx
+python-dotenv
+python-telegram-bot
+reportlab
+telegram

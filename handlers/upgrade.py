@@ -60,30 +60,6 @@ async def handle_payment_submission(update: Update, context: ContextTypes.DEFAUL
 
         # Determine plan type from caption
         plan_type = None
-        if "daily" in caption:
-            plan_type = "daily"
-        elif "3month" in caption or "three" in caption:
-            plan_type = "3month"
-        elif "lifetime" in caption:
-            plan_type = "lifetime"
-
-        if not plan_type:
-            await update.message.reply_text(
-                "❌ Please include your plan type in the caption (daily, 3month, or lifetime)"
-            )
-            return
-
-        # Process payment screenshot
-        # Implementation would depend on your payment processing logic
-        await update.message.reply_text(
-            "✅ Payment screenshot received! Your payment is being processed.\n"
-            "You'll receive confirmation within 24 hours."
-        )
-
-    except Exception as e:
-        logger.error(f"Error handling payment submission: {e}")
-        await update.message.reply_text("❌ Error processing payment. Please try again.")pe from caption
-        plan_type = None
         amount = 0
 
         if "daily" in caption:

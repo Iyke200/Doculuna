@@ -624,6 +624,17 @@ async def confirm_restart(query, context):
         await query.edit_message_text(
             "🔄 **Restarting Bot...**\n\n"
             "✅ Restart command executed\n"
+            "⏳ Bot will restart in a few seconds..."
+        )
+        
+        # In a real deployment, you might want to use a process manager
+        import os
+        import sys
+        os.execv(sys.executable, ['python'] + sys.argv)
+        
+    except Exception as e:
+        logger.error(f"Error restarting bot: {e}")
+        await query.edit_message_text("❌ Error restarting bot.")
             "⏳ Bot will be back online shortly\n\n"
             "Please wait a moment and try again."
         )

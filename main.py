@@ -239,6 +239,12 @@ from handlers.callbacks import handle_callbacks
 from handlers.admin import admin_panel
 from handlers.premium import premium_info
 from handlers.stats import stats_command
+from handlers.upgrade import upgrade, handle_payment_submission
+from handlers.admin import admin_panel, force_upgrade_command
+from handlers.help import help_command
+from handlers.callbacks import handle_callbacks
+from handlers.referrals import referrals
+import sys
 
 # Setup logging
 logging.basicConfig(
@@ -251,7 +257,8 @@ def main():
     """Main function to run the bot."""
     try:
         # Initialize database
-        init_database()
+        from database.db import init_db
+        init_db()
         
         # Create application
         application = Application.builder().token(BOT_TOKEN).build()
@@ -263,6 +270,8 @@ def main():
         application.add_handler(CommandHandler("premium", premium_info))
         application.add_handler(CommandHandler("admin", admin_panel))
         application.add_handler(CommandHandler("stats", stats_command))
+        application.add_handler(CommandHandler("upgrade", upgrade))
+        application.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
         
         # Add callback query handler
         application.add_handler(CallbackQueryHandler(handle_callbacks))
@@ -281,7 +290,25 @@ def main():
 
 async def handle_file_upload(update, context):
     """Handle file uploads."""
-    await update.message.reply_text("File processing feature coming soon!")
+    try:
+        from tools.file_processor import process_file
+        await process_file(update, context)
+    except Exception as e:
+        logger.error(f"Error handling file upload: {e}")
+        await update.message.reply_text("❌ Error processing file. Please try again.")
+
+async def handle_photo_upload(update, context):
+    """Handle photo uploads."""
+    try:
+        # Check if it's a payment screenshot
+        if update.message.caption:
+            await handle_payment_submission(update, context)
+        else:
+            from tools.image_to_pdf import convert_image_to_pdf
+            await convert_image_to_pdf(update, context)
+    except Exception as e:
+        logger.error(f"Error handling photo upload: {e}")
+        await update.message.reply_text("❌ Error processing image. Please try again.") update.message.reply_text("File processing feature coming soon!")
 
 async def handle_photo_upload(update, context):
     """Handle photo uploads."""

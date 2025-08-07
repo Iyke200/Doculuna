@@ -18,12 +18,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         keyboard = [
-            [InlineKeyboardButton("💰 Payment Management", callback_data="admin_payments")],
-            [InlineKeyboardButton("👥 User Management", callback_data="admin_users")],
-            [InlineKeyboardButton("📊 System Stats", callback_data="admin_stats")],
-            [InlineKeyboardButton("💎 Premium Control", callback_data="admin_premium")],
-            [InlineKeyboardButton("🔧 System Tools", callback_data="admin_system")],
-            [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
+            [InlineKeyboardButton("📊 View Bot Stats", callback_data="admin_stats")],
+            [InlineKeyboardButton("👥 View Users", callback_data="admin_users")],
+            [InlineKeyboardButton("💰 View Payments", callback_data="admin_payments")],
+            [InlineKeyboardButton("📤 Broadcast Message", callback_data="admin_broadcast")],
+            [InlineKeyboardButton("🧪 Test Features", callback_data="admin_test")],
+            [InlineKeyboardButton("⚙️ Force Upgrade", callback_data="admin_force_upgrade")],
             [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -95,6 +95,10 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
             await start_broadcast(query, context, "premium")
         elif data == "admin_broadcast_free":
             await start_broadcast(query, context, "free")
+        elif data == "admin_test":
+            await show_test_features(query, context)
+        elif data == "admin_force_upgrade":
+            await show_force_upgrade(query, context)
         elif data == "admin_restart_confirm":
             await confirm_restart(query, context)
         elif data == "admin_panel":
@@ -493,12 +497,105 @@ async def start_broadcast(query, context, target_type):
         context.user_data['broadcast_target'] = target_type
 
         await query.edit_message_text(
+
+
+async def show_test_features(query, context):
+    """Show test features for admin."""
+    keyboard = [
+        [InlineKeyboardButton("🔍 Test Database", callback_data="admin_test_db")],
+        [InlineKeyboardButton("📤 Test Broadcast", callback_data="admin_test_broadcast")],
+        [InlineKeyboardButton("💾 Test Backup", callback_data="admin_test_backup")],
+        [InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        f"🧪 **Test Features**\n\n"
+        f"Available test options:\n\n"
+        f"• Test database connectivity\n"
+        f"• Test broadcast system\n"
+        f"• Test backup functionality\n\n"
+        f"Select a test to run:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+async def show_force_upgrade(query, context):
+    """Show force upgrade interface."""
+    keyboard = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        f"⚙️ **Force Upgrade User**\n\n"
+        f"To manually upgrade a user, use this format:\n"
+        f"`/force_upgrade USER_ID PLAN_TYPE DAYS`\n\n"
+        f"**Plan Types:**\n"
+        f"• `daily` - 1 day access\n"
+        f"• `3month` - 90 days access\n"
+        f"• `lifetime` - permanent access\n\n"
+        f"**Example:**\n"
+        f"`/force_upgrade 123456789 lifetime 0`\n\n"
+        f"⚠️ This bypasses payment verification!",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
             f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
             f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
             f"Type your message and send it. The broadcast will start immediately.",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
+
+
+
+async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Force upgrade a user to premium."""
+    try:
+        user_id = update.effective_user.id
+        
+        if user_id not in ADMIN_USER_IDS:
+            await update.message.reply_text("❌ Access denied. Admin privileges required.")
+            return
+
+        if len(context.args) != 3:
+            await update.message.reply_text(
+                "❌ Invalid format.\nUsage: `/force_upgrade USER_ID PLAN_TYPE DAYS`\n"
+                "Example: `/force_upgrade 123456789 lifetime 0`",
+                parse_mode='Markdown'
+            )
+            return
+
+        target_user_id = int(context.args[0])
+        plan_type = context.args[1].lower()
+        days = int(context.args[2])
+        
+        if plan_type not in ['daily', '3month', 'lifetime']:
+            await update.message.reply_text("❌ Invalid plan type. Use: daily, 3month, or lifetime")
+            return
+        
+        if plan_type == 'lifetime':
+            expiry_date = None
+        else:
+            expiry_date = (datetime.now() + timedelta(days=days)).isoformat()
+        
+        success = update_premium_status(target_user_id, True, expiry_date, plan_type)
+        
+        if success:
+            await update.message.reply_text(
+                f"✅ **Force upgrade successful!**\n"
+                f"👤 User ID: {target_user_id}\n"
+                f"💎 Plan: {plan_type.title()}\n"
+                f"⏰ Duration: {'Lifetime' if plan_type == 'lifetime' else f'{days} days'}"
+            )
+        else:
+            await update.message.reply_text("❌ Failed to upgrade user.")
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID or days value.")
+    except Exception as e:
+        logger.error(f"Error force upgrading user: {e}")
+        await update.message.reply_text("❌ Error processing force upgrade.")
 
     except Exception as e:
         logger.error(f"Error starting broadcast: {e}")

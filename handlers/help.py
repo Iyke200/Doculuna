@@ -18,20 +18,23 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         help_text = (
-            "❓ **DocuLuna Help Center**\n\n"
+            "📌 **Available Commands:**\n"
+            "/start – Restart the bot\n"
+            "/help – Show this help menu\n"
+            "/upgrade – View premium plans\n"
+            "/stats – View your usage stats\n"
+            "/referral – Get your referral link\n"
+            "/premium – Check your premium status\n\n"
             "**Available Tools:**\n"
             "📝 Word to PDF - Convert .docx files to PDF\n"
             "📄 PDF to Word - Convert PDF to editable Word\n"
             "🖼️ Image to PDF - Convert images to PDF\n"
             "🔗 Merge PDFs - Combine multiple PDFs\n"
             "✂️ Split PDF - Split PDF into pages\n\n"
-            "**Usage Limits:**\n"
-            "🆓 Free: 3 uses per day\n"
-            "💎 Premium: Unlimited access\n\n"
             "**Getting Started:**\n"
-            "1. Choose a tool from the main menu\n"
-            "2. Send your file when prompted\n"
-            "3. Download the converted result\n\n"
+            "1. Send any document to begin processing\n"
+            "2. Use commands above for specific features\n"
+            "3. Upload and download converted files\n\n"
             "Need more help? Select an option below:"
         )
 

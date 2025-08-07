@@ -38,18 +38,16 @@ async def referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         free_weeks_earned = referral_count // 3  # 3 referrals = 1 week free
 
         message = (
-            "📢 **Invite & Earn with DocuLuna!**\n\n"
-            "Do you love DocuLuna? Share it with your friends and earn **FREE Pro access**!\n\n"
-            f"🔗 Your referral link:\n"
+            f"🔗 **Your referral link:**\n"
             f"{referral_link}\n\n"
-            "🎁 **Rewards:**\n"
-            "• Invite 3 friends who use the bot = Get **1 week Pro access FREE**\n"
-            "• Track your invites below\n\n"
-            "👥 **Your Invite Stats:**\n"
-            f"Total Invited: {total_invited}\n"
-            f"Successful Activations: {successful_activations}\n"
-            f"Free Weeks Earned: {free_weeks_earned}\n\n"
-            "Keep sharing and enjoy unlimited document power!"
+            f"📊 **Your Referral Stats:**\n"
+            f"👥 Total Invited: {total_invited}\n"
+            f"✅ Active Referrals: {successful_activations}\n"
+            f"🎁 Bonus Days Earned: {referral_count}\n\n"
+            f"💡 **How it works:**\n"
+            f"• Share your link with friends\n"
+            f"• When they join and use the bot, you both get 1 day free premium!\n"
+            f"• No limit on referrals - keep sharing and earning! 🚀"
         )
 
         await update.message.reply_text(

@@ -22,12 +22,16 @@ async def premium_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if is_premium:
             expiry = user.get('premium_expiry', 'Unknown')
-            status_text = "💎 **Premium Active**"
+            plan_type = user.get('premium_type', 'Premium')
+            status_text = f"💎 **{plan_type.title()} Plan Active**"
             usage_text = "✅ **Unlimited usage**"
-            expiry_text = f"📅 Expires: {expiry}"
+            if plan_type == 'lifetime':
+                expiry_text = "♾️ **Lifetime Access**"
+            else:
+                expiry_text = f"📅 Expires: {expiry}"
         else:
             status_text = "🆓 **Free Plan**"
-            usage_text = f"📊 Daily uses: {daily_uses}"
+            usage_text = f"📊 Daily uses remaining: {daily_uses}"
             expiry_text = ""
 
         keyboard = [

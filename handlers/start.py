@@ -41,20 +41,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message = (
-            "👋 Welcome to **DocuLuna** — your smart document assistant right here on Telegram!\n\n"
-            "Need to convert, merge, split, or transform files like Word, PDF, or images? You're in the right place.\n\n"
-            "🚀 **What You Can Do:**\n"
-            "• Word ➡️ PDF\n"
-            "• PDF ➡️ Word\n"
-            "• Merge multiple PDFs\n"
-            "• Split PDF pages\n"
-            "• Image ➡️ PDF\n\n"
-            "🎁 You're currently on the **Free Plan** — enjoy up to 3 tools per day!\n\n"
-            "🔓 Want unlimited access + faster speed + watermark-free downloads?\n"
-            "👉 Upgrade to **DocuLuna Pro** starting from just ₦1,000/week.\n\n"
-            "🔗 Use the buttons below to get started:"
-        )
+        if existing_user:
+            # Returning user
+            message = f"👋 Welcome back, {first_name}! Use /help to explore features or upload a document to begin."
+        else:
+            # New user
+            message = (
+                f"👋 Hello {first_name}!\n"
+                f"Welcome to **DocuLuna** – your AI-powered document toolkit on Telegram.\n\n"
+                f"Get started by sending a document or use /help to explore commands.\n"
+                f"Need premium tools? Use /upgrade to unlock full access."
+            )
 
         await update.message.reply_text(
             message,

@@ -78,16 +78,21 @@ def main():
         # Register command handlers
         logger.info("Registering handlers...")
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("referrals", referrals))
-        app.add_handler(CommandHandler("premiumstatus", premium_status))
+        app.add_handler(CommandHandler("referral", referrals))
+        app.add_handler(CommandHandler("premium", premium_status))
         app.add_handler(CommandHandler("upgrade", upgrade))
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("admin", admin_panel))
         
+        # Import and add stats handler
+        from handlers.stats import stats_command
+        app.add_handler(CommandHandler("stats", stats_command))
+        
         # Admin-only commands
-        from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message
+        from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message, force_upgrade_command
         app.add_handler(CommandHandler("grant_premium", grant_premium_command))
         app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
+        app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
         
         # Message handler for broadcasts (must be last)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

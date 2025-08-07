@@ -392,22 +392,43 @@ def add_referral(referrer_id, referred_id):
     except Exception as e:
         logger.error(f"Error adding referral {referrer_id} -> {referred_id}: {e}")
 
-def update_premium_status(user_id, is_premium, expiry_date=None):
+def update_premium_status(user_id, is_premium, expiry_date=None, plan_type=None):
     """Update premium status for a user."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE users 
-                SET is_premium = ?, premium_expiry = ?, updated_at = CURRENT_TIMESTAMP
+                SET is_premium = ?, premium_expiry = ?, premium_type = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
-            """, (is_premium, expiry_date, user_id))
+            """, (is_premium, expiry_date, plan_type, user_id))
             conn.commit()
-        logger.info(f"Premium status updated for user {user_id}: premium={is_premium}")
+        logger.info(f"Premium status updated for user {user_id}: premium={is_premium}, type={plan_type}")
         return True
     except Exception as e:
         logger.error(f"Error updating premium status for user {user_id}: {e}")
         return False
+
+def get_user_usage_stats(user_id):
+    """Get usage statistics for a user."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) as total_documents FROM usage_logs WHERE user_id = ?", (user_id,))
+            result = cursor.fetchone()
+            total_documents = result["total_documents"] if result else 0
+            
+            cursor.execute("SELECT COUNT(DISTINCT tool_name) as tools_used FROM usage_logs WHERE user_id = ?", (user_id,))
+            result = cursor.fetchone()
+            tools_used = result["tools_used"] if result else 0
+            
+            return {
+                'total_documents': total_documents,
+                'tools_used': tools_used
+            }
+    except Exception as e:
+        logger.error(f"Error getting usage stats for user {user_id}: {e}")
+        return {'total_documents': 0, 'tools_used': 0}
 
 if __name__ == "__main__":
     init_db()

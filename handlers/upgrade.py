@@ -14,33 +14,30 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
         keyboard = [
-            [InlineKeyboardButton("💳 Pay Weekly ₦1,000", callback_data="pay_weekly")],
-            [InlineKeyboardButton("💎 Pay Monthly ₦2,500", callback_data="pay_monthly")],
+            [InlineKeyboardButton("🔓 Daily Plan - ₦3,500", callback_data="pay_daily")],
+            [InlineKeyboardButton("📅 3-Month Plan - ₦9,000", callback_data="pay_3month")],
+            [InlineKeyboardButton("💎 Lifetime Plan - ₦25,000", callback_data="pay_lifetime")],
             [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message = (
-            "💼 **Upgrade to DocuLuna Pro**\n\n"
-            "Tired of daily limits and watermarks? Go Pro and get:\n\n"
+            "💼 **Upgrade to DocuLuna Premium**\n\n"
+            "Unlock unlimited document processing with premium features:\n\n"
             "✅ Unlimited file conversions\n"
             "✅ No watermarks\n"
             "✅ Faster processing\n"
-            "✅ Priority access\n"
-            "✅ File size up to 25MB\n"
-            "✅ Access bonus tools as we add them\n\n"
-            "💰 **Pricing Plans:**\n"
-            "• Weekly Plan: ₦1,000\n"
-            "• Monthly Plan: ₦2,500 (save ₦500)\n\n"
-            "🛒 **How to Pay:**\n"
-            "1. Send payment to:\n"
-            "   *Account Name:* Ebere Nwankwo\n"
-            "   *Bank/Wallet:* Moniepoint\n"
-            "   *Amount:* ₦1,000 or ₦2,500\n"
-            "   *Note:* Add your Telegram username in the transfer note\n\n"
-            "2. After payment, send a screenshot or transaction ID to this bot\n\n"
-            "⏳ We'll activate your Pro access within minutes!\n\n"
-            "🎁 Bonus: Refer 3 people and get 1 week free! Use `/referrals` to invite now."
+            "✅ Priority support\n"
+            "✅ Larger file support\n"
+            "✅ Advanced tools access\n\n"
+            "💰 **Choose Your Plan:**\n\n"
+            "🔓 **Daily Plan** – ₦3,500\n"
+            "Valid for 24 hours\n\n"
+            "📅 **3-Month Plan** – ₦9,000\n"
+            "Valid for 90 days\n\n"
+            "💎 **Lifetime Plan** – ₦25,000\n"
+            "Permanent access, all features unlocked forever\n\n"
+            "Select a plan below to continue:"
         )
 
         await update.message.reply_text(
@@ -65,15 +62,18 @@ async def handle_payment_submission(update: Update, context: ContextTypes.DEFAUL
         plan_type = None
         amount = 0
 
-        if "weekly" in caption:
-            plan_type = "weekly"
-            amount = WEEKLY_PREMIUM_PRICE
-        elif "monthly" in caption:
-            plan_type = "monthly"
-            amount = MONTHLY_PREMIUM_PRICE
+        if "daily" in caption:
+            plan_type = "daily"
+            amount = 3500
+        elif "3month" in caption or "3-month" in caption:
+            plan_type = "3month"
+            amount = 9000
+        elif "lifetime" in caption:
+            plan_type = "lifetime"
+            amount = 25000
         else:
             await update.message.reply_text(
-                "❌ Please send screenshot with caption 'weekly' or 'monthly'"
+                "❌ Please send screenshot with caption 'daily', '3month', or 'lifetime'"
             )
             return
 

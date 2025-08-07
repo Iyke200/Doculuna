@@ -4,11 +4,13 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT,
     first_name TEXT,
     last_name TEXT,
+    is_premium BOOLEAN DEFAULT 0,
+    premium_expiry TEXT,
+    premium_type TEXT,
     daily_uses INTEGER DEFAULT 3,
     last_reset_date TEXT,
-    is_premium INTEGER DEFAULT 0,
-    premium_expiry TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS referrals (

@@ -166,3 +166,8 @@ def format_file_size(size_bytes):
         i += 1
     
     return f"{size_bytes:.1f}{size_names[i]}"
+
+# Alias for backwards compatibility
+async def handle_compress_pdf(update, context):
+    """Alias for handle_compress_document."""
+    return await handle_compress_document(update, context)

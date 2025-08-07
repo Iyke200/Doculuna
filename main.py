@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.error import NetworkError, Forbidden
 from config import BOT_TOKEN
-from database.db import init_db
+from database.db import init_db, get_all_users, get_pending_payments
 from handlers.start import start
 from handlers.referrals import referrals
 from handlers.premium import premium_status

@@ -2,7 +2,7 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter
+from PyPDF2 import PdfReader, PdfWriter
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
 from reportlab.pdfgen import canvas
@@ -143,8 +143,51 @@ async def merge_pdfs(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
             logger.error(f"Error cleaning up merge files: {e}")
 
 async def handle_merge_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle PDF merge requests - wrapper function for callbacks."""
-    await handle_merge(update, context)
+    """Handle PDF merge requests."""
+    try:
+        user_id = update.effective_user.id
+
+        # Check usage limit
+        if not await check_usage_limit(user_id):
+            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
+                "Upgrade to **DocuLuna Pro** for unlimited access!",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            return
+
+        # Initialize merge session if not exists
+        if 'merge_files' not in context.user_data:
+            context.user_data['merge_files'] = []
+
+        keyboard = [
+            [InlineKeyboardButton("📄 Add PDF", callback_data="add_pdf_merge")],
+            [InlineKeyboardButton("🔗 Merge All", callback_data="merge_all_pdfs")],
+            [InlineKeyboardButton("🗑️ Clear All", callback_data="clear_merge_files")],
+            [InlineKeyboardButton("⬅️ Back", callback_data="tools_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        files_count = len(context.user_data['merge_files'])
+        message = (
+            f"🔗 **PDF Merger**\n\n"
+            f"📊 Files added: {files_count}\n\n"
+            f"📄 **Add PDF** - Upload more PDF files\n"
+            f"🔗 **Merge All** - Combine all uploaded PDFs\n"
+            f"🗑️ **Clear All** - Remove all files\n\n"
+            f"💡 Upload multiple PDF files, then click 'Merge All'"
+        )
+
+        await update.message.reply_text(
+            message, reply_markup=reply_markup, parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error in handle_merge_pdf: {e}")
+        await update.message.reply_text("❌ Error setting up PDF merger. Please try again.")
 
 # Export the main function as well
 __all__ = ['handle_merge', 'handle_merge_pdf', 'merge_pdfs']

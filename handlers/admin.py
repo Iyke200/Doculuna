@@ -216,7 +216,7 @@ async def show_premium_control(query, context):
     keyboard = [
         [InlineKeyboardButton("🎁 Grant Premium", callback_data="admin_grant_premium")],
         [InlineKeyboardButton("🚫 Revoke Premium", callback_data="admin_revoke_premium")],
-        [InlineKeyboardButton("📋 Premium List", callback_data="admin_premium_list")],
+        [InlineKeyboardButton("📋 Premium Users", callback_data="admin_premium_list")],
         [InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -302,7 +302,7 @@ async def show_user_list(query, context):
     """Show list of all users."""
     try:
         all_users = get_all_users()
-        
+
         if not all_users:
             keyboard = [[InlineKeyboardButton("🏠 Back to User Management", callback_data="admin_users")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -332,7 +332,7 @@ async def show_premium_list(query, context):
     try:
         all_users = get_all_users()
         premium_users = [u for u in all_users if u.get('is_premium')]
-        
+
         if not premium_users:
             keyboard = [[InlineKeyboardButton("🏠 Back to Premium Control", callback_data="admin_premium")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -399,10 +399,10 @@ async def clean_temp_files(query, context):
     try:
         import os
         import shutil
-        
+
         temp_dir = "data/temp"
         files_removed = 0
-        
+
         if os.path.exists(temp_dir):
             for filename in os.listdir(temp_dir):
                 file_path = os.path.join(temp_dir, filename)
@@ -435,10 +435,10 @@ async def view_system_logs(query, context):
     """View recent system logs."""
     try:
         import os
-        
+
         log_file = "doculuna.log"
         logs_content = "📋 **Recent System Logs**\n\n"
-        
+
         if os.path.exists(log_file):
             with open(log_file, 'r') as f:
                 lines = f.readlines()
@@ -548,20 +548,12 @@ async def show_force_upgrade(query, context):
         parse_mode='Markdown'
     )
 
-            f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
-            f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
-            f"Type your message and send it. The broadcast will start immediately.",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-
-
 
 async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Force upgrade a user to premium."""
     try:
         user_id = update.effective_user.id
-        
+
         if user_id not in ADMIN_USER_IDS:
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
@@ -577,18 +569,18 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
         target_user_id = int(context.args[0])
         plan_type = context.args[1].lower()
         days = int(context.args[2])
-        
+
         if plan_type not in ['daily', '3month', 'lifetime']:
             await update.message.reply_text("❌ Invalid plan type. Use: daily, 3month, or lifetime")
             return
-        
+
         if plan_type == 'lifetime':
             expiry_date = None
         else:
             expiry_date = (datetime.now() + timedelta(days=days)).isoformat()
-        
+
         success = update_premium_status(target_user_id, True, expiry_date, plan_type)
-        
+
         if success:
             await update.message.reply_text(
                 f"✅ **Force upgrade successful!**\n"
@@ -605,8 +597,6 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error force upgrading user: {e}")
         await update.message.reply_text("❌ Error processing force upgrade.")
 
-    except Exception as e:
-        logger.error(f"Error starting broadcast: {e}")
 
 async def confirm_restart(query, context):
     """Confirm and execute bot restart."""
@@ -617,34 +607,25 @@ async def confirm_restart(query, context):
             "⏳ Bot will be back online shortly\n\n"
             "Please wait a moment and try again."
         )
-        
+
         # Note: In a production environment, you would implement
         # actual restart logic here (e.g., exit with restart code)
         import sys
         logger.info("Admin requested bot restart")
         # sys.exit(0)  # Uncomment for actual restart
-        
+
     except Exception as e:
         logger.error(f"Error during restart: {e}")
 
 def is_admin(user_id):
     """Check if user is an admin."""
     return user_id in ADMIN_USER_IDS
-import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from database.db import (get_all_payments, get_all_users, update_premium_status, 
-                        get_pending_payments, approve_payment_by_id, reject_payment_by_id)
-from config import ADMIN_USER_IDS
-from datetime import datetime, timedelta
-
-logger = logging.getLogger(__name__)
 
 async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Command to grant premium access to a user."""
     try:
         user_id = update.effective_user.id
-        
+
         if user_id not in ADMIN_USER_IDS:
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
@@ -659,10 +640,10 @@ async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TY
 
         target_user_id = int(context.args[0])
         days = int(context.args[1])
-        
+
         expiry_date = datetime.now() + timedelta(days=days)
         success = update_premium_status(target_user_id, True, expiry_date.isoformat())
-        
+
         if success:
             await update.message.reply_text(
                 f"✅ Premium access granted!\n"
@@ -683,7 +664,7 @@ async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_T
     """Command to revoke premium access from a user."""
     try:
         user_id = update.effective_user.id
-        
+
         if user_id not in ADMIN_USER_IDS:
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
@@ -697,9 +678,9 @@ async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_T
             return
 
         target_user_id = int(context.args[0])
-        
+
         success = update_premium_status(target_user_id, False, None)
-        
+
         if success:
             await update.message.reply_text(
                 f"✅ Premium access revoked!\n"
@@ -718,7 +699,7 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle broadcast messages from admin."""
     try:
         user_id = update.effective_user.id
-        
+
         if user_id not in ADMIN_USER_IDS:
             return
 
@@ -733,7 +714,7 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         all_users = get_all_users()
-        
+
         # Filter users based on target
         if broadcast_target == "premium":
             target_users = [u for u in all_users if u.get('is_premium')]
@@ -772,4 +753,3 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error broadcasting message: {e}")
         await update.message.reply_text("❌ Error sending broadcast.")
-

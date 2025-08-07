@@ -497,7 +497,15 @@ async def start_broadcast(query, context, target_type):
         context.user_data['broadcast_target'] = target_type
 
         await query.edit_message_text(
+            f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
+            f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
+            f"Type your message and send it. The broadcast will start immediately.",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
 
+    except Exception as e:
+        logger.error(f"Error starting broadcast: {e}")
 
 async def show_test_features(query, context):
     """Show test features for admin."""

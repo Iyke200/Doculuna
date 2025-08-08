@@ -127,7 +127,7 @@ async def show_image_options(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "🖼 **Image received!** What would you like to do?",
         reply_markup=reply_markup,
         parse_mode='Markdown'
-    )e)
+    )
 
             # Show appropriate tools based on file type
             if file_name.endswith('.pdf'):

@@ -8,3 +8,4 @@ reportlab
 docx2pdf
 pdf2docx
 PyPDF2
+psutil

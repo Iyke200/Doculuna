@@ -12,8 +12,17 @@ from tools.file_processor import show_tools_menu
 
 logger = logging.getLogger(__name__)
 
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show main menu - temporary placeholder"""
+    try:
+        from handlers.start import show_main_menu as start_main_menu
+        await start_main_menu(update, context)
+    except Exception as e:
+        logger.error(f"Error showing main menu: {e}")
+        await update.callback_query.edit_message_text("❌ Error loading main menu.")
+
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle all callback queries."""
+    """Handle all callback queries with enhanced routing."""
     try:
         query = update.callback_query
         await query.answer()
@@ -22,6 +31,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         
         # Main menu options
         if callback_data == "main_menu":
+            from handlers.start import show_main_menu
             await show_main_menu(update, context)
         elif callback_data == "tools_menu":
             await show_tools_menu(update, context)
@@ -31,6 +41,31 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         elif callback_data == "help_menu":
             from handlers.help import help_command
             await help_command(update, context)
+        
+        # User dashboard and profile
+        elif callback_data == "user_dashboard":
+            from handlers.start import show_user_dashboard
+            await show_user_dashboard(update, context)
+        elif callback_data == "quick_start_guide":
+            from handlers.start import show_quick_start_guide
+            await show_quick_start_guide(update, context)
+        elif callback_data == "referral_menu":
+            from handlers.referrals import referrals
+            await referrals(update, context)
+        elif callback_data == "user_stats":
+            from handlers.stats import stats_command
+            await stats_command(update, context)
+        
+        # Admin features
+        elif callback_data == "admin_panel":
+            from handlers.admin import admin_panel
+            await admin_panel(update, context)
+        elif callback_data == "show_analytics":
+            from admin.dashboard import admin_dashboard
+            await admin_dashboard.show_advanced_analytics(update, context)
+        elif callback_data == "refresh_dashboard":
+            from admin.dashboard import show_admin_dashboard
+            await show_admin_dashboard(update, context)
         
         # Tool categories
         elif callback_data == "menu_pdf_tools":

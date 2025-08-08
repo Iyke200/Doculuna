@@ -2,11 +2,8 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from PyPDF2 import PdfReader, PdfWriter
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 import io
 
 logger = logging.getLogger(__name__)
@@ -72,6 +69,9 @@ async def merge_pdfs(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
     output_file = None
 
     try:
+        # Lazy imports
+        from PyPDF2 import PdfMerger
+
         if user_id is None:
             user_id = update.effective_user.id
 
@@ -192,9 +192,15 @@ async def handle_merge_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Export the main function as well
 __all__ = ['handle_merge', 'handle_merge_pdf', 'merge_pdfs']
 
+
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:
+        # Lazy imports
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from PyPDF2 import PdfReader, PdfWriter
+
         # Create watermark
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)

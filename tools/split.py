@@ -3,11 +3,8 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from PyPDF2 import PdfReader, PdfWriter
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 import io
 
 logger = logging.getLogger(__name__)
@@ -18,6 +15,9 @@ async def handle_split_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     output_files = []
 
     try:
+        # Lazy imports
+        from PyPDF2 import PdfReader, PdfWriter
+
         user_id = update.effective_user.id
 
         # Check usage limit
@@ -108,9 +108,15 @@ async def handle_split_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Error cleaning up split files: {e}")
 
+
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:
+        # Lazy imports
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from PyPDF2 import PdfReader, PdfWriter
+
         # Create watermark
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)

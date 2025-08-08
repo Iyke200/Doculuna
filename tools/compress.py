@@ -2,11 +2,8 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from PyPDF2 import PdfReader, PdfWriter
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 import io
 import shutil
 
@@ -100,9 +97,13 @@ async def handle_compress_document(update: Update, context: ContextTypes.DEFAULT
         except Exception as e:
             logger.error(f"Error cleaning up compress files: {e}")
 
+
 def compress_pdf(input_file, output_file):
     """Compress PDF by removing unnecessary elements."""
     try:
+        # Lazy imports
+        from PyPDF2 import PdfReader, PdfWriter
+
         reader = PdfReader(input_file)
         writer = PdfWriter()
 
@@ -120,9 +121,15 @@ def compress_pdf(input_file, output_file):
         # If compression fails, copy original file
         shutil.copy2(input_file, output_file)
 
+
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:
+        # Lazy imports
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from PyPDF2 import PdfReader, PdfWriter
+
         # Create watermark
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)
@@ -152,6 +159,7 @@ def add_pdf_watermark(file_path):
 
     except Exception as e:
         logger.error(f"Error adding watermark to PDF: {e}")
+
 
 def format_file_size(size_bytes):
     """Format file size in human readable format."""

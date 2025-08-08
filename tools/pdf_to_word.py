@@ -2,9 +2,6 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-import fitz  # PyMuPDF
-from docx import Document
-from docx.shared import Inches
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
 
@@ -16,6 +13,10 @@ async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE)
     output_file = None
 
     try:
+        # Lazy imports to reduce startup time
+        import fitz  # PyMuPDF
+        from docx import Document
+
         user_id = update.effective_user.id
 
         # Check usage limit
@@ -109,6 +110,9 @@ async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def add_docx_watermark(file_path):
     """Add DocuLuna watermark to Word document."""
     try:
+        # Lazy import
+        from docx import Document
+        
         doc = Document(file_path)
         
         # Add watermark as header and footer

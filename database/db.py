@@ -403,3 +403,59 @@ def update_referral_count(user_id):
         
     except Exception as e:
         logger.error(f"Error updating referral count for user {user_id}: {e}")
+
+def save_payment_request(user_id, amount, plan_type, screenshot_path):
+    """Save payment request to database."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO payments (user_id, amount, plan_type, screenshot_file_id, status)
+            VALUES (?, ?, ?, ?, 'pending')
+        ''', (user_id, amount, plan_type, screenshot_path))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Payment request saved for user {user_id}: {plan_type} - {amount}")
+        
+    except Exception as e:
+        logger.error(f"Error saving payment request for user {user_id}: {e}")
+
+def approve_payment(payment_id):
+    """Approve a payment request."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE payments 
+            SET status = 'approved', processed_at = ?
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), payment_id))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Payment {payment_id} approved")
+        
+    except Exception as e:
+        logger.error(f"Error approving payment {payment_id}: {e}")
+
+def reject_payment(payment_id):
+    """Reject a payment request."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE payments 
+            SET status = 'rejected', processed_at = ?
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), payment_id))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Payment {payment_id} rejected")
+        
+    except Exception as e:
+        logger.error(f"Error rejecting payment {payment_id}: {e}")

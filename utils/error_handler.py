@@ -37,31 +37,4 @@ def log_error(error_message, user_id=None, additional_info=None):
     if additional_info:
         log_msg += f" | Info: {additional_info}"
     
-    logger.error(log_msg)msimport logging
-
-logger = logging.getLogger(__name__)
-
-def error_handler(func):
-    """Decorator for handling errors in bot functions."""
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Error in {func.__name__}: {e}")
-            return None
-    return wrapper
-
-def log_error(error, context="Unknown"):
-    """Log error with context."""
-    logger.error(f"Error in {context}: {error}")
-
-def format_error_for_user(error):
-    """Format error message for user display."""
-    if "file not found" in str(error).lower():
-        return "❌ File not found. Please try uploading the file again."
-    elif "timeout" in str(error).lower():
-        return "❌ Processing timeout. Please try with a smaller file."
-    elif "permission" in str(error).lower():
-        return "❌ Permission error. Please try again."
-    else:
-        return "❌ An unexpected error occurred. Please try again."gain later."
+    logger.error(log_msg)

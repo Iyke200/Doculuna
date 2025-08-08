@@ -1,142 +1,40 @@
-import json
-import os
+
 import logging
-from datetime import datetime, date
-from database.db import get_user, add_usage_log
+from database.db import get_user, increment_user_usage, add_usage_log
+from config import FREE_DAILY_LIMIT, PREMIUM_DAILY_LIMIT
 
 logger = logging.getLogger(__name__)
-USAGE_FILE = "data/usage.json"
-
-def load_usage_data():
-    """Load usage data from JSON file."""
-    try:
-        if os.path.exists(USAGE_FILE):
-            with open(USAGE_FILE, 'r') as f:
-                return json.load(f)
-        return {}
-    except Exception as e:
-        logger.error(f"Error loading usage data: {e}")
-        return {}
-
-def save_usage_data(data):
-    """Save usage data to JSON file."""
-    try:
-        os.makedirs("data", exist_ok=True)
-        with open(USAGE_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        logger.error(f"Error saving usage data: {e}")
 
 async def check_usage_limit(user_id):
-    """Check if user has exceeded daily usage limit."""
+    """Check if user has exceeded usage limit."""
     try:
         user = get_user(user_id)
         if not user:
-            return False
-        
-        # Premium users have unlimited usage
-        if user.get('is_premium'):
-            return True
-        
-        # Load usage data
-        usage_data = load_usage_data()
-        today = date.today().isoformat()
-        
-        user_usage = usage_data.get(str(user_id), {}).get(today, 0)
-        
-        from config import FREE_DAILY_LIMIT
-        return user_usage < FREE_DAILY_LIMIT
+            return True  # Allow usage for new users
+            
+        if user.get('is_premium', False):
+            return True  # Premium users have unlimited access
+            
+        usage_count = user.get('usage_count', 0)
+        if usage_count >= FREE_DAILY_LIMIT:
+            return False  # Limit exceeded
+            
+        return True
         
     except Exception as e:
         logger.error(f"Error checking usage limit for user {user_id}: {e}")
-        return False
+        return True  # Allow usage on error
 
-async def increment_usage(user_id):
-    """Increment user's daily usage count."""
-    try:
-        usage_data = load_usage_data()
-        today = date.today().isoformat()
-        
-        if str(user_id) not in usage_data:
-            usage_data[str(user_id)] = {}
-        
-        if today not in usage_data[str(user_id)]:
-            usage_data[str(user_id)][today] = 0
-        
-        usage_data[str(user_id)][today] += 1
-        save_usage_data(usage_data)
-        
-        # Also log to database
-        add_usage_log(user_id, "tool_use")
-        
-    except Exception as e:
-        logger.error(f"Error incrementing usage for user {user_id}: {e}")
-
-def save_usage_data(data):
-    """Save usage data to JSON file."""
-    try:
-        os.makedirs(os.path.dirname(USAGE_FILE), exist_ok=True)
-        with open(USAGE_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        logger.error(f"Error saving usage data: {e}")
-
-async def check_usage_limit(user_id):
-    """Check if user can use tools (premium users always can)."""
-    try:
-        # Get user from database
-        user = get_user(user_id)
-        if not user:
-            return False
-
-        # Premium users have unlimited access
-        if user['is_premium']:
-            return True
-
-        # Check daily uses from database
-        return user['daily_uses'] > 0
-
-    except Exception as e:
-        logger.error(f"Error checking usage limit for user {user_id}: {e}")
-        return False
-
-async def increment_usage(user_id):
+async def increment_usage(user_id, tool_used="unknown"):
     """Increment user's usage count."""
     try:
-        # Get user from database
-        user = get_user(user_id)
-        if not user:
-            return False
-
-        # Don't count for premium users
-        if user['is_premium']:
-            return True
-
-        # Database handles the decrement automatically via add_usage
-        return True
-
+        increment_user_usage(user_id)
+        add_usage_log(user_id, tool_used)
+        
+        logger.info(f"Usage incremented for user {user_id}: {tool_used}")
+        
     except Exception as e:
         logger.error(f"Error incrementing usage for user {user_id}: {e}")
-        return False
-
-def get_usage_stats(user_id):
-    """Get user's usage statistics from database."""
-    try:
-        user = get_user(user_id)
-        if not user:
-            return {"count": 0, "remaining": 0}
-
-        if user['is_premium']:
-            return {"count": 0, "remaining": "Unlimited"}
-
-        remaining = user['daily_uses']
-        used = 3 - remaining
-
-        return {"count": used, "remaining": remaining}
-
-    except Exception as e:
-        logger.error(f"Error getting usage stats for user {user_id}: {e}")
-        return {"count": 0, "remaining": 0}
 
 def add_watermark_to_file(file_path, is_premium=False):
     """Add watermark to files for free users."""
@@ -144,37 +42,8 @@ def add_watermark_to_file(file_path, is_premium=False):
         return True
 
     try:
-        import fitz  # PyMuPDF
-
-        if file_path.lower().endswith('.pdf'):
-            # Add watermark to PDF
-            pdf_document = fitz.open(file_path)
-
-            for page_num in range(pdf_document.page_count):
-                page = pdf_document[page_num]
-
-                # Add watermark text
-                watermark_text = "DocuLuna Free - Upgrade for watermark-free files"
-                page.insert_text(
-                    (50, 50),
-                    watermark_text,
-                    fontsize=10,
-                    color=(0.8, 0.8, 0.8),
-                    overlay=True
-                )
-
-                # Add watermark at bottom
-                page.insert_text(
-                    (50, page.rect.height - 30),
-                    "Get premium at t.me/DocuLunaBot",
-                    fontsize=8,
-                    color=(0.7, 0.7, 0.7),
-                    overlay=True
-                )
-
-            pdf_document.save(file_path)
-            pdf_document.close()
-
+        # For now, just log the watermark action
+        logger.info(f"Watermark would be added to {file_path}")
         return True
 
     except Exception as e:

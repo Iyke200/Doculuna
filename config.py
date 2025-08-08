@@ -5,7 +5,8 @@ load_dotenv()
 
 # Bot Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
+ADMIN_USER_IDS = [int(x) for x in os.getenv("ADMIN_USER_IDS", "").split(",") if x.strip()]
+ADMIN_IDS = ADMIN_USER_IDS  # Alias for compatibility
 
 # Database Configuration
 DB_PATH = "database/doculuna.db"
@@ -29,13 +30,13 @@ PREMIUM_PLANS = {
     "lifetime": {"price": 1000, "days": None}
 }
 
-# File size limits (in MB)
-MAX_FILE_SIZE = 50
-MAX_PREMIUM_FILE_SIZE = 100
+# Usage Limits
+FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "3"))
+PREMIUM_DAILY_LIMIT = int(os.getenv("PREMIUM_DAILY_LIMIT", "1000"))
 
-# Daily usage limits
-FREE_DAILY_LIMIT = 3
-PREMIUM_DAILY_LIMIT = -1  # Unlimited
+# File Size Limits (in MB)
+MAX_FILE_SIZE_FREE = int(os.getenv("MAX_FILE_SIZE_FREE", "10"))
+MAX_FILE_SIZE_PREMIUM = int(os.getenv("MAX_FILE_SIZE_PREMIUM", "100"))
 
 # Referral Configuration
 REFERRAL_BONUS_DAYS = 1

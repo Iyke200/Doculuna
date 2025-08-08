@@ -39,6 +39,9 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 tool_used TEXT,
+                file_size INTEGER DEFAULT 0,
+                processing_time INTEGER DEFAULT 0,
+                success BOOLEAN DEFAULT TRUE,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (user_id)
             )
@@ -293,36 +296,7 @@ def get_referral_stats(user_id):
         logger.error(f"Error getting referral stats for user {user_id}: {e}")
         return 0
 
-def get_user(user_id):
-    """Get user by user_id."""
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        
-        conn.close()
-        
-        if result:
-            return {
-                'user_id': result[0],
-                'username': result[1],
-                'first_name': result[2],
-                'last_name': result[3],
-                'is_premium': bool(result[4]),
-                'premium_expires': result[5],
-                'referred_by': result[6],
-                'referral_count': result[7],
-                'usage_count': result[8],
-                'last_usage': result[9],
-                'created_at': result[10]
-            }
-        return None
-        
-    except Exception as e:
-        logger.error(f"Error getting user {user_id}: {e}")
-        return None
+
 
 def get_user_usage_stats(user_id):
     """Get user usage statistics."""

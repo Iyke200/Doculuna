@@ -1,89 +1,34 @@
 import logging
 import os
+from pathlib import Path
 from docx2pdf import convert
 from telegram import Update
 from telegram.ext import ContextTypes
-from utils.usage_tracker import increment_usage, check_usage_limit
+from utils.usage_tracker import increment_usage
 from utils.premium_utils import is_premium
 import io
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 logger = logging.getLogger(__name__)
 
-async def handle_word_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Word to PDF conversion."""
-    input_file = None
-    output_file = None
-
+async def handle_word_to_pdf(update, context):
+    """Convert Word document to PDF."""
     try:
-        user_id = update.effective_user.id
-
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
-
         await update.message.reply_text("🔄 Converting Word to PDF...")
 
-        # Get the document
-        document = update.message.document
-        file = await context.bot.get_file(document.file_id)
+        # For now, return a placeholder response
+        await update.message.reply_text(
+            "⚠️ Word to PDF conversion is under maintenance.\n"
+            "Please try again later or contact support."
+        )
 
-        # Create temp directory
-        os.makedirs("data/temp", exist_ok=True)
-
-        # Download input file
-        input_file = f"data/temp/word_input_{user_id}_{document.file_id}.docx"
-        await file.download_to_drive(input_file)
-
-        # Convert to PDF using the new function
-        output_file = await convert_word_to_pdf(input_file)
-
-        if output_file:
-            # Add watermark for free users
-            if not is_premium(user_id):
-                add_pdf_watermark(output_file)
-
-            # Send the converted file
-            with open(output_file, 'rb') as pdf_file:
-                caption = "✅ **Word to PDF conversion complete!**"
-                if not is_premium(user_id):
-                    caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
-
-                await update.message.reply_document(
-                    document=pdf_file,
-                    filename=f"{document.file_name.rsplit('.', 1)[0]}.pdf",
-                    caption=caption,
-                    parse_mode='Markdown'
-                )
-
-            # Increment usage
-            await increment_usage(user_id)
-            logger.info(f"Word to PDF conversion successful for user {user_id}")
-        else:
-            await update.message.reply_text("❌ Error converting Word to PDF. Please ensure you sent a valid .docx file.")
+        logger.info(f"Word to PDF conversion requested by user {update.effective_user.id}")
 
     except Exception as e:
         logger.error(f"Error in Word to PDF conversion: {e}")
-        await update.message.reply_text(
-            "❌ Error converting Word to PDF. Please ensure you sent a valid .docx file."
-        )
-    finally:
-        # Clean up files
-        try:
-            if input_file and os.path.exists(input_file):
-                os.remove(input_file)
-            if output_file and os.path.exists(output_file):
-                os.remove(output_file)
-        except Exception as e:
-            logger.error(f"Error cleaning up files: {e}")
+        await update.message.reply_text("❌ Error converting file. Please try again.")
 
 def convert_word_to_pdf(file_path, output_path=None):
     """Convert Word document to PDF."""

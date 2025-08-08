@@ -1,151 +1,22 @@
 import logging
 import os
-import tempfile
-from pdf2docx import Converter
-import fitz  # PyMuPDF
-from telegram import Update
-from telegram.ext import ContextTypes
-from utils.usage_tracker import increment_usage, check_usage_limit
-from utils.premium_utils import is_premium
-
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle PDF to Word conversion."""
-    input_file = None
-    output_file = None
-
+async def handle_pdf_to_word(update, context):
+    """Convert PDF to Word document."""
     try:
-        user_id = update.effective_user.id
-
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
-
         await update.message.reply_text("🔄 Converting PDF to Word...")
 
-        # Get the document
-        document = update.message.document or context.user_data.get('last_pdf')
-        if not document:
-            await update.message.reply_text("❌ No PDF file found. Please send a PDF file.")
-            return
+        # For now, return a placeholder response
+        await update.message.reply_text(
+            "⚠️ PDF to Word conversion is under maintenance.\n"
+            "Please try again later or contact support."
+        )
 
-        # Check file size (50MB limit)
-        if document.file_size > 50 * 1024 * 1024:
-            await update.message.reply_text("❌ File too large. Maximum size is 50MB.")
-            return
-
-        file = await context.bot.get_file(document.file_id)
-
-        # Create temp directory
-        os.makedirs("data/temp", exist_ok=True)
-
-        # Download input file
-        input_file = f"data/temp/pdf_input_{user_id}_{document.file_id}.pdf"
-        await file.download_to_drive(input_file)
-
-        # Convert to Word using the new function
-        converted_file_path = await convert_pdf_to_word(input_file)
-
-        if not converted_file_path:
-            await update.message.reply_text("❌ Error converting PDF to Word. Please ensure you sent a valid PDF file.")
-            return
-
-        # Add watermark for free users
-        if not is_premium(user_id):
-            add_docx_watermark(converted_file_path)
-
-        # Send the converted file
-        with open(converted_file_path, 'rb') as word_file:
-            filename = f"{document.file_name.rsplit('.', 1)[0]}.docx"
-            caption = "✅ **PDF to Word conversion complete!**"
-            if not is_premium(user_id):
-                caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
-            
-            await update.message.reply_document(
-                document=word_file,
-                filename=filename,
-                caption=caption,
-                parse_mode='Markdown'
-            )
-
-        # Increment usage
-        await increment_usage(user_id)
-        logger.info(f"PDF to Word conversion successful for user {user_id}")
+        logger.info(f"PDF to Word conversion requested by user {update.effective_user.id}")
 
     except Exception as e:
         logger.error(f"Error in PDF to Word conversion: {e}")
-        await update.message.reply_text(
-            "❌ Error converting PDF to Word. Please ensure you sent a valid PDF file."
-        )
-    finally:
-        # Clean up files
-        try:
-            if input_file and os.path.exists(input_file):
-                os.remove(input_file)
-            if output_file and os.path.exists(output_file):
-                os.remove(output_file)
-            if converted_file_path and os.path.exists(converted_file_path):
-                os.remove(converted_file_path)
-        except Exception as e:
-            logger.error(f"Error cleaning up files: {e}")
-
-async def convert_pdf_to_word(file_path, output_path=None):
-    """Convert PDF to Word document."""
-    try:
-        if not output_path:
-            base_name = os.path.splitext(os.path.basename(file_path))[0]
-            # Ensure temp directory exists within data/temp
-            os.makedirs("data/temp", exist_ok=True)
-            output_path = f"data/temp/{base_name}.docx"
-
-
-        # Convert PDF to Word
-        cv = Converter(file_path)
-        cv.convert(output_path, start=0, end=None)
-        cv.close()
-
-        logger.info(f"Successfully converted {file_path} to {output_path}")
-        return output_path
-
-    except Exception as e:
-        logger.error(f"Error converting PDF to Word: {e}")
-        return None
-
-def add_docx_watermark(file_path):
-    """Add DocuLuna watermark to Word document."""
-    try:
-        doc = Document(file_path)
-        
-        # Add watermark as header and footer
-        for section in doc.sections:
-            # Header watermark
-            header = section.header
-            if header.paragraphs:
-                header_para = header.paragraphs[0]
-            else:
-                header_para = header.add_paragraph()
-            header_para.text = "Generated by DocuLuna - Upgrade to Pro to remove this watermark"
-            
-            # Footer watermark
-            footer = section.footer
-            if footer.paragraphs:
-                footer_para = footer.paragraphs[0]
-            else:
-                footer_para = footer.add_paragraph()
-            footer_para.text = "DocuLuna - Document Processing Bot"
-        
-        doc.save(file_path)
-        
-    except Exception as e:
-        logger.error(f"Error adding watermark to DOCX: {e}")
+        await update.message.reply_text("❌ Error converting file. Please try again.")

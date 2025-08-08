@@ -1,38 +1,64 @@
 import logging
 import os
+import time
+import traceback
+import sys
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.error import NetworkError, Forbidden
 from config import BOT_TOKEN
-from database.db import init_db, get_all_users, get_pending_payments
-from handlers.start import start
-from handlers.referrals import referrals
-from handlers.premium import premium_status
-from handlers.upgrade import upgrade, handle_payment_submission
-from handlers.help import help_command
-from handlers.admin import admin_panel
-from handlers.callbacks import handle_callback_query
-from utils.error_handler import error_handler, log_error
-from utils.usage_tracker import check_usage_limit, increment_usage
-from utils.file_processor import process_file # Added for file processing
 
-# Setup logging
-logging.basicConfig(
-    filename="doculuna.log",
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-# Create directories
+# Ensure required directories exist
 os.makedirs("data/temp", exist_ok=True)
 os.makedirs("payments", exist_ok=True)
 os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
-# Define admin user IDs (replace with your actual admin IDs)
-from config import ADMIN_USER_IDS
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("logs/doculuna.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def import_handlers():
+    """Import handlers with error handling."""
+    try:
+        from database.db import init_db, get_all_users, get_pending_payments
+        from handlers.start import start
+        from handlers.referrals import referrals
+        from handlers.premium import premium_status
+        from handlers.upgrade import upgrade, handle_payment_submission
+        from handlers.help import help_command
+        from handlers.admin import admin_panel
+        from handlers.callbacks import handle_callback_query
+        from utils.error_handler import error_handler, log_error
+        from utils.usage_tracker import check_usage_limit, increment_usage
+        from utils.file_processor import process_file
+        from config import ADMIN_USER_IDS
+
+        return {
+            'init_db': init_db,
+            'start': start,
+            'referrals': referrals,
+            'premium_status': premium_status,
+            'upgrade': upgrade,
+            'handle_payment_submission': handle_payment_submission,
+            'help_command': help_command,
+            'admin_panel': admin_panel,
+            'handle_callback_query': handle_callback_query,
+            'process_file': process_file,
+            'ADMIN_USER_IDS': ADMIN_USER_IDS
+        }
+    except Exception as e:
+        logger.error(f"Error importing handlers: {e}")
+        raise
 
 async def error_callback(update, context):
     """Global error handler for the bot."""
@@ -56,167 +82,89 @@ async def error_callback(update, context):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
-def main():
-    """Initialize and run the Telegram bot."""
+def start_bot_clean():
+    """Start the bot with clean initialization."""
+    logger.info("🚀 Starting DocuLuna Bot...")
+
+    if not BOT_TOKEN:
+        logger.critical("BOT_TOKEN not found")
+        raise ValueError("BOT_TOKEN is required")
+    logger.info("✓ Bot token found")
+
+    # Import handlers
+    handlers = import_handlers()
+
+    # Initialize database
+    logger.info("Initializing database...")
+    handlers['init_db']()
+    logger.info("✓ Database initialized")
+
+    # Create Application
+    logger.info("Creating Telegram application...")
+    app = Application.builder().token(BOT_TOKEN).build()
+    logger.info("✓ Application created")
+
+    # Add global error handler
+    app.add_error_handler(error_callback)
+
+    # Register command handlers
+    logger.info("Registering handlers...")
+    app.add_handler(CommandHandler("start", handlers['start']))
+    app.add_handler(CommandHandler("referral", handlers['referrals']))
+    app.add_handler(CommandHandler("premium", handlers['premium_status']))
+    app.add_handler(CommandHandler("upgrade", handlers['upgrade']))
+    app.add_handler(CommandHandler("help", handlers['help_command']))
+    app.add_handler(CommandHandler("admin", handlers['admin_panel']))
+
+    # Import and add additional handlers with error handling
     try:
-        logger.info("=== DocuLuna Bot Starting ===")
-
-        if not BOT_TOKEN:
-            logger.critical("BOT_TOKEN not found")
-            raise ValueError("BOT_TOKEN is required")
-        logger.info("✓ Bot token found")
-
-        # Initialize database
-        logger.info("Initializing database...")
-        init_db()
-        logger.info("✓ Database initialized")
-
-        # Create Application
-        logger.info("Creating Telegram application...")
-        app = Application.builder().token(BOT_TOKEN).build()
-        logger.info("✓ Application created")
-
-        # Add global error handler
-        app.add_error_handler(error_callback)
-
-        # Register command handlers
-        logger.info("Registering handlers...")
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("referral", referrals))
-        app.add_handler(CommandHandler("premium", premium_status))
-        app.add_handler(CommandHandler("upgrade", upgrade))
-        app.add_handler(CommandHandler("help", help_command))
-        app.add_handler(CommandHandler("admin", admin_panel))
-
-        # Import and add stats handler
         from handlers.stats import stats_command
         app.add_handler(CommandHandler("stats", stats_command))
 
-        # Admin-only commands
         from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message, force_upgrade_command
         app.add_handler(CommandHandler("grant_premium", grant_premium_command))
         app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
         app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
+    except ImportError as e:
+        logger.warning(f"Some admin commands not available: {e}")
 
-        # Register callback query handler
-        app.add_handler(CallbackQueryHandler(handle_callback_query))
+    # Register callback query handler
+    app.add_handler(CallbackQueryHandler(handlers['handle_callback_query']))
 
-        # Register message handlers for file processing
-        app.add_handler(MessageHandler(
-            filters.Document.ALL & ~filters.COMMAND,
-            process_file
-        ))
-        app.add_handler(MessageHandler(
-            filters.PHOTO & ~filters.COMMAND,
-            process_file # Route photos to process_file as well
-        ))
+    # Register message handlers for file processing
+    app.add_handler(MessageHandler(
+        filters.Document.ALL & ~filters.COMMAND,
+        handlers['process_file']
+    ))
+    app.add_handler(MessageHandler(
+        filters.PHOTO & ~filters.COMMAND,
+        handlers['process_file']
+    ))
 
-        logger.info("✓ All handlers registered")
+    logger.info("✓ All handlers registered")
 
-        # Start bot
-        logger.info("Starting bot polling...")
-        print("🤖 DocuLuna Bot is now running!")
-        print("✓ Database initialized")
-        print("✓ Handlers registered")
-        print("✓ Polling started")
+    # Start bot
+    logger.info("Starting bot polling...")
+    print("🤖 DocuLuna Bot is now running!")
+    print("✓ Database initialized")
+    print("✓ Handlers registered")
+    print("✓ Polling started")
 
-        app.run_polling(
-            allowed_updates=["message", "callback_query"],
-            drop_pending_updates=True
-        )
+    logger.info("✅ DocuLuna started successfully")
 
-    except Exception as e:
-        logger.critical(f"❌ Bot failed to start: {e}")
-        print(f"❌ Bot failed to start: {e}")
-        raise
-
-async def handle_pdf_document(update, context):
-    """Route PDF documents to appropriate handlers based on user context."""
-    try:
-        user_id = update.effective_user.id
-
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
-
-        # Show PDF tool options
-        keyboard = [
-            [InlineKeyboardButton("📝 Convert to Word", callback_data="tool_pdf_to_word")],
-            [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
-            [InlineKeyboardButton("🔗 Merge with Others", callback_data="tool_merge_pdf")],
-            [InlineKeyboardButton("🗜 Compress PDF", callback_data="tool_compress_pdf")] # Added compression option
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(
-            "📄 **PDF received!** What would you like to do?",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-
-        # Store the document for later use
-        context.user_data['last_pdf'] = update.message.document
-
-    except Exception as e:
-        logger.error(f"Error handling PDF document: {e}")
-        await update.message.reply_text("❌ Error processing document. Please try again.")
-
-async def handle_word_document(update, context):
-    """Handle Word documents."""
-    try:
-        user_id = update.effective_user.id
-
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
-
-        await handle_word_to_pdf(update, context)
-        await increment_usage(user_id)
-
-    except Exception as e:
-        logger.error(f"Error handling Word document: {e}")
-        await update.message.reply_text("❌ Error processing document. Please try again.")
-
-async def handle_image_document(update, context):
-    """Handle image documents."""
-    try:
-        user_id = update.effective_user.id
-
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
-
-        await handle_image_to_pdf(update, context)
-        await increment_usage(user_id)
-
-    except Exception as e:
-        logger.error(f"Error handling image document: {e}")
-        await update.message.reply_text("❌ Error processing document. Please try again.")
-
+    app.run_polling(
+        allowed_updates=["message", "callback_query"],
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            logging.info("🚀 Starting DocuLuna...")
+            start_bot_clean()
+        except KeyboardInterrupt:
+            logging.info("🛑 Stopped by user.")
+            sys.exit(0)
+        except Exception:
+            logging.exception("❌ DocuLuna crashed — restarting in 5s")
+            time.sleep(5)

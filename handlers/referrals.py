@@ -86,7 +86,7 @@ async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAUL
 
     except Exception as e:
         logger.error(f"Error handling referral callback: {e}")
-        await query.edit_message_text("❌ An error occurred. Please try again later.")eek free
+        await query.edit_message_text("❌ An error occurred. Please try again later.")
 
         message = (
             f"🔗 **Your referral link:**\n"

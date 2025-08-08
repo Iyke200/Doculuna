@@ -37,7 +37,7 @@ def log_error(error_message, user_id=None, additional_info=None):
     if additional_info:
         log_msg += f" | Info: {additional_info}"
     
-    logger.error(log_msg)msg)
+    logger.error(log_msg)
 
 def format_error_for_user(error):
     """Format error message for user display."""

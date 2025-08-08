@@ -3,10 +3,27 @@ import sqlite3
 import logging
 import os
 from datetime import datetime
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
 DB_FILE = "database/doculuna.db"
+
+@contextmanager
+def get_db_connection():
+    """Get a database connection with automatic closing."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        yield conn
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Database error: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 def init_db():
     """Initialize the database with required tables."""
@@ -280,15 +297,148 @@ def get_referral_stats(user_id):
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         
+        # Get user and their referral count
         cursor.execute("SELECT referral_count FROM users WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
         
+        if result:
+            referral_count = result[0] or 0
+        else:
+            referral_count = 0
+        
         conn.close()
         
-        if result:
-            return result[0] or 0
-        return 0
+        return {
+            'total_invited': referral_count,
+            'bonus_uses': referral_count * 1  # 1 extra use per referral
+        }
         
     except Exception as e:
-        logger.error(f"Error getting referral stats for user {user_id}: {e}")
-        return 0
+        logger.error(f"Error getting referral stats: {e}")
+        return {'total_invited': 0, 'bonus_uses': 0}
+
+def save_payment_request(user_id, amount, plan_type, filepath):
+    """Save a payment request to the database."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO payments (user_id, amount, plan_type, receipt_path, status)
+            VALUES (?, ?, ?, ?, 'pending')
+        ''', (user_id, amount, plan_type, filepath))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Payment request saved for user {user_id}: {plan_type} - {amount}")
+        
+    except Exception as e:
+        logger.error(f"Error saving payment request: {e}")
+        raise
+
+def get_all_payments():
+    """Get all payment requests."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT p.id, p.user_id, u.username, u.first_name, p.amount, p.plan_type, 
+                   p.status, p.created_at, p.receipt_path
+            FROM payments p 
+            LEFT JOIN users u ON p.user_id = u.user_id 
+            ORDER BY p.created_at DESC
+        ''')
+        
+        payments = cursor.fetchall()
+        conn.close()
+        
+        return payments
+        
+    except Exception as e:
+        logger.error(f"Error getting all payments: {e}")
+        return []
+
+def update_premium_status(user_id, is_premium, expires_at=None):
+    """Update user premium status."""
+    return update_user_premium(user_id, is_premium, expires_at)
+
+def approve_payment_by_id(payment_id):
+    """Approve a payment by its ID."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('UPDATE payments SET status = "approved" WHERE id = ?', (payment_id,))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Payment {payment_id} approved")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error approving payment {payment_id}: {e}")
+        return False
+
+def reject_payment_by_id(payment_id):
+    """Reject a payment by its ID."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('UPDATE payments SET status = "rejected" WHERE id = ?', (payment_id,))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Payment {payment_id} rejected")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error rejecting payment {payment_id}: {e}")
+        return False
+
+def get_user_usage_stats(user_id):
+    """Get usage statistics for a user."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        # Get user basic info
+        cursor.execute("SELECT usage_count, last_usage FROM users WHERE user_id = ?", (user_id,))
+        user_result = cursor.fetchone()
+        
+        # Get usage logs count
+        cursor.execute("SELECT COUNT(*) FROM usage_logs WHERE user_id = ?", (user_id,))
+        total_uses = cursor.fetchone()[0] if cursor.fetchone() else 0
+        
+        # Get today's usage count
+        cursor.execute("""
+            SELECT COUNT(*) FROM usage_logs 
+            WHERE user_id = ? AND DATE(timestamp) = DATE('now')
+        """, (user_id,))
+        today_uses = cursor.fetchone()[0] if cursor.fetchone() else 0
+        
+        conn.close()
+        
+        if user_result:
+            usage_count, last_usage = user_result
+            return {
+                'total_uses': total_uses or usage_count or 0,
+                'today_uses': today_uses,
+                'last_usage': last_usage
+            }
+        else:
+            return {
+                'total_uses': 0,
+                'today_uses': 0,
+                'last_usage': None
+            }
+        
+    except Exception as e:
+        logger.error(f"Error getting user usage stats: {e}")
+        return {
+            'total_uses': 0,
+            'today_uses': 0,
+            'last_usage': None
+        }

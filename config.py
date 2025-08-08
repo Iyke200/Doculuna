@@ -9,6 +9,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "8129574913:AAFTvBu_d4R4WDDTAYSJUxUwPhWgdozlb
 
 # Usage limits for freemium model
 FREE_USAGE_LIMIT = 3  # Number of free uses per day
+PREMIUM_USAGE_LIMIT = 999999  # Unlimited
 REFERRAL_BONUS = 1   # Extra uses per successful referral
 
 # Pricing for premium subscriptions (in Naira)
@@ -21,8 +22,16 @@ PAYMENT_ACCOUNT = "9057203030"
 PAYMENT_BANK = "Moniepoint"
 PAYMENT_NAME = "Ebere Nwankwo"
 
+# Payment Methods (additional options)
+PAYMENT_METHODS = {
+    "upi": "your-upi-id@bank",
+    "paytm": "9876543210",
+    "gpay": "9876543210"
+}
+
 # Database configuration
 DB_PATH = "database/doculuna.db"
+DATABASE_URL = "database/doculuna.db"
 
 # Logging configuration
 LOG_FILE = "doculuna.log"
@@ -30,7 +39,7 @@ LOG_LEVEL = "DEBUG"
 
 # Abuse prevention
 MAX_DAILY_REQUESTS = 50  # Max requests per user per day
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB max file size
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 
 # Admin configuration
 ADMIN_USER_IDS = [6857550239]  # Admin user IDs
@@ -46,6 +55,7 @@ RATE_LIMIT_WINDOW = 60  # seconds
 # File processing limits
 MAX_CONCURRENT_PROCESSES = 5
 PROCESSING_TIMEOUT = 300  # 5 minutes
+MAX_MERGE_FILES = 10
 
 # Business analytics
 ANALYTICS_ENABLED = True
@@ -73,60 +83,9 @@ ENABLE_ANALYTICS = True
 ENABLE_NOTIFICATIONS = True
 
 # Directories
-TEMP_DIR = "temp"
+TEMP_DIR = "data/temp"
 PAYMENTS_DIR = "payments"
 BACKUPS_DIR = "backups"
 
-# File Size Limits (in bytes)
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_MERGE_FILES = 10
-
-# Usage Limits
-FREE_USAGE_LIMIT = 3
-REFERRAL_BONUS = 1
-
-# Premium Pricing (Nigerian Naira)
-DAILY_PREMIUM_PRICE = 3500
-THREE_MONTH_PREMIUM_PRICE = 9000
-LIFETIME_PREMIUM_PRICE = 25000
-
-# Payment Details
-PAYMENT_ACCOUNT = "9057203030"
-PAYMENT_BANK = "Moniepoint"
-PAYMENT_NAME = "Ebere Nwankwo"
-
-# Admin Configuration
-ADMIN_USER_IDS = [6857550239]  # Replace with actual admin user IDs
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Bot Configuration
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-
-# Usage Limits
-FREE_USAGE_LIMIT = 3
-PREMIUM_USAGE_LIMIT = 999999  # Unlimited
-
-# Referral System
-REFERRAL_BONUS = 1  # Days of premium per referral
-
-# Payment Configuration
-PAYMENT_METHODS = {
-    "upi": "your-upi-id@bank",
-    "paytm": "9876543210",
-    "gpay": "9876543210"
-}
-
-# Admin Configuration
-ADMIN_USER_IDS = [123456789]  # Replace with actual admin user IDs
-
 # File Configuration
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-TEMP_DIR = "data/temp"
 ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.gif']
-
-# Database Configuration
-DATABASE_URL = "database/doculuna.db"

@@ -2,7 +2,12 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+    fitz = None
 from docx import Document
 from docx.shared import Inches
 from utils.usage_tracker import increment_usage, check_usage_limit
@@ -12,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle PDF to Word conversion."""
+    if not PYMUPDF_AVAILABLE:
+        await update.message.reply_text(
+            "❌ PDF to Word conversion is temporarily unavailable.\n"
+            "This feature requires PyMuPDF which is not installed."
+        )
+        return
+        
     input_file = None
     output_file = None
 

@@ -2,7 +2,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_user, save_payment_request
-from config import DAILY_PREMIUM_PRICE, THREE_MONTH_PREMIUM_PRICE, LIFETIME_PREMIUM_PRICE, PAYMENT_ACCOUNT, PAYMENT_BANK, PAYMENT_NAME
+from config import PREMIUM_PLANS, PAYMENT_METHODS
 import os
 from datetime import datetime
 
@@ -14,9 +14,9 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
         keyboard = [
-            [InlineKeyboardButton("🔓 Daily Plan - ₦3,500", callback_data="pay_daily")],
-            [InlineKeyboardButton("📅 3-Month Plan - ₦9,000", callback_data="pay_3month")],
-            [InlineKeyboardButton("💎 Lifetime Plan - ₦25,000", callback_data="pay_lifetime")],
+            [InlineKeyboardButton(f"🔓 Daily Plan - ₦{PREMIUM_PLANS['daily']['price']}", callback_data="pay_daily")],
+            [InlineKeyboardButton(f"📅 3-Month Plan - ₦{PREMIUM_PLANS['3month']['price']}", callback_data="pay_3month")],
+            [InlineKeyboardButton(f"💎 Lifetime Plan - ₦{PREMIUM_PLANS['lifetime']['price']}", callback_data="pay_lifetime")],
             [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -31,11 +31,11 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ Larger file support\n"
             "✅ Advanced tools access\n\n"
             "💰 **Choose Your Plan:**\n\n"
-            "🔓 **Daily Plan** – ₦3,500\n"
+            f"🔓 **Daily Plan** – ₦{PREMIUM_PLANS['daily']['price']}\n"
             "Valid for 24 hours\n\n"
-            "📅 **3-Month Plan** – ₦9,000\n"
+            f"📅 **3-Month Plan** – ₦{PREMIUM_PLANS['3month']['price']}\n"
             "Valid for 90 days\n\n"
-            "💎 **Lifetime Plan** – ₦25,000\n"
+            f"💎 **Lifetime Plan** – ₦{PREMIUM_PLANS['lifetime']['price']}\n"
             "Permanent access, all features unlocked forever\n\n"
             "Select a plan below to continue:"
         )
@@ -64,13 +64,13 @@ async def handle_payment_submission(update: Update, context: ContextTypes.DEFAUL
 
         if "daily" in caption:
             plan_type = "daily"
-            amount = 3500
+            amount = PREMIUM_PLANS['daily']['price']
         elif "3month" in caption or "3-month" in caption:
             plan_type = "3month"
-            amount = 9000
+            amount = PREMIUM_PLANS['3month']['price']
         elif "lifetime" in caption:
             plan_type = "lifetime"
-            amount = 25000
+            amount = PREMIUM_PLANS['lifetime']['price']
         else:
             await update.message.reply_text(
                 "❌ Please send screenshot with caption 'daily', '3month', or 'lifetime'"

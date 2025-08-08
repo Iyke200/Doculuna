@@ -91,7 +91,18 @@ def add_watermark_to_file(file_path, is_premium=False):
         return True
     
     try:
-        import fitz  # PyMuPDF
+        # Get file size (in MB)
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(file_path)
+            file_size_mb = len(doc.tobytes()) / (1024 * 1024)
+            doc.close()
+        except ImportError:
+            # Fallback to file size if PyMuPDF not available
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        except Exception:
+            # Fallback if document processing fails
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         
         if file_path.lower().endswith('.pdf'):
             # Add watermark to PDF

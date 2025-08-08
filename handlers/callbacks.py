@@ -170,55 +170,8 @@ async def show_image_tools_menu(update: Update, context: ContextTypes.DEFAULT_TY
     await update.callback_query.edit_message_text(
         "🖼 **Image Tools**\n\nSelect a tool or upload an image to get started:",
         reply_markup=reply_markup,
-        parse_mode='Markdown'.")
-        elif callback_data == "tool_word_to_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_word_to_pdf(update, context)
-            else:
-                await query.edit_message_text("📄 Please upload a Word file first.")
-        elif callback_data == "tool_image_to_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_image_to_pdf(update, context)
-            else:
-                await query.edit_message_text("📷 Please upload an image file first.")
-        elif callback_data == "tool_split_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_split_pdf(update, context)
-            else:
-                await query.edit_message_text("📄 Please upload a PDF file first.")
-        elif callback_data == "tool_merge_pdf":
-            await handle_merge_pdf(update, context)
-        elif callback_data == "tool_compress_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_compress_pdf(update, context)
-            else:
-                await query.edit_message_text("📄 Please upload a PDF file first.")
-        
-        # Referral callbacks
-        elif callback_data.startswith("copy_referral_"):
-            from handlers.referrals import handle_referral_callbacks
-            await handle_referral_callbacks(update, context, callback_data)
-        
-        # Premium callbacks
-        elif callback_data == "upgrade_pro":
-            from handlers.upgrade import upgrade
-            await upgrade(update, context)
-        
-        # Admin callbacks
-        elif callback_data.startswith("admin_"):
-            from handlers.admin import handle_admin_callbacks
-            await handle_admin_callbacks(update, context, callback_data)
-            
-    except Exception as e:
-        logger.error(f"Error handling callback query: {e}")
-        try:
-            await query.edit_message_text("❌ An error occurred. Please try again later.")
-        except:
-            pass
+        parse_mode='Markdown'
+    )
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show the main menu."""
@@ -291,45 +244,7 @@ async def show_image_tools_menu(update: Update, context: ContextTypes.DEFAULT_TY
             parse_mode='Markdown'
         )
     except Exception as e:
-        logger.error(f"Error showing Image tools menu: {e}").")
-        
-        elif callback_data == "tool_word_to_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_word_to_pdf(update, context)
-            else:
-                await query.edit_message_text("📝 Please upload a Word document first.")
-        
-        elif callback_data == "tool_image_to_pdf":
-            if 'last_file' in context.user_data or 'last_photo' in context.user_data:
-                await handle_image_to_pdf(update, context)
-            else:
-                await query.edit_message_text("🖼️ Please upload an image first.")
-        
-        elif callback_data == "tool_split_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_split_pdf(update, context)
-            else:
-                await query.edit_message_text("📄 Please upload a PDF file first.")
-        
-        elif callback_data == "tool_compress_pdf":
-            if 'last_file' in context.user_data:
-                context.user_data['document'] = context.user_data['last_file']
-                await handle_compress_pdf(update, context)
-            else:
-                await query.edit_message_text("📄 Please upload a PDF file first.")
-        
-        elif callback_data == "tool_merge_pdf":
-            await handle_merge_pdf(update, context)
-        
-        # Payment callbacks
-        elif callback_data.startswith("pay_"):
-            await handle_payment_selection(update, context, callback_data)
-        
-    except Exception as e:
-        logger.error(f"Error handling callback query: {e}")
-        await query.edit_message_text("❌ An error occurred. Please try again.")
+        logger.error(f"Error showing Image tools menu: {e}")
 
 async def show_main_menu(update, context):
     """Show the main menu."""

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Display admin panel with management options."""
+    """Display enhanced admin panel with modern dashboard"""
     try:
         user_id = update.effective_user.id
 
@@ -17,31 +17,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
 
-        keyboard = [
-            [InlineKeyboardButton("📊 View Bot Stats", callback_data="admin_stats")],
-            [InlineKeyboardButton("👥 View Users", callback_data="admin_users")],
-            [InlineKeyboardButton("💰 View Payments", callback_data="admin_payments")],
-            [InlineKeyboardButton("📤 Broadcast Message", callback_data="admin_broadcast")],
-            [InlineKeyboardButton("🧪 Test Features", callback_data="admin_test")],
-            [InlineKeyboardButton("⚙️ Force Upgrade", callback_data="admin_force_upgrade")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(
-            f"🔧 **Admin Panel**\n\n"
-            f"Welcome, Admin! 👨‍💼\n\n"
-            f"**Available Functions:**\n"
-            f"💰 Payment Management - Review & approve payments\n"
-            f"👥 User Management - View & manage users\n"
-            f"📊 System Stats - Bot usage statistics\n"
-            f"💎 Premium Control - Manage premium users\n"
-            f"🔧 System Tools - Maintenance functions\n"
-            f"📢 Broadcast - Send messages to all users\n\n"
-            f"🕒 Current time: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+        # Import and use the new dashboard
+        from admin.dashboard import show_admin_dashboard
+        await show_admin_dashboard(update, context)
 
     except Exception as e:
         logger.error(f"Error showing admin panel: {e}")

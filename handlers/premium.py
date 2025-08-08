@@ -17,21 +17,27 @@ async def premium_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Please register with /start first.")
             return
 
-        is_premium = user.get('is_premium', 0)
-        daily_uses = user.get('daily_uses', 3)
+        is_premium = user.get('is_premium', False)
+        premium_type = user.get('premium_type', None)
+        premium_expires = user.get('premium_expires', None)
 
-        if is_premium:
-            expiry = user.get('premium_expiry', 'Unknown')
-            plan_type = user.get('premium_type', 'Premium')
-            status_text = f"💎 **{plan_type.title()} Plan Active**"
-            usage_text = "✅ **Unlimited usage**"
-            if plan_type == 'lifetime':
-                expiry_text = "♾️ **Lifetime Access**"
+        if is_premium and premium_type:
+            if premium_type == 'lifetime':
+                status_text = f"💎 **Lifetime Plan**"
+                expiry_text = "♾️ **Permanent access, all features unlocked forever**"
+            elif premium_type == 'daily':
+                status_text = f"🔓 **Daily Plan**"
+                expiry_text = f"📅 **Expires:** {premium_expires}" if premium_expires else "📅 **Valid for 24 hours**"
+            elif premium_type == '3month':
+                status_text = f"📅 **3-Month Plan**"
+                expiry_text = f"📅 **Expires:** {premium_expires}" if premium_expires else "📅 **Valid for 90 days**"
             else:
-                expiry_text = f"📅 Expires: {expiry}"
+                status_text = f"💎 **Premium Plan**"
+                expiry_text = f"📅 **Expires:** {premium_expires}" if premium_expires else ""
+            usage_text = "✅ **Unlimited usage**"
         else:
             status_text = "🆓 **Free Plan**"
-            usage_text = f"📊 Daily uses remaining: {daily_uses}"
+            usage_text = f"📊 Daily uses remaining: 3"
             expiry_text = ""
 
         keyboard = [

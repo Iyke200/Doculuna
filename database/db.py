@@ -25,6 +25,7 @@ def init_db():
                 last_name TEXT,
                 is_premium BOOLEAN DEFAULT FALSE,
                 premium_expires TIMESTAMP,
+                premium_type TEXT,
                 referred_by INTEGER,
                 referral_count INTEGER DEFAULT 0,
                 usage_count INTEGER DEFAULT 0,
@@ -98,11 +99,12 @@ def get_user(user_id):
                 'last_name': result[3],
                 'is_premium': bool(result[4]),
                 'premium_expires': result[5],
-                'referred_by': result[6],
-                'referral_count': result[7],
-                'usage_count': result[8],
-                'last_usage': result[9],
-                'created_at': result[10]
+                'premium_type': result[6],
+                'referred_by': result[7],
+                'referral_count': result[8],
+                'usage_count': result[9],
+                'last_usage': result[10],
+                'created_at': result[11]
             }
         return None
         
@@ -204,7 +206,7 @@ def get_pending_payments():
         logger.error(f"Error getting pending payments: {e}")
         return []
 
-def update_user_premium(user_id, is_premium, expires_at=None):
+def update_user_premium(user_id, is_premium, expires_at=None, premium_type=None):
     """Update user premium status."""
     try:
         conn = sqlite3.connect(DB_FILE)
@@ -212,13 +214,13 @@ def update_user_premium(user_id, is_premium, expires_at=None):
         
         cursor.execute('''
             UPDATE users 
-            SET is_premium = ?, premium_expires = ?
+            SET is_premium = ?, premium_expires = ?, premium_type = ?
             WHERE user_id = ?
-        ''', (is_premium, expires_at, user_id))
+        ''', (is_premium, expires_at, premium_type, user_id))
         
         conn.commit()
         conn.close()
-        logger.info(f"Updated premium status for user {user_id}")
+        logger.info(f"Updated premium status for user {user_id}: premium={is_premium}, type={premium_type}, expires={expires_at}")
         
     except Exception as e:
         logger.error(f"Error updating premium status for user {user_id}: {e}")
@@ -292,3 +294,29 @@ def get_referral_stats(user_id):
     except Exception as e:
         logger.error(f"Error getting referral stats for user {user_id}: {e}")
         return 0
+
+def get_user_usage_stats(user_id):
+    """Get user usage statistics."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        # Count usage logs for this user
+        cursor.execute("SELECT COUNT(*) FROM usage_logs WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        tools_used = result[0] if result else 0
+        
+        # For documents processed, we can use the same count for now
+        # In a real implementation, you might want separate tracking
+        total_documents = tools_used
+        
+        conn.close()
+
+        return {
+            'total_documents': total_documents,
+            'tools_used': tools_used
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting usage stats for user {user_id}: {e}")
+        return {'total_documents': 0, 'tools_used': 0}

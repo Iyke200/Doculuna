@@ -15,13 +15,7 @@ from handlers.admin import admin_panel
 from handlers.callbacks import handle_callback_query
 from utils.error_handler import error_handler, log_error
 from utils.usage_tracker import check_usage_limit, increment_usage
-from tools.file_processor import process_file # Added for file processing
-from tools.pdf_to_word import handle_pdf_to_word # Added for PDF to Word tool
-from tools.word_to_pdf import handle_word_to_pdf # Added for Word to PDF tool
-from tools.image_to_pdf import handle_image_to_pdf # Added for Image to PDF tool
-from tools.split import handle_split_pdf # Added for PDF splitter tool
-from tools.merge import handle_merge_pdf # Added for PDF merger tool
-from tools.compress import handle_compress_document # Added for document compression tool
+from tools.file_processor import process_file  # Keep lightweight processor
 
 # Setup logging
 logging.basicConfig(
@@ -38,7 +32,7 @@ os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
 
 # Define admin user IDs (replace with your actual admin IDs)
-ADMIN_USER_IDS = [123456789] # Example admin ID
+ADMIN_USER_IDS = [123456789]  # Example admin ID
 
 async def error_callback(update, context):
     """Global error handler for the bot."""
@@ -114,7 +108,7 @@ def main():
         ))
         app.add_handler(MessageHandler(
             filters.PHOTO & ~filters.COMMAND,
-            process_file # Route photos to process_file as well
+            process_file  # Route photos to process_file as well
         ))
 
         logger.info("✓ All handlers registered")
@@ -158,7 +152,7 @@ async def handle_pdf_document(update, context):
             [InlineKeyboardButton("📝 Convert to Word", callback_data="tool_pdf_to_word")],
             [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
             [InlineKeyboardButton("🔗 Merge with Others", callback_data="tool_merge_pdf")],
-            [InlineKeyboardButton("🗜 Compress PDF", callback_data="tool_compress_pdf")] # Added compression option
+            [InlineKeyboardButton("🗜 Compress PDF", callback_data="tool_compress_pdf")]  # Added compression option
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -178,6 +172,9 @@ async def handle_pdf_document(update, context):
 async def handle_word_document(update, context):
     """Handle Word documents."""
     try:
+        # Lazy import to avoid loading heavy deps on startup
+        from tools.word_to_pdf import handle_word_to_pdf
+
         user_id = update.effective_user.id
 
         # Check usage limit
@@ -202,6 +199,9 @@ async def handle_word_document(update, context):
 async def handle_image_document(update, context):
     """Handle image documents."""
     try:
+        # Lazy import
+        from tools.image_to_pdf import handle_image_to_pdf
+
         user_id = update.effective_user.id
 
         # Check usage limit

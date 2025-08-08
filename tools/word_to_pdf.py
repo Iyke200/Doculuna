@@ -3,15 +3,8 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-from docx import Document
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.utils import ImageReader
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
-from PyPDF2 import PdfReader, PdfWriter
 import io
 
 logger = logging.getLogger(__name__)
@@ -22,6 +15,14 @@ async def handle_word_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE)
     output_file = None
 
     try:
+        # Lazy imports
+        from docx import Document
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from PyPDF2 import PdfReader, PdfWriter
+
         user_id = update.effective_user.id
 
         # Check usage limit
@@ -106,6 +107,11 @@ async def handle_word_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""
     try:
+        # Lazy imports
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from PyPDF2 import PdfReader, PdfWriter
+
         # Create watermark
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)

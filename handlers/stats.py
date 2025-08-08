@@ -28,12 +28,10 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         message = (
             f"📊 **Your DocuLuna Stats**\n\n"
-            f"👤 **Account Status:** {premium_status}\n"
-            f"📁 **Documents Processed:** {usage_stats.get('total_documents', 0)}\n"
-            f"🛠️ **Tools Used:** {usage_stats.get('tools_used', 0)}\n"
-            f"👥 **Referrals Made:** {referrals}\n"
-            f"🎁 **Bonus Days Earned:** {referrals} days\n\n"
-            f"Keep using DocuLuna and invite friends for more bonuses! 🚀"
+            f"📁 **Documents uploaded:** {usage_stats.get('total_documents', 0)}\n"
+            f"🛠️ **Tools used:** {usage_stats.get('tools_used', 0)}\n"
+            f"👤 **Premium status:** {premium_status}\n"
+            f"👥 **Referrals gained:** {referrals}"
         )
 
         await update.message.reply_text(

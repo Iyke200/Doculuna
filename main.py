@@ -37,8 +37,8 @@ os.makedirs("payments", exist_ok=True)
 os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
 
-# Define admin user IDs (replace with your actual admin IDs)
-ADMIN_USER_IDS = [123456789] # Example admin ID
+# Import admin user IDs from config
+from config import ADMIN_USER_IDS
 
 async def error_callback(update, context):
     """Global error handler for the bot."""
@@ -98,11 +98,17 @@ def main():
         from handlers.stats import stats_command
         app.add_handler(CommandHandler("stats", stats_command))
 
-        # Admin-only commands
-        from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message, force_upgrade_command
+        # Admin-only commands and message handler
+        from handlers.admin import grant_premium_command, revoke_premium_command, force_upgrade_command, handle_admin_message
         app.add_handler(CommandHandler("grant_premium", grant_premium_command))
         app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
         app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
+        
+        # Admin message handler for admin actions (must be before general document handlers)
+        app.add_handler(MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle_admin_message
+        ))
 
         # Register callback query handler
         app.add_handler(CallbackQueryHandler(handle_callback_query))

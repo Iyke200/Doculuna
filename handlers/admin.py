@@ -102,6 +102,21 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
             await show_force_upgrade(query, context)
         elif data == "admin_restart_confirm":
             await confirm_restart(query, context)
+        elif data.startswith("confirm_broadcast_"):
+            await execute_broadcast(query, context)
+        elif data.startswith("force_upgrade_"):
+            plan_type = data.split("_")[2]
+            await start_force_upgrade(query, context, plan_type)
+        elif data == "force_revoke_premium":
+            await start_revoke_premium(query, context)
+        elif data.startswith("confirm_upgrade_"):
+            parts = data.split("_")
+            target_user_id = int(parts[2])
+            plan_type = parts[3]
+            await execute_force_upgrade(query, context, target_user_id, plan_type)
+        elif data.startswith("confirm_revoke_"):
+            target_user_id = int(data.split("_")[2])
+            await execute_revoke_premium(query, context, target_user_id)
         elif data == "admin_panel":
             # Simulate an update object for calling admin_panel
             fake_update = type('obj', (object,), {'message': type('obj', (object,), {'reply_text': query.edit_message_text}), 'effective_user': query.from_user})
@@ -492,7 +507,7 @@ async def restart_bot(query, context):
     except Exception as e:
         logger.error(f"Error showing restart confirmation: {e}")
 
-async def start_broadcast(context: ContextTypes.DEFAULT_TYPE, target_type: str):
+async def start_broadcast(query, context, target_type: str):
     """Start broadcast message process."""
     try:
         target_descriptions = {
@@ -505,27 +520,50 @@ async def start_broadcast(context: ContextTypes.DEFAULT_TYPE, target_type: str):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         context.user_data['broadcast_target'] = target_type
+        context.user_data['broadcast_step'] = 'waiting_message'
 
-        # Use edit_message_text if called from a callback query, otherwise reply_text
-        # This part assumes start_broadcast is called from handle_admin_callbacks
-        # If it could be called directly, we'd need a way to check query existence.
-        # For now, assuming it's always a callback.
-        query = context.callback_query # Access query object if available
-        if query:
-            await query.edit_message_text(
-                f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
-                f"Send your message to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
-                f"Type your message and send it. The broadcast will start immediately.",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-        else:
-             # Fallback for when this might be called differently, though unlikely given context
-            logger.error("start_broadcast called without a query object.")
-
+        await query.edit_message_text(
+            f"📢 **Broadcast to {target_descriptions.get(target_type, 'Users')}**\n\n"
+            f"Please send the message content you want to broadcast to {target_descriptions.get(target_type, 'users').lower()}.\n\n"
+            f"After you send the message, you'll be asked to confirm before sending.",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
 
     except Exception as e:
         logger.error(f"Error starting broadcast: {e}")
+
+async def confirm_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
+    """Show confirmation for broadcast message."""
+    try:
+        target_type = context.user_data.get('broadcast_target', 'all')
+        target_descriptions = {
+            "all": "All Users",
+            "premium": "Premium Users Only", 
+            "free": "Free Users Only"
+        }
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ Yes, Send", callback_data=f"confirm_broadcast_{target_type}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        context.user_data['broadcast_message'] = message_text
+        context.user_data['broadcast_step'] = 'waiting_confirmation'
+
+        await update.message.reply_text(
+            f"📢 **Confirm Broadcast**\n\n"
+            f"**Target:** {target_descriptions.get(target_type, 'Users')}\n"
+            f"**Message:**\n{message_text}\n\n"
+            f"✅ Send to all users?",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error confirming broadcast: {e}")
+        await update.message.reply_text("❌ Error preparing broadcast confirmation.")
 
 async def show_test_features(query, context):
     """Show test features for admin."""
@@ -550,20 +588,23 @@ async def show_test_features(query, context):
 
 async def show_force_upgrade(query, context):
     """Show force upgrade interface."""
-    keyboard = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+    keyboard = [
+        [InlineKeyboardButton("🔓 Grant Daily Plan", callback_data="force_upgrade_daily")],
+        [InlineKeyboardButton("📅 Grant 3-Month Plan", callback_data="force_upgrade_3month")],
+        [InlineKeyboardButton("💎 Grant Lifetime Plan", callback_data="force_upgrade_lifetime")],
+        [InlineKeyboardButton("❌ Revoke Premium", callback_data="force_revoke_premium")],
+        [InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await query.edit_message_text(
         f"⚙️ **Force Upgrade User**\n\n"
-        f"To manually upgrade a user, use this format:\n"
-        f"`/force_upgrade USER_ID PLAN_TYPE DAYS`\n\n"
-        f"**Plan Types:**\n"
-        f"• `daily` - 1 day access\n"
-        f"• `3month` - 90 days access\n"
-        f"• `lifetime` - permanent access\n\n"
-        f"**Example:**\n"
-        f"`/force_upgrade 123456789 lifetime 0`\n\n"
-        f"⚠️ This bypasses payment verification!",
+        f"Manually promote any user by ID to premium level:\n\n"
+        f"🔓 **Daily Plan** - 24 hours access\n"
+        f"📅 **3-Month Plan** - 90 days access\n"
+        f"💎 **Lifetime Plan** - Permanent access\n\n"
+        f"⚠️ This bypasses payment verification!\n\n"
+        f"Select plan type to continue:",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -724,13 +765,30 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # Check if admin is in broadcast mode
-        broadcast_target = context.user_data.get('broadcast_target')
-        if not broadcast_target:
+        broadcast_step = context.user_data.get('broadcast_step')
+        if broadcast_step != 'waiting_message':
             return
 
         message_text = update.message.text
         if not message_text:
             await update.message.reply_text("❌ Please send a text message to broadcast.")
+            return
+
+        # Show confirmation
+        await confirm_broadcast(update, context, message_text)
+
+    except Exception as e:
+        logger.error(f"Error handling broadcast message: {e}")
+        await update.message.reply_text("❌ Error processing broadcast message.")
+
+async def execute_broadcast(query, context):
+    """Execute the confirmed broadcast."""
+    try:
+        broadcast_target = context.user_data.get('broadcast_target')
+        message_text = context.user_data.get('broadcast_message')
+        
+        if not broadcast_target or not message_text:
+            await query.edit_message_text("❌ Broadcast data not found.")
             return
 
         all_users = get_all_users()
@@ -743,10 +801,10 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:  # all
             target_users = all_users
 
+        await query.edit_message_text(f"📢 Starting broadcast to {len(target_users)} users...")
+
         sent_count = 0
         failed_count = 0
-
-        await update.message.reply_text(f"📢 Starting broadcast to {len(target_users)} users...")
 
         for user in target_users:
             try:
@@ -762,14 +820,283 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Clear broadcast mode
         context.user_data.pop('broadcast_target', None)
+        context.user_data.pop('broadcast_message', None)
+        context.user_data.pop('broadcast_step', None)
 
-        await update.message.reply_text(
+        await query.edit_message_text(
             f"✅ **Broadcast Complete**\n\n"
             f"📤 Sent: {sent_count}\n"
             f"❌ Failed: {failed_count}\n"
             f"🎯 Target: {broadcast_target.title()} users"
         )
 
+        logger.info(f"Broadcast completed: {sent_count} sent, {failed_count} failed")
+
     except Exception as e:
-        logger.error(f"Error broadcasting message: {e}")
-        await update.message.reply_text("❌ Error sending broadcast.")
+        logger.error(f"Error executing broadcast: {e}")
+        await query.edit_message_text("❌ Error sending broadcast.")
+
+async def start_force_upgrade(query, context, plan_type):
+    """Start force upgrade process."""
+    try:
+        plan_names = {
+            "daily": "Daily Plan (24 hours)",
+            "3month": "3-Month Plan (90 days)", 
+            "lifetime": "Lifetime Plan (Permanent)"
+        }
+        
+        keyboard = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        context.user_data['force_upgrade_plan'] = plan_type
+        context.user_data['admin_action'] = 'waiting_user_id_upgrade'
+
+        await query.edit_message_text(
+            f"⚙️ **Force Upgrade to {plan_names.get(plan_type, 'Premium')}**\n\n"
+            f"Please send the User ID of the user you want to upgrade.\n\n"
+            f"Example: `123456789`\n\n"
+            f"⚠️ Make sure the User ID is correct before confirming!",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error starting force upgrade: {e}")
+        await query.edit_message_text("❌ Error starting force upgrade.")
+
+async def start_revoke_premium(query, context):
+    """Start revoke premium process."""
+    try:
+        keyboard = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        context.user_data['admin_action'] = 'waiting_user_id_revoke'
+
+        await query.edit_message_text(
+            f"❌ **Revoke Premium Access**\n\n"
+            f"Please send the User ID of the user whose premium access you want to revoke.\n\n"
+            f"Example: `123456789`\n\n"
+            f"⚠️ This will immediately remove their premium status!",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+    except Exception as e:
+        logger.error(f"Error starting revoke premium: {e}")
+        await query.edit_message_text("❌ Error starting revoke premium.")
+
+async def handle_admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle admin message inputs for various admin actions."""
+    try:
+        user_id = update.effective_user.id
+        
+        if user_id not in ADMIN_USER_IDS:
+            return
+        
+        admin_action = context.user_data.get('admin_action')
+        message_text = update.message.text
+        
+        if admin_action == 'waiting_user_id_upgrade':
+            await handle_force_upgrade_user_id(update, context, message_text)
+        elif admin_action == 'waiting_user_id_revoke':
+            await handle_revoke_premium_user_id(update, context, message_text)
+        elif context.user_data.get('broadcast_step') == 'waiting_message':
+            await broadcast_message(update, context)
+            
+    except Exception as e:
+        logger.error(f"Error handling admin message: {e}")
+
+async def handle_force_upgrade_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_text: str):
+    """Handle user ID input for force upgrade."""
+    try:
+        try:
+            target_user_id = int(user_id_text.strip())
+        except ValueError:
+            await update.message.reply_text("❌ Invalid User ID. Please send a valid numeric User ID.")
+            return
+        
+        plan_type = context.user_data.get('force_upgrade_plan')
+        if not plan_type:
+            await update.message.reply_text("❌ Plan type not found. Please restart the process.")
+            return
+        
+        # Check if user exists
+        from database.db import get_user
+        user = get_user(target_user_id)
+        if not user:
+            await update.message.reply_text(f"❌ User with ID {target_user_id} not found.")
+            return
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ Confirm Upgrade", callback_data=f"confirm_upgrade_{target_user_id}_{plan_type}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        plan_names = {
+            "daily": "Daily Plan (24 hours)",
+            "3month": "3-Month Plan (90 days)",
+            "lifetime": "Lifetime Plan (Permanent)"
+        }
+        
+        user_name = user.get('first_name', 'Unknown')
+        
+        await update.message.reply_text(
+            f"⚙️ **Confirm Force Upgrade**\n\n"
+            f"**User:** {user_name} (ID: {target_user_id})\n"
+            f"**Plan:** {plan_names.get(plan_type, 'Premium')}\n\n"
+            f"⚠️ Confirm upgrade? This bypasses payment verification.",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+        context.user_data.pop('admin_action', None)
+        
+    except Exception as e:
+        logger.error(f"Error handling force upgrade user ID: {e}")
+        await update.message.reply_text("❌ Error processing upgrade request.")
+
+async def handle_revoke_premium_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_text: str):
+    """Handle user ID input for revoking premium."""
+    try:
+        try:
+            target_user_id = int(user_id_text.strip())
+        except ValueError:
+            await update.message.reply_text("❌ Invalid User ID. Please send a valid numeric User ID.")
+            return
+        
+        # Check if user exists and has premium
+        from database.db import get_user
+        user = get_user(target_user_id)
+        if not user:
+            await update.message.reply_text(f"❌ User with ID {target_user_id} not found.")
+            return
+        
+        if not user.get('is_premium'):
+            await update.message.reply_text(f"❌ User {user.get('first_name', 'Unknown')} is not a premium user.")
+            return
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ Confirm Revoke", callback_data=f"confirm_revoke_{target_user_id}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="admin_panel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        user_name = user.get('first_name', 'Unknown')
+        plan_type = user.get('premium_type', 'Premium')
+        
+        await update.message.reply_text(
+            f"❌ **Confirm Revoke Premium**\n\n"
+            f"**User:** {user_name} (ID: {target_user_id})\n"
+            f"**Current Plan:** {plan_type.title()}\n\n"
+            f"⚠️ Confirm revoke? This will immediately remove premium access.",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+        context.user_data.pop('admin_action', None)
+        
+    except Exception as e:
+        logger.error(f"Error handling revoke premium user ID: {e}")
+        await update.message.reply_text("❌ Error processing revoke request.")
+
+async def execute_force_upgrade(query, context, target_user_id: int, plan_type: str):
+    """Execute the force upgrade."""
+    try:
+        from database.db import update_user_premium, get_user
+        from datetime import datetime, timedelta
+        
+        user = get_user(target_user_id)
+        if not user:
+            await query.edit_message_text("❌ User not found.")
+            return
+        
+        # Calculate expiry based on plan type
+        if plan_type == "lifetime":
+            expires_at = None
+        elif plan_type == "daily":
+            expires_at = (datetime.now() + timedelta(days=1)).isoformat()
+        elif plan_type == "3month":
+            expires_at = (datetime.now() + timedelta(days=90)).isoformat()
+        else:
+            expires_at = None
+        
+        # Update user premium status
+        update_user_premium(target_user_id, True, expires_at, plan_type)
+        
+        plan_names = {
+            "daily": "Daily Plan (24 hours)",
+            "3month": "3-Month Plan (90 days)",
+            "lifetime": "Lifetime Plan (Permanent)"
+        }
+        
+        user_name = user.get('first_name', 'Unknown')
+        
+        await query.edit_message_text(
+            f"✅ **Force Upgrade Successful**\n\n"
+            f"**User:** {user_name} (ID: {target_user_id})\n"
+            f"**Plan:** {plan_names.get(plan_type, 'Premium')}\n"
+            f"**Expires:** {expires_at if expires_at else 'Never'}\n\n"
+            f"User has been upgraded successfully!",
+            parse_mode='Markdown'
+        )
+        
+        # Try to notify the user
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=f"🎉 **Congratulations!**\n\n"
+                f"You have been upgraded to **{plan_names.get(plan_type, 'Premium')}**!\n\n"
+                f"Enjoy unlimited access to all DocuLuna features! 🚀",
+                parse_mode='Markdown'
+            )
+            logger.info(f"Notified user {target_user_id} of force upgrade")
+        except Exception as e:
+            logger.warning(f"Could not notify user {target_user_id} of upgrade: {e}")
+        
+        logger.info(f"Force upgrade completed for user {target_user_id} to {plan_type}")
+        
+    except Exception as e:
+        logger.error(f"Error executing force upgrade: {e}")
+        await query.edit_message_text("❌ Error completing upgrade.")
+
+async def execute_revoke_premium(query, context, target_user_id: int):
+    """Execute the premium revoke."""
+    try:
+        from database.db import update_user_premium, get_user
+        
+        user = get_user(target_user_id)
+        if not user:
+            await query.edit_message_text("❌ User not found.")
+            return
+        
+        # Revoke premium status
+        update_user_premium(target_user_id, False, None, None)
+        
+        user_name = user.get('first_name', 'Unknown')
+        
+        await query.edit_message_text(
+            f"✅ **Premium Revoked Successfully**\n\n"
+            f"**User:** {user_name} (ID: {target_user_id})\n\n"
+            f"Premium access has been removed.",
+            parse_mode='Markdown'
+        )
+        
+        # Try to notify the user
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=f"📢 **Premium Access Update**\n\n"
+                f"Your premium access has been updated.\n\n"
+                f"You can upgrade again anytime using /upgrade.",
+                parse_mode='Markdown'
+            )
+            logger.info(f"Notified user {target_user_id} of premium revoke")
+        except Exception as e:
+            logger.warning(f"Could not notify user {target_user_id} of revoke: {e}")
+        
+        logger.info(f"Premium revoked for user {target_user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error revoking premium: {e}")
+        await query.edit_message_text("❌ Error revoking premium.")

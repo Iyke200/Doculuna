@@ -49,3 +49,39 @@ async def compress_file(file_path, output_path=None, compression_quality=85):
     except Exception as e:
         logger.error(f"Error compressing file: {e}")
         return None
+
+async def handle_compress_document(update, context):
+    """Handle document compression from Telegram."""
+    try:
+        from telegram import InputFile
+        
+        # Download the file
+        file = await update.message.document.get_file()
+        file_path = f"temp/{update.message.document.file_name}"
+        
+        # Ensure temp directory exists
+        os.makedirs("temp", exist_ok=True)
+        
+        await file.download_to_drive(file_path)
+        
+        # Compress the file
+        compressed_path = await compress_file(file_path)
+        
+        if compressed_path:
+            with open(compressed_path, 'rb') as compressed_file:
+                await update.message.reply_document(
+                    document=InputFile(compressed_file, filename=os.path.basename(compressed_path)),
+                    caption="🗜 Your compressed file is ready!"
+                )
+            
+            # Cleanup
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if os.path.exists(compressed_path):
+                os.remove(compressed_path)
+        else:
+            await update.message.reply_text("❌ Failed to compress the file.")
+            
+    except Exception as e:
+        logger.error(f"Error handling document compression: {e}")
+        await update.message.reply_text("❌ Error processing file for compression.")

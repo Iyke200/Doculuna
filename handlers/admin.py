@@ -2,7 +2,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime, timedelta
-from database.db import get_all_users, update_premium_status
+from database.db import get_all_users, update_premium_status, get_pending_payments
 from config import ADMIN_IDS
 
 logger = logging.getLogger(__name__)
@@ -282,6 +282,67 @@ async def show_broadcast_options(query, context):
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
+
+def approve_payment_by_id(payment_id):
+    """Approve a payment by ID."""
+    try:
+        import sqlite3
+        from database.db import DB_FILE
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('UPDATE payments SET status = ? WHERE id = ?', ('approved', payment_id))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Error approving payment {payment_id}: {e}")
+        return False
+
+def reject_payment_by_id(payment_id):
+    """Reject a payment by ID."""
+    try:
+        import sqlite3
+        from database.db import DB_FILE
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('UPDATE payments SET status = ? WHERE id = ?', ('rejected', payment_id))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Error rejecting payment {payment_id}: {e}")
+        return False
+
+def get_all_payments():
+    """Get all payments."""
+    try:
+        import sqlite3
+        from database.db import DB_FILE
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM payments')
+        results = cursor.fetchall()
+        conn.close()
+        
+        payments = []
+        for result in results:
+            payments.append({
+                'id': result[0],
+                'user_id': result[1],
+                'plan_type': result[2],
+                'amount': result[3],
+                'status': result[4],
+                'screenshot_file_id': result[5],
+                'created_at': result[6],
+                'processed_at': result[7]
+            })
+        return payments
+    except Exception as e:
+        logger.error(f"Error getting all payments: {e}")
+        return []
 
 async def approve_payment(query, context, payment_id):
     """Approve a payment."""

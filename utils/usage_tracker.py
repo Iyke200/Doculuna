@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from datetime import datetime, date
 from database.db import get_user, add_usage_log
 
@@ -16,6 +17,60 @@ def load_usage_data():
     except Exception as e:
         logger.error(f"Error loading usage data: {e}")
         return {}
+
+def save_usage_data(data):
+    """Save usage data to JSON file."""
+    try:
+        os.makedirs("data", exist_ok=True)
+        with open(USAGE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving usage data: {e}")
+
+async def check_usage_limit(user_id):
+    """Check if user has exceeded daily usage limit."""
+    try:
+        user = get_user(user_id)
+        if not user:
+            return False
+        
+        # Premium users have unlimited usage
+        if user.get('is_premium'):
+            return True
+        
+        # Load usage data
+        usage_data = load_usage_data()
+        today = date.today().isoformat()
+        
+        user_usage = usage_data.get(str(user_id), {}).get(today, 0)
+        
+        from config import FREE_DAILY_LIMIT
+        return user_usage < FREE_DAILY_LIMIT
+        
+    except Exception as e:
+        logger.error(f"Error checking usage limit for user {user_id}: {e}")
+        return False
+
+async def increment_usage(user_id):
+    """Increment user's daily usage count."""
+    try:
+        usage_data = load_usage_data()
+        today = date.today().isoformat()
+        
+        if str(user_id) not in usage_data:
+            usage_data[str(user_id)] = {}
+        
+        if today not in usage_data[str(user_id)]:
+            usage_data[str(user_id)][today] = 0
+        
+        usage_data[str(user_id)][today] += 1
+        save_usage_data(usage_data)
+        
+        # Also log to database
+        add_usage_log(user_id, "tool_use")
+        
+    except Exception as e:
+        logger.error(f"Error incrementing usage for user {user_id}: {e}")
 
 def save_usage_data(data):
     """Save usage data to JSON file."""

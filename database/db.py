@@ -52,62 +52,6 @@ def init_db():
                 plan_type TEXT,
                 amount INTEGER,
                 status TEXT DEFAULT 'pending',
-                screenshot_path TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
-        
-        logger.info("Database initialized successfully")
-        
-    except Exception as e:
-        logger.error(f"Error initializing database: {e}")
-
-def save_payment_request(user_id, amount, plan_type, screenshot_path):
-    """Save a payment request to the database."""
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO payments (user_id, amount, plan_type, screenshot_path)
-            VALUES (?, ?, ?, ?)
-        ''', (user_id, amount, plan_type, screenshot_path))
-        
-        conn.commit()
-        conn.close()
-        
-        logger.info(f"Payment request saved for user {user_id}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error saving payment request: {e}")
-        return False
-
-def update_premium_status(user_id, is_premium, expiry_date=None, plan_type=None):
-    """Update user's premium status."""
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            UPDATE users 
-            SET is_premium = ?, premium_expires = ?
-            WHERE user_id = ?
-        ''', (is_premium, expiry_date, user_id))
-        
-        conn.commit()
-        conn.close()
-        
-        logger.info(f"Premium status updated for user {user_id}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error updating premium status: {e}")
-        return False
                 screenshot_file_id TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 processed_at TIMESTAMP,

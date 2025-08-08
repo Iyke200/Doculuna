@@ -1,10 +1,9 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from database.db import (get_all_payments, get_all_users, update_premium_status, 
-                        get_pending_payments, approve_payment_by_id, reject_payment_by_id)
-from config import ADMIN_USER_IDS
 from datetime import datetime, timedelta
+from database.db import get_all_users, update_premium_status
+from config import ADMIN_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.effective_user.id
 
-        if user_id not in ADMIN_USER_IDS:
+        if user_id not in ADMIN_IDS:
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
 
@@ -54,7 +53,7 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
         data = query.data
         user_id = query.from_user.id
 
-        if user_id not in ADMIN_USER_IDS:
+        if user_id not in ADMIN_IDS:
             await query.edit_message_text("❌ Access denied.")
             return
 
@@ -492,6 +491,163 @@ async def restart_bot(query, context):
     except Exception as e:
         logger.error(f"Error showing restart confirmation: {e}")
 
+async def confirm_restart(query, context):
+    """Confirm and execute bot restart."""
+    try:
+        await query.edit_message_text(
+            "🔄 **Restarting Bot...**\n\n"
+            "✅ Restart command executed\n"
+            "⏳ Bot will restart in a few seconds..."
+        )
+
+        # In a real deployment, you might want to use a process manager
+        import os
+        import sys
+        os.execv(sys.executable, ['python'] + sys.argv)
+
+    except Exception as e:
+        logger.error(f"Error restarting bot: {e}")
+        await query.edit_message_text("❌ Error restarting bot.")
+
+
+def is_admin(user_id):
+    """Check if user is an admin."""
+    return user_id in ADMIN_IDS
+
+async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Command to grant premium access to a user."""
+    try:
+        user_id = update.effective_user.id
+
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Access denied. Admin privileges required.")
+            return
+
+        if len(context.args) != 2:
+            await update.message.reply_text(
+                "❌ Invalid format.\nUsage: `/grant_premium USER_ID DAYS`\n"
+                "Example: `/grant_premium 123456789 30`",
+                parse_mode='Markdown'
+            )
+            return
+
+        target_user_id = int(context.args[0])
+        days = int(context.args[1])
+
+        expiry_date = datetime.now() + timedelta(days=days)
+        success = update_premium_status(target_user_id, True, expiry_date.isoformat())
+
+        if success:
+            await update.message.reply_text(
+                f"✅ Premium access granted!\n"
+                f"👤 User ID: {target_user_id}\n"
+                f"⏰ Duration: {days} days\n"
+                f"📅 Expires: {expiry_date.strftime('%Y-%m-%d')}"
+            )
+        else:
+            await update.message.reply_text("❌ Failed to grant premium access.")
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID or days value.")
+    except Exception as e:
+        logger.error(f"Error granting premium: {e}")
+        await update.message.reply_text("❌ Error granting premium access.")
+
+async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Command to revoke premium access from a user."""
+    try:
+        user_id = update.effective_user.id
+
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Access denied. Admin privileges required.")
+            return
+
+        if len(context.args) != 1:
+            await update.message.reply_text(
+                "❌ Invalid format.\nUsage: `/revoke_premium USER_ID`\n"
+                "Example: `/revoke_premium 123456789`",
+                parse_mode='Markdown'
+            )
+            return
+
+        target_user_id = int(context.args[0])
+
+        success = update_premium_status(target_user_id, False, None)
+
+        if success:
+            await update.message.reply_text(
+                f"✅ Premium access revoked!\n"
+                f"👤 User ID: {target_user_id}"
+            )
+        else:
+            await update.message.reply_text("❌ Failed to revoke premium access.")
+
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID.")
+    except Exception as e:
+        logger.error(f"Error revoking premium: {e}")
+        await update.message.reply_text("❌ Error revoking premium access.")
+
+async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast messages from admin."""
+    try:
+        user_id = update.effective_user.id
+
+        if user_id not in ADMIN_IDS:
+            return
+
+        # Check if admin is in broadcast mode
+        broadcast_target = context.user_data.get('broadcast_target')
+        if not broadcast_target:
+            return
+
+        message_text = update.message.text
+        if not message_text:
+            await update.message.reply_text("❌ Please send a text message to broadcast.")
+            return
+
+        all_users = get_all_users()
+
+        # Filter users based on target
+        if broadcast_target == "premium":
+            target_users = [u for u in all_users if u.get('is_premium')]
+        elif broadcast_target == "free":
+            target_users = [u for u in all_users if not u.get('is_premium')]
+        else:  # all
+            target_users = all_users
+
+        sent_count = 0
+        failed_count = 0
+
+        await update.message.reply_text(f"📢 Starting broadcast to {len(target_users)} users...")
+
+        for user in target_users:
+            try:
+                await context.bot.send_message(
+                    chat_id=user['user_id'],
+                    text=f"📢 **Announcement**\n\n{message_text}",
+                    parse_mode='Markdown'
+                )
+                sent_count += 1
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"Failed to send broadcast to {user['user_id']}: {e}")
+
+        # Clear broadcast mode
+        context.user_data.pop('broadcast_target', None)
+
+        await update.message.reply_text(
+            f"✅ **Broadcast Complete**\n\n"
+            f"📤 Sent: {sent_count}\n"
+            f"❌ Failed: {failed_count}\n"
+            f"🎯 Target: {broadcast_target.title()} users"
+        )
+
+    except Exception as e:
+        logger.error(f"Error broadcasting message: {e}")
+        await update.message.reply_text("❌ Error sending broadcast.")
+
+
 async def start_broadcast(context: ContextTypes.DEFAULT_TYPE, target_type: str):
     """Start broadcast message process."""
     try:
@@ -574,7 +730,7 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         user_id = update.effective_user.id
 
-        if user_id not in ADMIN_USER_IDS:
+        if user_id not in ADMIN_IDS:
             await update.message.reply_text("❌ Access denied. Admin privileges required.")
             return
 
@@ -616,171 +772,3 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         logger.error(f"Error force upgrading user: {e}")
         await update.message.reply_text("❌ Error processing force upgrade.")
-
-
-async def confirm_restart(query, context):
-    """Confirm and execute bot restart."""
-    try:
-        await query.edit_message_text(
-            "🔄 **Restarting Bot...**\n\n"
-            "✅ Restart command executed\n"
-            "⏳ Bot will restart in a few seconds..."
-        )
-        
-        # In a real deployment, you might want to use a process manager
-        import os
-        import sys
-        os.execv(sys.executable, ['python'] + sys.argv)
-        
-    except Exception as e:
-        logger.error(f"Error restarting bot: {e}")
-        await query.edit_message_text("❌ Error restarting bot.")
-            "⏳ Bot will be back online shortly\n\n"
-            "Please wait a moment and try again."
-        )
-
-        # Note: In a production environment, you would implement
-        # actual restart logic here (e.g., exit with restart code)
-        import sys
-        logger.info("Admin requested bot restart")
-        # sys.exit(0)  # Uncomment for actual restart
-
-    except Exception as e:
-        logger.error(f"Error during restart: {e}")
-
-def is_admin(user_id):
-    """Check if user is an admin."""
-    return user_id in ADMIN_USER_IDS
-
-async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Command to grant premium access to a user."""
-    try:
-        user_id = update.effective_user.id
-
-        if user_id not in ADMIN_USER_IDS:
-            await update.message.reply_text("❌ Access denied. Admin privileges required.")
-            return
-
-        if len(context.args) != 2:
-            await update.message.reply_text(
-                "❌ Invalid format.\nUsage: `/grant_premium USER_ID DAYS`\n"
-                "Example: `/grant_premium 123456789 30`",
-                parse_mode='Markdown'
-            )
-            return
-
-        target_user_id = int(context.args[0])
-        days = int(context.args[1])
-
-        expiry_date = datetime.now() + timedelta(days=days)
-        success = update_premium_status(target_user_id, True, expiry_date.isoformat())
-
-        if success:
-            await update.message.reply_text(
-                f"✅ Premium access granted!\n"
-                f"👤 User ID: {target_user_id}\n"
-                f"⏰ Duration: {days} days\n"
-                f"📅 Expires: {expiry_date.strftime('%Y-%m-%d')}"
-            )
-        else:
-            await update.message.reply_text("❌ Failed to grant premium access.")
-
-    except ValueError:
-        await update.message.reply_text("❌ Invalid user ID or days value.")
-    except Exception as e:
-        logger.error(f"Error granting premium: {e}")
-        await update.message.reply_text("❌ Error granting premium access.")
-
-async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Command to revoke premium access from a user."""
-    try:
-        user_id = update.effective_user.id
-
-        if user_id not in ADMIN_USER_IDS:
-            await update.message.reply_text("❌ Access denied. Admin privileges required.")
-            return
-
-        if len(context.args) != 1:
-            await update.message.reply_text(
-                "❌ Invalid format.\nUsage: `/revoke_premium USER_ID`\n"
-                "Example: `/revoke_premium 123456789`",
-                parse_mode='Markdown'
-            )
-            return
-
-        target_user_id = int(context.args[0])
-
-        success = update_premium_status(target_user_id, False, None)
-
-        if success:
-            await update.message.reply_text(
-                f"✅ Premium access revoked!\n"
-                f"👤 User ID: {target_user_id}"
-            )
-        else:
-            await update.message.reply_text("❌ Failed to revoke premium access.")
-
-    except ValueError:
-        await update.message.reply_text("❌ Invalid user ID.")
-    except Exception as e:
-        logger.error(f"Error revoking premium: {e}")
-        await update.message.reply_text("❌ Error revoking premium access.")
-
-async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle broadcast messages from admin."""
-    try:
-        user_id = update.effective_user.id
-
-        if user_id not in ADMIN_USER_IDS:
-            return
-
-        # Check if admin is in broadcast mode
-        broadcast_target = context.user_data.get('broadcast_target')
-        if not broadcast_target:
-            return
-
-        message_text = update.message.text
-        if not message_text:
-            await update.message.reply_text("❌ Please send a text message to broadcast.")
-            return
-
-        all_users = get_all_users()
-
-        # Filter users based on target
-        if broadcast_target == "premium":
-            target_users = [u for u in all_users if u.get('is_premium')]
-        elif broadcast_target == "free":
-            target_users = [u for u in all_users if not u.get('is_premium')]
-        else:  # all
-            target_users = all_users
-
-        sent_count = 0
-        failed_count = 0
-
-        await update.message.reply_text(f"📢 Starting broadcast to {len(target_users)} users...")
-
-        for user in target_users:
-            try:
-                await context.bot.send_message(
-                    chat_id=user['user_id'],
-                    text=f"📢 **Announcement**\n\n{message_text}",
-                    parse_mode='Markdown'
-                )
-                sent_count += 1
-            except Exception as e:
-                failed_count += 1
-                logger.error(f"Failed to send broadcast to {user['user_id']}: {e}")
-
-        # Clear broadcast mode
-        context.user_data.pop('broadcast_target', None)
-
-        await update.message.reply_text(
-            f"✅ **Broadcast Complete**\n\n"
-            f"📤 Sent: {sent_count}\n"
-            f"❌ Failed: {failed_count}\n"
-            f"🎯 Target: {broadcast_target.title()} users"
-        )
-
-    except Exception as e:
-        logger.error(f"Error broadcasting message: {e}")
-        await update.message.reply_text("❌ Error sending broadcast.")

@@ -1,142 +1,37 @@
-
-import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from PyPDF2 import PdfReader, PdfWriter
-from utils.usage_tracker import increment_usage, check_usage_limit
-from utils.premium_utils import is_premium
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-import io
+import os
+import PyPDF2
 
 logger = logging.getLogger(__name__)
 
-async def handle_split_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle PDF split requests."""
-    input_file = None
-    output_files = []
-
+async def split_pdf(file_path, output_dir=None):
+    """Split PDF into individual pages."""
     try:
-        user_id = update.effective_user.id
+        if not output_dir:
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            output_dir = f"temp/{base_name}_split"
 
-        # Check usage limit
-        if not await check_usage_limit(user_id):
-            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
-                "Upgrade to **DocuLuna Pro** for unlimited access!",
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            return
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
 
-        await update.message.reply_text("🔄 Splitting PDF...")
+        # Open PDF file
+        with open(file_path, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
 
-        # Get the document
-        document = update.message.document or context.user_data.get('last_pdf')
-        if not document:
-            await update.message.reply_text("❌ No PDF file found. Please send a PDF file.")
-            return
+            output_files = []
+            for page_num in range(len(reader.pages)):
+                writer = PyPDF2.PdfWriter()
+                writer.add_page(reader.pages[page_num])
 
-        file = await context.bot.get_file(document.file_id)
+                output_path = os.path.join(output_dir, f"page_{page_num + 1}.pdf")
+                with open(output_path, 'wb') as output_file:
+                    writer.write(output_file)
 
-        # Create temp directory
-        os.makedirs("data/temp", exist_ok=True)
+                output_files.append(output_path)
 
-        # Download input file
-        input_file = f"data/temp/split_input_{user_id}_{document.file_id}.pdf"
-        await file.download_to_drive(input_file)
-
-        # Read PDF and split
-        reader = PdfReader(input_file)
-        total_pages = len(reader.pages)
-
-        if total_pages == 1:
-            await update.message.reply_text("❌ PDF has only one page. Nothing to split.")
-            return
-
-        # Split each page
-        for page_num in range(total_pages):
-            writer = PdfWriter()
-            writer.add_page(reader.pages[page_num])
-            
-            output_file = f"data/temp/split_page_{user_id}_{page_num + 1}.pdf"
-            output_files.append(output_file)
-            
-            with open(output_file, 'wb') as output:
-                writer.write(output)
-
-            # Add watermark for free users
-            if not is_premium(user_id):
-                add_pdf_watermark(output_file)
-
-        # Send split pages
-        await update.message.reply_text(f"✅ **PDF split into {total_pages} pages**")
-
-        for i, output_file in enumerate(output_files):
-            with open(output_file, 'rb') as page_file:
-                caption = f"📄 Page {i + 1} of {total_pages}"
-                if not is_premium(user_id) and i == 0:
-                    caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
-                    
-                await update.message.reply_document(
-                    document=page_file,
-                    filename=f"{document.file_name.rsplit('.', 1)[0]}_page_{i + 1}.pdf",
-                    caption=caption,
-                    parse_mode='Markdown'
-                )
-
-        # Increment usage
-        await increment_usage(user_id)
-        logger.info(f"PDF split successful for user {user_id}")
+        logger.info(f"Successfully split {file_path} into {len(output_files)} pages")
+        return output_files
 
     except Exception as e:
         logger.error(f"Error splitting PDF: {e}")
-        await update.message.reply_text(
-            "❌ Error splitting PDF. Please ensure you sent a valid PDF file."
-        )
-    finally:
-        # Clean up files
-        try:
-            if input_file and os.path.exists(input_file):
-                os.remove(input_file)
-            for output_file in output_files:
-                if os.path.exists(output_file):
-                    os.remove(output_file)
-        except Exception as e:
-            logger.error(f"Error cleaning up split files: {e}")
-
-def add_pdf_watermark(file_path):
-    """Add DocuLuna watermark to PDF."""
-    try:
-        # Create watermark
-        packet = io.BytesIO()
-        can = canvas.Canvas(packet, pagesize=letter)
-        can.setFont("Helvetica", 40)
-        can.setFillAlpha(0.1)
-        can.drawString(100, 400, "DocuLuna")
-        can.setFont("Helvetica", 12)
-        can.drawString(100, 50, "Generated by DocuLuna - Upgrade to Pro to remove watermark")
-        can.save()
-
-        # Move to the beginning of the StringIO buffer
-        packet.seek(0)
-        watermark = PdfReader(packet)
-
-        # Read the existing PDF
-        existing_pdf = PdfReader(file_path)
-        output = PdfWriter()
-
-        # Add watermark to each page
-        for page in existing_pdf.pages:
-            page.merge_page(watermark.pages[0])
-            output.add_page(page)
-
-        # Write the result
-        with open(file_path, "wb") as output_stream:
-            output.write(output_stream)
-
-    except Exception as e:
-        logger.error(f"Error adding watermark to PDF: {e}")
+        return None

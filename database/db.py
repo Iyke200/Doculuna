@@ -348,3 +348,114 @@ def get_referral_stats(user_id):
     except Exception as e:
         logger.error(f"Error getting referral stats for user {user_id}: {e}")
         return 0
+
+def get_user(user_id):
+    """Get user by user_id."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        
+        if result:
+            return {
+                'user_id': result[0],
+                'username': result[1],
+                'first_name': result[2],
+                'last_name': result[3],
+                'is_premium': bool(result[4]),
+                'premium_expires': result[5],
+                'referred_by': result[6],
+                'referral_count': result[7],
+                'usage_count': result[8],
+                'last_usage': result[9],
+                'created_at': result[10]
+            }
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting user {user_id}: {e}")
+        return None
+
+def get_user_usage_stats(user_id):
+    """Get user usage statistics."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM usage_logs WHERE user_id = ?", (user_id,))
+        total_documents = cursor.fetchone()[0] or 0
+        
+        cursor.execute("SELECT COUNT(DISTINCT tool_used) FROM usage_logs WHERE user_id = ?", (user_id,))
+        tools_used = cursor.fetchone()[0] or 0
+        
+        conn.close()
+        
+        return {
+            'total_documents': total_documents,
+            'tools_used': tools_used
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting usage stats for user {user_id}: {e}")
+        return {'total_documents': 0, 'tools_used': 0}
+
+def update_premium_status(user_id, is_premium, expires_at=None, plan_type=None):
+    """Update user premium status."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE users 
+            SET is_premium = ?, premium_expires = ?
+            WHERE user_id = ?
+        ''', (is_premium, expires_at, user_id))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Updated premium status for user {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error updating premium status for user {user_id}: {e}")
+        return False
+
+def add_usage_log(user_id, tool_used, file_size=0, processing_time=0, success=True):
+    """Add usage log entry."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO usage_logs (user_id, tool_used, file_size, processing_time, success)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, tool_used, file_size, processing_time, success))
+        
+        conn.commit()
+        conn.close()
+        
+    except Exception as e:
+        logger.error(f"Error adding usage log for user {user_id}: {e}")
+
+def update_referral_count(user_id):
+    """Update referral count for a user."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE users 
+            SET referral_count = referral_count + 1
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Updated referral count for user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error updating referral count for user {user_id}: {e}")

@@ -1,54 +1,41 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 # Bot Configuration
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
 
-# Webhook settings (for production)
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
-WEBHOOK_PORT = int(os.getenv("PORT", 5000))
-
-# External services
-PAYMENT_VERIFICATION_API = os.getenv("PAYMENT_VERIFICATION_API", "")
-
-# Feature flags
-ENABLE_PREMIUM_FEATURES = True
-ENABLE_ANALYTICS = True
-ENABLE_NOTIFICATIONS = True
-
-# Directories
-TEMP_DIR = "temp"
-PAYMENTS_DIR = "payments"
-BACKUPS_DIR = "backups"
-
-# File Size Limits (in bytes)
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_MERGE_FILES = 10
-
-# Usage Limits
-FREE_USAGE_LIMIT = 3
-PREMIUM_USAGE_LIMIT = 999999  # Unlimited
-REFERRAL_BONUS = 1
-
-# Premium Pricing (Nigerian Naira)
-DAILY_PREMIUM_PRICE = 3500
-THREE_MONTH_PREMIUM_PRICE = 9000
-LIFETIME_PREMIUM_PRICE = 25000
-
-# Payment Details
-PAYMENT_ACCOUNT = "9057203030"
-PAYMENT_BANK = "Moniepoint"
-PAYMENT_NAME = "Ebere Nwankwo"
+# Database Configuration
+DB_PATH = "database/doculuna.db"
 
 # Payment Configuration
 PAYMENT_METHODS = {
-    "upi": "your-upi-id@bank",
-    "paytm": "9876543210",
-    "gpay": "9876543210"
+    "bkash": {
+        "number": "+8801700000000",
+        "account_type": "Personal"
+    },
+    "nagad": {
+        "number": "+8801700000000", 
+        "account_type": "Personal"
+    }
 }
 
-# Admin Configuration
-ADMIN_USER_IDS = [6857550239]  # Replace with actual admin user IDs
+# Premium Plans
+PREMIUM_PLANS = {
+    "daily": {"price": 20, "days": 1},
+    "3month": {"price": 300, "days": 90},
+    "lifetime": {"price": 1000, "days": None}
+}
+
+# File size limits (in MB)
+MAX_FILE_SIZE = 50
+MAX_PREMIUM_FILE_SIZE = 100
+
+# Daily usage limits
+FREE_DAILY_LIMIT = 3
+PREMIUM_DAILY_LIMIT = -1  # Unlimited
+
+# Referral Configuration
+REFERRAL_BONUS_DAYS = 1

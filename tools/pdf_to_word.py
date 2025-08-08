@@ -1,12 +1,13 @@
-import os
 import logging
+import os
+import tempfile
+from pdf2docx import Converter
+import fitz  # PyMuPDF
 from telegram import Update
 from telegram.ext import ContextTypes
-import fitz  # PyMuPDF
-from docx import Document
-from docx.shared import Inches
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,28 +54,19 @@ async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE)
         input_file = f"data/temp/pdf_input_{user_id}_{document.file_id}.pdf"
         await file.download_to_drive(input_file)
 
-        # Convert to Word
-        output_file = f"data/temp/pdf_output_{user_id}_{document.file_id}.docx"
+        # Convert to Word using the new function
+        converted_file_path = await convert_pdf_to_word(input_file)
 
-        # Use PyMuPDF to extract text and convert to DOCX
-        doc = fitz.open(input_file)
-        word_doc = Document()
-        
-        for page_num in range(len(doc)):
-            page = doc.load_page(page_num)
-            text = page.get_text()
-            if text.strip():
-                word_doc.add_paragraph(text)
-                
-        doc.close()
-        word_doc.save(output_file)
+        if not converted_file_path:
+            await update.message.reply_text("❌ Error converting PDF to Word. Please ensure you sent a valid PDF file.")
+            return
 
         # Add watermark for free users
         if not is_premium(user_id):
-            add_docx_watermark(output_file)
+            add_docx_watermark(converted_file_path)
 
         # Send the converted file
-        with open(output_file, 'rb') as word_file:
+        with open(converted_file_path, 'rb') as word_file:
             filename = f"{document.file_name.rsplit('.', 1)[0]}.docx"
             caption = "✅ **PDF to Word conversion complete!**"
             if not is_premium(user_id):
@@ -103,8 +95,32 @@ async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 os.remove(input_file)
             if output_file and os.path.exists(output_file):
                 os.remove(output_file)
+            if converted_file_path and os.path.exists(converted_file_path):
+                os.remove(converted_file_path)
         except Exception as e:
             logger.error(f"Error cleaning up files: {e}")
+
+async def convert_pdf_to_word(file_path, output_path=None):
+    """Convert PDF to Word document."""
+    try:
+        if not output_path:
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            # Ensure temp directory exists within data/temp
+            os.makedirs("data/temp", exist_ok=True)
+            output_path = f"data/temp/{base_name}.docx"
+
+
+        # Convert PDF to Word
+        cv = Converter(file_path)
+        cv.convert(output_path, start=0, end=None)
+        cv.close()
+
+        logger.info(f"Successfully converted {file_path} to {output_path}")
+        return output_path
+
+    except Exception as e:
+        logger.error(f"Error converting PDF to Word: {e}")
+        return None
 
 def add_docx_watermark(file_path):
     """Add DocuLuna watermark to Word document."""

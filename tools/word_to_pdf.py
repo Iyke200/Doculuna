@@ -1,17 +1,10 @@
-
-import os
 import logging
+import os
+from docx2pdf import convert
 from telegram import Update
 from telegram.ext import ContextTypes
-from docx import Document
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.utils import ImageReader
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from utils.usage_tracker import increment_usage, check_usage_limit
 from utils.premium_utils import is_premium
-from PyPDF2 import PdfReader, PdfWriter
 import io
 
 logger = logging.getLogger(__name__)
@@ -50,43 +43,32 @@ async def handle_word_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE)
         input_file = f"data/temp/word_input_{user_id}_{document.file_id}.docx"
         await file.download_to_drive(input_file)
 
-        # Convert to PDF
-        output_file = f"data/temp/word_output_{user_id}_{document.file_id}.pdf"
-        
-        # Read DOCX and convert to PDF using reportlab
-        doc = Document(input_file)
-        pdf_doc = SimpleDocTemplate(output_file, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-        
-        for paragraph in doc.paragraphs:
-            if paragraph.text.strip():
-                p = Paragraph(paragraph.text, styles['Normal'])
-                story.append(p)
-                story.append(Spacer(1, 12))
-        
-        pdf_doc.build(story)
+        # Convert to PDF using the new function
+        output_file = await convert_word_to_pdf(input_file)
 
-        # Add watermark for free users
-        if not is_premium(user_id):
-            add_pdf_watermark(output_file)
-
-        # Send the converted file
-        with open(output_file, 'rb') as pdf_file:
-            caption = "✅ **Word to PDF conversion complete!**"
+        if output_file:
+            # Add watermark for free users
             if not is_premium(user_id):
-                caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
-                
-            await update.message.reply_document(
-                document=pdf_file,
-                filename=f"{document.file_name.rsplit('.', 1)[0]}.pdf",
-                caption=caption,
-                parse_mode='Markdown'
-            )
+                add_pdf_watermark(output_file)
 
-        # Increment usage
-        await increment_usage(user_id)
-        logger.info(f"Word to PDF conversion successful for user {user_id}")
+            # Send the converted file
+            with open(output_file, 'rb') as pdf_file:
+                caption = "✅ **Word to PDF conversion complete!**"
+                if not is_premium(user_id):
+                    caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
+
+                await update.message.reply_document(
+                    document=pdf_file,
+                    filename=f"{document.file_name.rsplit('.', 1)[0]}.pdf",
+                    caption=caption,
+                    parse_mode='Markdown'
+                )
+
+            # Increment usage
+            await increment_usage(user_id)
+            logger.info(f"Word to PDF conversion successful for user {user_id}")
+        else:
+            await update.message.reply_text("❌ Error converting Word to PDF. Please ensure you sent a valid .docx file.")
 
     except Exception as e:
         logger.error(f"Error in Word to PDF conversion: {e}")
@@ -102,6 +84,26 @@ async def handle_word_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 os.remove(output_file)
         except Exception as e:
             logger.error(f"Error cleaning up files: {e}")
+
+def convert_word_to_pdf(file_path, output_path=None):
+    """Convert Word document to PDF."""
+    try:
+        if not output_path:
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            output_path = f"data/temp/{base_name}.pdf" # Corrected path to match original temp dir
+
+        # Ensure temp directory exists
+        os.makedirs("data/temp", exist_ok=True)
+
+        # Convert Word to PDF
+        convert(file_path, output_path)
+
+        logger.info(f"Successfully converted {file_path} to {output_path}")
+        return output_path
+
+    except Exception as e:
+        logger.error(f"Error converting Word to PDF: {e}")
+        return None
 
 def add_pdf_watermark(file_path):
     """Add DocuLuna watermark to PDF."""

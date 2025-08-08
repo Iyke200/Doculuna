@@ -1,6 +1,10 @@
 import logging
 import os
 import PyPDF2
+from telegram import Update
+from telegram.ext import ContextTypes
+from utils.usage_tracker import increment_usage
+from utils.premium_utils import is_premium
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +39,20 @@ async def split_pdf(file_path, output_dir=None):
     except Exception as e:
         logger.error(f"Error splitting PDF: {e}")
         return None
+
+async def handle_split_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle PDF splitting request."""
+    try:
+        await update.message.reply_text("🔄 Splitting PDF...")
+
+        # For now, return a placeholder response
+        await update.message.reply_text(
+            "⚠️ PDF splitting is under maintenance.\n"
+            "Please try again later or contact support."
+        )
+
+        logger.info(f"PDF splitting requested by user {update.effective_user.id}")
+
+    except Exception as e:
+        logger.error(f"Error in PDF splitting: {e}")
+        await update.message.reply_text("❌ Error splitting file. Please try again.")

@@ -28,12 +28,16 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Get stats
         all_users = get_all_users()
         total_users = len(all_users)
-        premium_users = len([u for u in all_users if u.get('is_premium', False)])
+        premium_users = len([u for u in all_users if u.get("is_premium", False)])
         pending_payments = get_pending_payments()
 
         keyboard = [
             [InlineKeyboardButton("👥 User Stats", callback_data="admin_stats")],
-            [InlineKeyboardButton("💳 Pending Payments", callback_data="admin_payments")],
+            [
+                InlineKeyboardButton(
+                    "💳 Pending Payments", callback_data="admin_payments"
+                )
+            ],
             [InlineKeyboardButton("💎 Grant Premium", callback_data="admin_grant")],
             [InlineKeyboardButton("📊 Analytics", callback_data="admin_analytics")],
             [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
@@ -50,9 +54,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            admin_message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            admin_message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"Admin panel accessed by user {user_id}")
@@ -129,8 +131,7 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not context.args:
             await update.message.reply_text(
-                "Usage: /broadcast <message>\n"
-                "Example: /broadcast Hello everyone!"
+                "Usage: /broadcast <message>\n" "Example: /broadcast Hello everyone!"
             )
             return
 
@@ -141,9 +142,9 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for user in users:
             try:
                 await context.bot.send_message(
-                    chat_id=user['user_id'],
+                    chat_id=user["user_id"],
                     text=f"📢 **Broadcast Message:**\n\n{message}",
-                    parse_mode='Markdown'
+                    parse_mode="Markdown",
                 )
                 success_count += 1
             except Exception:
@@ -168,8 +169,7 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
 
         if len(context.args) < 1:
             await update.message.reply_text(
-                "Usage: /force_upgrade <user_id>\n"
-                "Example: /force_upgrade 123456789"
+                "Usage: /force_upgrade <user_id>\n" "Example: /force_upgrade 123456789"
             )
             return
 
@@ -185,6 +185,7 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error force upgrading: {e}")
         await update.message.reply_text("❌ Error force upgrading user.")
 
+
 async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle admin callback queries."""
     try:
@@ -199,7 +200,7 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
         if callback_data == "admin_stats":
             all_users = get_all_users()
-            premium_users = len([u for u in all_users if u.get('is_premium', False)])
+            premium_users = len([u for u in all_users if u.get("is_premium", False)])
             pending_payments_count = len(get_pending_payments())
 
             message = (
@@ -212,7 +213,7 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await query.edit_message_text(
                 message,
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
+                parse_mode="Markdown",
             )
 
         elif callback_data == "admin_payments":
@@ -233,14 +234,22 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     message += f"... and {len(payments) - 5} more pending payments."
 
             keyboard = [
-                [InlineKeyboardButton("✅ Approve", callback_data="admin_approve_payment")],
-                [InlineKeyboardButton("❌ Reject", callback_data="admin_reject_payment")],
-                [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+                [
+                    InlineKeyboardButton(
+                        "✅ Approve", callback_data="admin_approve_payment"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "❌ Reject", callback_data="admin_reject_payment"
+                    )
+                ],
+                [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")],
             ]
             await query.edit_message_text(
                 message,
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
+                parse_mode="Markdown",
             )
 
         elif callback_data == "admin_grant":
@@ -259,12 +268,14 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             )
 
         elif callback_data == "admin_panel":
-            await admin_panel(update, context) # Re-display admin panel
+            await admin_panel(update, context)  # Re-display admin panel
 
         else:
-            await query.edit_message_text("🔧 **Admin Panel**\n\nSelect an option from the menu.")
+            await query.edit_message_text(
+                "🔧 **Admin Panel**\n\nSelect an option from the menu."
+            )
 
-        await query.answer() # Acknowledge the callback
+        await query.answer()  # Acknowledge the callback
 
     except Exception as e:
         logger.error(f"Error in admin callback: {e}")

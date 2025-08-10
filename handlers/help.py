@@ -1,4 +1,3 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -41,9 +40,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            help_message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            help_message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"Help command used by user {update.effective_user.id}")

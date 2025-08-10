@@ -1,4 +1,3 @@
-
 import logging
 import traceback
 from datetime import datetime
@@ -10,20 +9,18 @@ async def error_handler(update, context):
     """Global error handler for the bot."""
     try:
         logger.error(f"Update {update} caused error {context.error}")
-        
+
         # Log the full traceback
         tb_lines = traceback.format_exception(
-            type(context.error), 
-            context.error, 
-            context.error.__traceback__
+            type(context.error), context.error, context.error.__traceback__
         )
-        tb_string = ''.join(tb_lines)
-        
+        tb_string = "".join(tb_lines)
+
         log_error(
             error_type=type(context.error).__name__,
             error_message=str(context.error),
             traceback=tb_string,
-            update_data=str(update) if update else None
+            update_data=str(update) if update else None,
         )
 
         # Send user-friendly error message
@@ -42,8 +39,9 @@ def log_error(error_type, error_message, traceback=None, update_data=None):
     """Log error details to file."""
     try:
         import os
+
         os.makedirs("logs", exist_ok=True)
-        
+
         with open("logs/errors.log", "a", encoding="utf-8") as f:
             f.write(f"\n{'='*50}\n")
             f.write(f"Timestamp: {datetime.now().isoformat()}\n")
@@ -54,7 +52,7 @@ def log_error(error_type, error_message, traceback=None, update_data=None):
             if update_data:
                 f.write(f"Update Data: {update_data}\n")
             f.write(f"{'='*50}\n")
-    
+
     except Exception as e:
         logger.error(f"Failed to log error to file: {e}")
 

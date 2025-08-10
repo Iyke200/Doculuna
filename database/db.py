@@ -216,7 +216,7 @@ def add_user(user_id, first_name, username=None, last_name=None):
             (user_id, username, first_name, last_name) 
             VALUES (?, ?, ?, ?)
             """,
-            (user_id, username, first_name, last_name)
+            (user_id, username, first_name, last_name),
         )
 
         conn.commit()
@@ -239,7 +239,7 @@ def update_premium_status(user_id, is_premium, expires_at=None):
             SET is_premium = ?, premium_expires = ? 
             WHERE user_id = ?
             """,
-            (is_premium, expires_at, user_id)
+            (is_premium, expires_at, user_id),
         )
 
         conn.commit()
@@ -256,25 +256,25 @@ def get_pending_payments():
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT * FROM payments WHERE status = 'pending'"
-        )
+        cursor.execute("SELECT * FROM payments WHERE status = 'pending'")
         results = cursor.fetchall()
 
         conn.close()
 
         payments = []
         for result in results:
-            payments.append({
-                "id": result[0],
-                "user_id": result[1],
-                "plan_type": result[2],
-                "amount": result[3],
-                "status": result[4],
-                "screenshot_file_id": result[5],
-                "created_at": result[6],
-                "processed_at": result[7],
-            })
+            payments.append(
+                {
+                    "id": result[0],
+                    "user_id": result[1],
+                    "plan_type": result[2],
+                    "amount": result[3],
+                    "status": result[4],
+                    "screenshot_file_id": result[5],
+                    "created_at": result[6],
+                    "processed_at": result[7],
+                }
+            )
 
         return payments
 
@@ -295,7 +295,7 @@ def approve_payment(payment_id):
             SET status = 'approved', processed_at = CURRENT_TIMESTAMP 
             WHERE id = ?
             """,
-            (payment_id,)
+            (payment_id,),
         )
 
         conn.commit()
@@ -318,7 +318,7 @@ def reject_payment(payment_id):
             SET status = 'rejected', processed_at = CURRENT_TIMESTAMP 
             WHERE id = ?
             """,
-            (payment_id,)
+            (payment_id,),
         )
 
         conn.commit()

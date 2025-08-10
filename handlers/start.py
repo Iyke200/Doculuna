@@ -5,6 +5,7 @@ from database.db import add_user, get_user
 
 logger = logging.getLogger(__name__)
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     try:
@@ -22,7 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🛠️ Document Tools", callback_data="tools_menu")],
             [InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")],
             [InlineKeyboardButton("👥 Referrals", callback_data="referrals_menu")],
-            [InlineKeyboardButton("❓ Help", callback_data="help_menu")]
+            [InlineKeyboardButton("❓ Help", callback_data="help_menu")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -45,13 +46,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         await update.message.reply_text(
-            welcome_message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            welcome_message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"User {user_id} ({first_name}) started the bot")
 
     except Exception as e:
         logger.error(f"Error in start command for user {user_id}: {e}")
-        await update.message.reply_text("❌ Welcome! Something went wrong, but you can still use the bot.")
+        await update.message.reply_text(
+            "❌ Welcome! Something went wrong, but you can still use the bot."
+        )

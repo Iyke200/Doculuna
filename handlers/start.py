@@ -26,6 +26,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        welcome_message = (
+            f"🌟 **Welcome to DocuLuna, {first_name}!**\n\n"
+            "🚀 Your ultimate document processing companion!\n\n"
+            "✨ **What I can do:**\n"
+            "📄 Convert PDF ↔ Word documents\n"
+            "🖼️ Transform images to PDF\n"
+            "✂️ Split & merge PDF files\n"
+            "🗜️ Compress large documents\n\n"
+            "🆓 **Free Plan:** 3 uses per day\n"
+            "💎 **Premium:** Unlimited access\n\n"
+            "Ready to get started? Choose an option below!"
+        )
+
+        await update.message.reply_text(
+            welcome_message,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+        logger.info(f"User {user_id} ({first_name}) started the bot")
+
+    except Exception as e:
+        logger.error(f"Error in start command for user {user_id}: {e}")
+        await update.message.reply_text("❌ Welcome! Something went wrong, but you can still use the bot.")kup(keyboard)
+
         if existing_user:
             # Returning user
             message = f"👋 Welcome back, {first_name}! Use /help to explore features or upload a document to begin."

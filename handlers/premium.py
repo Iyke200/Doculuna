@@ -125,5 +125,6 @@ async def handle_premium_callbacks(update: Update, context: ContextTypes.DEFAULT
             )
             
     except Exception as e:
-        logger.error(f"Error handling premium callback: {e}")
+        logger.error(f"Error handling premium callbacks: {e}")
+        await query.answer("❌ Error occurred.", show_alert=True)ng premium callback: {e}")
         await query.edit_message_text("❌ An error occurred.")

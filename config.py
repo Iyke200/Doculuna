@@ -41,8 +41,28 @@ LOG_LEVEL = "DEBUG"
 MAX_DAILY_REQUESTS = 50  # Max requests per user per day
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 
+# Premium plans configuration
+PREMIUM_PLANS = {
+    'daily': {
+        'price': DAILY_PREMIUM_PRICE,
+        'duration_days': 1,
+        'name': 'Daily Plan'
+    },
+    '3month': {
+        'price': THREE_MONTH_PREMIUM_PRICE,
+        'duration_days': 90,
+        'name': '3-Month Plan'
+    },
+    'lifetime': {
+        'price': LIFETIME_PREMIUM_PRICE,
+        'duration_days': 36500,  # 100 years
+        'name': 'Lifetime Plan'
+    }
+}
+
 # Admin configuration
 ADMIN_USER_IDS = [6857550239]  # Admin user IDs
+ADMIN_IDS = ADMIN_USER_IDS  # Alias for compatibility
 
 # Production settings
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")

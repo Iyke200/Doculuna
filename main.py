@@ -158,13 +158,12 @@ def start_bot_clean():
     )
 
 if __name__ == "__main__":
-    while True:
-        try:
-            logging.info("🚀 Starting DocuLuna...")
-            start_bot_clean()
-        except KeyboardInterrupt:
-            logging.info("🛑 Stopped by user.")
-            sys.exit(0)
-        except Exception:
-            logging.exception("❌ DocuLuna crashed — restarting in 5s")
-            time.sleep(5)
+    try:
+        logging.info("🚀 Starting DocuLuna...")
+        start_bot_clean()
+    except KeyboardInterrupt:
+        logging.info("🛑 Stopped by user.")
+        sys.exit(0)
+    except Exception as e:
+        logging.exception(f"❌ DocuLuna failed to start: {e}")
+        sys.exit(1)

@@ -1,10 +1,9 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime, timedelta
 from database.db import get_all_users, update_premium_status, get_pending_payments, approve_payment, reject_payment
-from config import ADMIN_IDS
+from config import ADMIN_IDS, ADMIN_USER_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ async def show_bot_stats(query, context):
         users = get_all_users()
         total_users = len(users)
         premium_users = len([u for u in users if u.get('is_premium', False)])
-        
+
         message = (
             f"📊 **Bot Statistics**\n\n"
             f"👥 Total Users: {total_users}\n"
@@ -122,9 +121,9 @@ async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TY
 
         target_user = int(context.args[0])
         days = int(context.args[1]) if len(context.args) > 1 else 30
-        
+
         expires_at = (datetime.now() + timedelta(days=days)).isoformat()
-        
+
         if update_premium_status(target_user, True, expires_at):
             await update.message.reply_text(f"✅ Premium granted to user {target_user} for {days} days.")
         else:
@@ -147,7 +146,7 @@ async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_T
             return
 
         target_user = int(context.args[0])
-        
+
         if update_premium_status(target_user, False):
             await update.message.reply_text(f"✅ Premium revoked from user {target_user}.")
         else:
@@ -171,10 +170,10 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         message = " ".join(context.args)
         users = get_all_users()
-        
+
         sent = 0
         failed = 0
-        
+
         for user in users:
             try:
                 await context.bot.send_message(user['user_id'], message)
@@ -202,14 +201,14 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
 
         target_user = int(context.args[0])
         plan_type = context.args[1] if len(context.args) > 1 else "lifetime"
-        
+
         if plan_type == "daily":
             expires_at = (datetime.now() + timedelta(days=1)).isoformat()
         elif plan_type == "3month":
             expires_at = (datetime.now() + timedelta(days=90)).isoformat()
         else:  # lifetime
             expires_at = None
-        
+
         if update_premium_status(target_user, True, expires_at):
             await update.message.reply_text(f"✅ Force upgraded user {target_user} to {plan_type}.")
         else:
@@ -218,3 +217,64 @@ async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         logger.error(f"Error force upgrading: {e}")
         await update.message.reply_text("❌ Error force upgrading user.")
+
+async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle admin callback queries."""
+    try:
+        query = update.callback_query
+        user_id = update.effective_user.id
+
+        if user_id not in ADMIN_USER_IDS:
+            await query.answer("❌ Access denied.", show_alert=True)
+            return
+
+        callback_data = query.data
+
+        if callback_data == "admin_stats":
+            users = get_all_users()
+            await query.edit_message_text(
+                f"📊 **Bot Statistics**\n\n"
+                f"👥 Total Users: {len(users)}\n"
+                f"💎 Premium Users: {len([u for u in users if u.get('is_premium')])}\n"
+                f"🆓 Free Users: {len([u for u in users if not u.get('is_premium')])}"
+            )
+        elif callback_data == "admin_users":
+            users = get_all_users()
+            if users:
+                user_list_text = "👥 **All Users:**\n\n"
+                for user in users[:10]: # Show first 10 users
+                    status = "💎 Premium" if user.get('is_premium') else "🆓 Free"
+                    user_list_text += f"ID: {user.get('user_id')}, Name: {user.get('first_name')}, Status: {status}\n"
+                if len(users) > 10:
+                    user_list_text += f"\n... and {len(users) - 10} more users."
+            else:
+                user_list_text = "👥 **No users found.**"
+            await query.edit_message_text(user_list_text)
+
+        elif callback_data == "admin_payments":
+            payments = get_pending_payments()
+            if payments:
+                payment_text = "💰 **Pending Payments:**\n\n"
+                for payment in payments[:5]:  # Show first 5
+                    payment_text += f"User: {payment.get('user_id')}\n"
+                    payment_text += f"Amount: ₦{payment.get('amount')}\n"
+                    payment_text += f"Plan: {payment.get('plan_type')}\n\n"
+            else:
+                payment_text = "💰 **No pending payments**"
+            await query.edit_message_text(payment_text)
+
+        elif callback_data == "admin_broadcast":
+            await query.edit_message_text("Please use the /broadcast command to send a message.")
+
+        elif callback_data == "admin_force_upgrade":
+            await query.edit_message_text("Please use the /force_upgrade command to upgrade a user.")
+
+        elif callback_data == "main_menu":
+            await query.edit_message_text("Returning to main menu...") # Placeholder, actual main menu logic would go here.
+
+        else:
+            await query.edit_message_text("🔧 **Admin Panel**\n\nFeature coming soon!")
+
+    except Exception as e:
+        logger.error(f"Error in admin callback: {e}")
+        await query.answer("❌ Error occurred.", show_alert=True)

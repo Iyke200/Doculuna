@@ -1,10 +1,10 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_user, get_referral_stats
 
 logger = logging.getLogger(__name__)
+
 
 async def referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle referrals command with improved UI."""
@@ -27,8 +27,12 @@ async def referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
             referral_link = f"https://t.me/DocuLunaBot?start=ref_{user_id}"
 
         keyboard = [
-            [InlineKeyboardButton("📋 Copy Link", callback_data=f"copy_referral_{user_id}")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            [
+                InlineKeyboardButton(
+                    "📋 Copy Link", callback_data=f"copy_referral_{user_id}"
+                )
+            ],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -51,9 +55,7 @@ async def referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"Referrals info sent to user {user_id}")
@@ -62,7 +64,10 @@ async def referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in referrals command for user {user_id}: {e}")
         await update.message.reply_text("❌ An error occurred. Please try again later.")
 
-async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
+
+async def handle_referral_callbacks(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, data: str
+):
     """Handle referral-related callbacks."""
     try:
         query = update.callback_query
@@ -81,7 +86,7 @@ async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAUL
                     f"📋 **Copy Your Referral Link:**\n\n"
                     f"`{referral_link}`\n\n"
                     f"Share this link to earn bonus uses! 🎉",
-                    parse_mode='Markdown'
+                    parse_mode="Markdown",
                 )
 
     except Exception as e:
@@ -102,9 +107,7 @@ async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAUL
         )
 
         await update.message.reply_text(
-            message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"Referrals info sent to user {user_id}")
@@ -113,7 +116,10 @@ async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAUL
         logger.error(f"Error in referrals command for user {user_id}: {e}")
         await update.message.reply_text("❌ An error occurred. Please try again later.")
 
-async def handle_referral_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
+
+async def handle_referral_callbacks(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, data: str
+):
     """Handle referral-related callbacks."""
     try:
         query = update.callback_query

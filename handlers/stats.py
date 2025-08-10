@@ -5,6 +5,7 @@ from database.db import get_all_users
 
 logger = logging.getLogger(__name__)
 
+
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show user statistics."""
     try:
@@ -21,7 +22,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Thank you for using DocuLuna!"
         )
 
-        await update.message.reply_text(message, parse_mode='Markdown')
+        await update.message.reply_text(message, parse_mode="Markdown")
 
         logger.info(f"Stats shown to user {user_id}")
 

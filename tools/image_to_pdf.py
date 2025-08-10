@@ -4,6 +4,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 async def handle_image_to_pdf(update, context):
     """Convert image to PDF."""
     try:
@@ -15,7 +16,9 @@ async def handle_image_to_pdf(update, context):
             "Please try again later or contact support."
         )
 
-        logger.info(f"Image to PDF conversion requested by user {update.effective_user.id}")
+        logger.info(
+            f"Image to PDF conversion requested by user {update.effective_user.id}"
+        )
 
     except Exception as e:
         logger.error(f"Error in Image to PDF conversion: {e}")

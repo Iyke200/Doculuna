@@ -8,16 +8,32 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+
 async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /upgrade command."""
     try:
         user_id = update.effective_user.id
 
         keyboard = [
-            [InlineKeyboardButton(f"🔓 Daily Plan - ₦{PREMIUM_PLANS['daily']['price']}", callback_data="pay_daily")],
-            [InlineKeyboardButton(f"📅 3-Month Plan - ₦{PREMIUM_PLANS['3month']['price']}", callback_data="pay_3month")],
-            [InlineKeyboardButton(f"💎 Lifetime Plan - ₦{PREMIUM_PLANS['lifetime']['price']}", callback_data="pay_lifetime")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            [
+                InlineKeyboardButton(
+                    f"🔓 Daily Plan - ₦{PREMIUM_PLANS['daily']['price']}",
+                    callback_data="pay_daily",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    f"📅 3-Month Plan - ₦{PREMIUM_PLANS['3month']['price']}",
+                    callback_data="pay_3month",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    f"💎 Lifetime Plan - ₦{PREMIUM_PLANS['lifetime']['price']}",
+                    callback_data="pay_lifetime",
+                )
+            ],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -41,9 +57,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+            message, reply_markup=reply_markup, parse_mode="Markdown"
         )
 
         logger.info(f"Upgrade options shown to user {user_id}")
@@ -51,6 +65,7 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in upgrade command for user {user_id}: {e}")
         await update.message.reply_text("❌ An error occurred. Please try again later.")
+
 
 async def handle_payment_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle payment screenshot submission."""
@@ -64,13 +79,13 @@ async def handle_payment_submission(update: Update, context: ContextTypes.DEFAUL
 
         if "daily" in caption:
             plan_type = "daily"
-            amount = PREMIUM_PLANS['daily']['price']
+            amount = PREMIUM_PLANS["daily"]["price"]
         elif "3month" in caption or "3-month" in caption:
             plan_type = "3month"
-            amount = PREMIUM_PLANS['3month']['price']
+            amount = PREMIUM_PLANS["3month"]["price"]
         elif "lifetime" in caption:
             plan_type = "lifetime"
-            amount = PREMIUM_PLANS['lifetime']['price']
+            amount = PREMIUM_PLANS["lifetime"]["price"]
         else:
             await update.message.reply_text(
                 "❌ Please send screenshot with caption 'daily', '3month', or 'lifetime'"
@@ -103,4 +118,6 @@ async def handle_payment_submission(update: Update, context: ContextTypes.DEFAUL
 
     except Exception as e:
         logger.error(f"Error handling payment submission from user {user_id}: {e}")
-        await update.message.reply_text("❌ Error processing payment. Please try again.")
+        await update.message.reply_text(
+            "❌ Error processing payment. Please try again."
+        )

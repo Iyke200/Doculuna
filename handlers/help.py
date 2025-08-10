@@ -1,9 +1,9 @@
-
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help command."""
@@ -11,9 +11,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🛠️ How to Use Tools", callback_data="help_tools")],
             [InlineKeyboardButton("💎 About Premium", callback_data="help_premium")],
-            [InlineKeyboardButton("👥 Referral System", callback_data="help_referrals")],
+            [
+                InlineKeyboardButton(
+                    "👥 Referral System", callback_data="help_referrals"
+                )
+            ],
             [InlineKeyboardButton("📞 Contact Support", callback_data="help_contact")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -42,15 +46,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if update.callback_query:
             await update.callback_query.edit_message_text(
-                help_text,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
+                help_text, reply_markup=reply_markup, parse_mode="Markdown"
             )
         else:
             await update.message.reply_text(
-                help_text,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
+                help_text, reply_markup=reply_markup, parse_mode="Markdown"
             )
 
     except Exception as e:

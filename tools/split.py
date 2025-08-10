@@ -8,6 +8,7 @@ from utils.premium_utils import is_premium
 
 logger = logging.getLogger(__name__)
 
+
 async def split_pdf(file_path, output_dir=None):
     """Split PDF into individual pages."""
     try:
@@ -19,7 +20,7 @@ async def split_pdf(file_path, output_dir=None):
         os.makedirs(output_dir, exist_ok=True)
 
         # Open PDF file
-        with open(file_path, 'rb') as file:
+        with open(file_path, "rb") as file:
             reader = PyPDF2.PdfReader(file)
 
             output_files = []
@@ -28,7 +29,7 @@ async def split_pdf(file_path, output_dir=None):
                 writer.add_page(reader.pages[page_num])
 
                 output_path = os.path.join(output_dir, f"page_{page_num + 1}.pdf")
-                with open(output_path, 'wb') as output_file:
+                with open(output_path, "wb") as output_file:
                     writer.write(output_file)
 
                 output_files.append(output_path)
@@ -39,6 +40,7 @@ async def split_pdf(file_path, output_dir=None):
     except Exception as e:
         logger.error(f"Error splitting PDF: {e}")
         return None
+
 
 async def handle_split_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle PDF splitting request."""

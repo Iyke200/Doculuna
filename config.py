@@ -10,7 +10,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "8129574913:AAFTvBu_d4R4WDDTAYSJUxUwPhWgdozlb
 # Usage limits for freemium model
 FREE_USAGE_LIMIT = 3  # Number of free uses per day
 PREMIUM_USAGE_LIMIT = 999999  # Unlimited
-REFERRAL_BONUS = 1   # Extra uses per successful referral
+REFERRAL_BONUS = 1  # Extra uses per successful referral
 
 # Pricing for premium subscriptions (in Naira)
 DAILY_PREMIUM_PRICE = 3500
@@ -26,7 +26,7 @@ PAYMENT_NAME = "Ebere Nwankwo"
 PAYMENT_METHODS = {
     "upi": "your-upi-id@bank",
     "paytm": "9876543210",
-    "gpay": "9876543210"
+    "gpay": "9876543210",
 }
 
 # Database configuration
@@ -43,21 +43,17 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 
 # Premium plans configuration
 PREMIUM_PLANS = {
-    'daily': {
-        'price': DAILY_PREMIUM_PRICE,
-        'duration_days': 1,
-        'name': 'Daily Plan'
+    "daily": {"price": DAILY_PREMIUM_PRICE, "duration_days": 1, "name": "Daily Plan"},
+    "3month": {
+        "price": THREE_MONTH_PREMIUM_PRICE,
+        "duration_days": 90,
+        "name": "3-Month Plan",
     },
-    '3month': {
-        'price': THREE_MONTH_PREMIUM_PRICE,
-        'duration_days': 90,
-        'name': '3-Month Plan'
+    "lifetime": {
+        "price": LIFETIME_PREMIUM_PRICE,
+        "duration_days": 36500,  # 100 years
+        "name": "Lifetime Plan",
     },
-    'lifetime': {
-        'price': LIFETIME_PREMIUM_PRICE,
-        'duration_days': 36500,  # 100 years
-        'name': 'Lifetime Plan'
-    }
 }
 
 # Admin configuration
@@ -108,4 +104,4 @@ PAYMENTS_DIR = "payments"
 BACKUPS_DIR = "backups"
 
 # File Configuration
-ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.gif']
+ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png", ".gif"]

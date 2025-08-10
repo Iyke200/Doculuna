@@ -5,7 +5,14 @@ import traceback
 import sys
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes,
+)
 from telegram.error import NetworkError, Forbidden
 from config import BOT_TOKEN
 
@@ -20,12 +27,10 @@ os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/doculuna.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler("logs/doculuna.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
 
 def import_handlers():
     """Import handlers with error handling."""
@@ -44,21 +49,22 @@ def import_handlers():
         from config import ADMIN_USER_IDS
 
         return {
-            'init_db': init_db,
-            'start': start,
-            'referrals': referrals,
-            'premium_status': premium_status,
-            'upgrade': upgrade,
-            'handle_payment_submission': handle_payment_submission,
-            'help_command': help_command,
-            'admin_panel': admin_panel,
-            'handle_callback_query': handle_callback_query,
-            'process_file': process_file,
-            'ADMIN_USER_IDS': ADMIN_USER_IDS
+            "init_db": init_db,
+            "start": start,
+            "referrals": referrals,
+            "premium_status": premium_status,
+            "upgrade": upgrade,
+            "handle_payment_submission": handle_payment_submission,
+            "help_command": help_command,
+            "admin_panel": admin_panel,
+            "handle_callback_query": handle_callback_query,
+            "process_file": process_file,
+            "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
         logger.error(f"Error importing handlers: {e}")
         raise
+
 
 async def error_callback(update, context):
     """Global error handler for the bot."""
@@ -82,6 +88,7 @@ async def error_callback(update, context):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
+
 def start_bot_clean():
     """Start the bot with clean initialization."""
     logger.info("🚀 Starting DocuLuna Bot...")
@@ -96,7 +103,7 @@ def start_bot_clean():
 
     # Initialize database
     logger.info("Initializing database...")
-    handlers['init_db']()
+    handlers["init_db"]()
     logger.info("✓ Database initialized")
 
     # Create Application
@@ -109,19 +116,26 @@ def start_bot_clean():
 
     # Register command handlers
     logger.info("Registering handlers...")
-    app.add_handler(CommandHandler("start", handlers['start']))
-    app.add_handler(CommandHandler("referral", handlers['referrals']))
-    app.add_handler(CommandHandler("premium", handlers['premium_status']))
-    app.add_handler(CommandHandler("upgrade", handlers['upgrade']))
-    app.add_handler(CommandHandler("help", handlers['help_command']))
-    app.add_handler(CommandHandler("admin", handlers['admin_panel']))
+    app.add_handler(CommandHandler("start", handlers["start"]))
+    app.add_handler(CommandHandler("referral", handlers["referrals"]))
+    app.add_handler(CommandHandler("premium", handlers["premium_status"]))
+    app.add_handler(CommandHandler("upgrade", handlers["upgrade"]))
+    app.add_handler(CommandHandler("help", handlers["help_command"]))
+    app.add_handler(CommandHandler("admin", handlers["admin_panel"]))
 
     # Import and add additional handlers with error handling
     try:
         from handlers.stats import stats_command
+
         app.add_handler(CommandHandler("stats", stats_command))
 
-        from handlers.admin import grant_premium_command, revoke_premium_command, broadcast_message, force_upgrade_command
+        from handlers.admin import (
+            grant_premium_command,
+            revoke_premium_command,
+            broadcast_message,
+            force_upgrade_command,
+        )
+
         app.add_handler(CommandHandler("grant_premium", grant_premium_command))
         app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
         app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
@@ -129,17 +143,17 @@ def start_bot_clean():
         logger.warning(f"Some admin commands not available: {e}")
 
     # Register callback query handler
-    app.add_handler(CallbackQueryHandler(handlers['handle_callback_query']))
+    app.add_handler(CallbackQueryHandler(handlers["handle_callback_query"]))
 
     # Register message handlers for file processing
-    app.add_handler(MessageHandler(
-        filters.Document.ALL & ~filters.COMMAND,
-        handlers['process_file']
-    ))
-    app.add_handler(MessageHandler(
-        filters.PHOTO & ~filters.COMMAND,
-        handlers['process_file']
-    ))
+    app.add_handler(
+        MessageHandler(
+            filters.Document.ALL & ~filters.COMMAND, handlers["process_file"]
+        )
+    )
+    app.add_handler(
+        MessageHandler(filters.PHOTO & ~filters.COMMAND, handlers["process_file"])
+    )
 
     logger.info("✓ All handlers registered")
 
@@ -153,9 +167,9 @@ def start_bot_clean():
     logger.info("✅ DocuLuna started successfully")
 
     app.run_polling(
-        allowed_updates=["message", "callback_query"],
-        drop_pending_updates=True
+        allowed_updates=["message", "callback_query"], drop_pending_updates=True
     )
+
 
 if __name__ == "__main__":
     try:

@@ -1,22 +1,147 @@
-import logging
 import os
-from pathlib import Path
+import logging
+from telegram import Update
+from telegram.ext import ContextTypes
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+    fitz = None
+from docx import Document
+from docx.shared import Inches
+from utils.usage_tracker import increment_usage, check_usage_limit
+from utils.premium_utils import is_premium
 
 logger = logging.getLogger(__name__)
 
-async def handle_pdf_to_word(update, context):
-    """Convert PDF to Word document."""
+async def handle_pdf_to_word(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle PDF to Word conversion."""
+    if not PYMUPDF_AVAILABLE:
+        await update.message.reply_text(
+            "❌ PDF to Word conversion is temporarily unavailable.\n"
+            "This feature requires PyMuPDF which is not installed."
+        )
+        return
+        
+    input_file = None
+    output_file = None
+
     try:
+        user_id = update.effective_user.id
+
+        # Check usage limit
+        if not await check_usage_limit(user_id):
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+            keyboard = [[InlineKeyboardButton("💎 Upgrade to Pro", callback_data="upgrade_pro")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "⚠️ You've reached your daily limit of 3 tool uses.\n\n"
+                "Upgrade to **DocuLuna Pro** for unlimited access!",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            return
+
         await update.message.reply_text("🔄 Converting PDF to Word...")
 
-        # For now, return a placeholder response
-        await update.message.reply_text(
-            "⚠️ PDF to Word conversion is under maintenance.\n"
-            "Please try again later or contact support."
-        )
+        # Get the document
+        document = update.message.document or context.user_data.get('last_pdf')
+        if not document:
+            await update.message.reply_text("❌ No PDF file found. Please send a PDF file.")
+            return
 
-        logger.info(f"PDF to Word conversion requested by user {update.effective_user.id}")
+        # Check file size (50MB limit)
+        if document.file_size > 50 * 1024 * 1024:
+            await update.message.reply_text("❌ File too large. Maximum size is 50MB.")
+            return
+
+        file = await context.bot.get_file(document.file_id)
+
+        # Create temp directory
+        os.makedirs("data/temp", exist_ok=True)
+
+        # Download input file
+        input_file = f"data/temp/pdf_input_{user_id}_{document.file_id}.pdf"
+        await file.download_to_drive(input_file)
+
+        # Convert to Word
+        output_file = f"data/temp/pdf_output_{user_id}_{document.file_id}.docx"
+
+        # Use PyMuPDF to extract text and convert to DOCX
+        doc = fitz.open(input_file)
+        word_doc = Document()
+        
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            text = page.get_text()
+            if text.strip():
+                word_doc.add_paragraph(text)
+                
+        doc.close()
+        word_doc.save(output_file)
+
+        # Add watermark for free users
+        if not is_premium(user_id):
+            add_docx_watermark(output_file)
+
+        # Send the converted file
+        with open(output_file, 'rb') as word_file:
+            filename = f"{document.file_name.rsplit('.', 1)[0]}.docx"
+            caption = "✅ **PDF to Word conversion complete!**"
+            if not is_premium(user_id):
+                caption += "\n\n💎 *Upgrade to Pro to remove watermark*"
+            
+            await update.message.reply_document(
+                document=word_file,
+                filename=filename,
+                caption=caption,
+                parse_mode='Markdown'
+            )
+
+        # Increment usage
+        await increment_usage(user_id)
+        logger.info(f"PDF to Word conversion successful for user {user_id}")
 
     except Exception as e:
         logger.error(f"Error in PDF to Word conversion: {e}")
-        await update.message.reply_text("❌ Error converting file. Please try again.")
+        await update.message.reply_text(
+            "❌ Error converting PDF to Word. Please ensure you sent a valid PDF file."
+        )
+    finally:
+        # Clean up files
+        try:
+            if input_file and os.path.exists(input_file):
+                os.remove(input_file)
+            if output_file and os.path.exists(output_file):
+                os.remove(output_file)
+        except Exception as e:
+            logger.error(f"Error cleaning up files: {e}")
+
+def add_docx_watermark(file_path):
+    """Add DocuLuna watermark to Word document."""
+    try:
+        doc = Document(file_path)
+        
+        # Add watermark as header and footer
+        for section in doc.sections:
+            # Header watermark
+            header = section.header
+            if header.paragraphs:
+                header_para = header.paragraphs[0]
+            else:
+                header_para = header.add_paragraph()
+            header_para.text = "Generated by DocuLuna - Upgrade to Pro to remove this watermark"
+            
+            # Footer watermark
+            footer = section.footer
+            if footer.paragraphs:
+                footer_para = footer.paragraphs[0]
+            else:
+                footer_para = footer.add_paragraph()
+            footer_para.text = "DocuLuna - Document Processing Bot"
+        
+        doc.save(file_path)
+        
+    except Exception as e:
+        logger.error(f"Error adding watermark to DOCX: {e}")

@@ -1,52 +1,62 @@
+
 import logging
 import traceback
-from functools import wraps
-from telegram import Update
-from telegram.ext import ContextTypes
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
-def error_handler(func):
-    """Decorator to handle errors in handler functions."""
+async def error_handler(update, context):
+    """Global error handler for the bot."""
+    try:
+        logger.error(f"Update {update} caused error {context.error}")
+        
+        # Log the full traceback
+        tb_lines = traceback.format_exception(
+            type(context.error), 
+            context.error, 
+            context.error.__traceback__
+        )
+        tb_string = ''.join(tb_lines)
+        
+        log_error(
+            error_type=type(context.error).__name__,
+            error_message=str(context.error),
+            traceback=tb_string,
+            update_data=str(update) if update else None
+        )
 
-    @wraps(func)
-    async def wrapper(
-        update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs
-    ):
-        try:
-            return await func(update, context, *args, **kwargs)
-        except Exception as e:
-            logger.error(f"Error in {func.__name__}: {e}")
-            logger.error(traceback.format_exc())
-
-            # Try to send error message to user
+        # Send user-friendly error message
+        if update and update.effective_chat:
             try:
-                if update.message:
-                    await update.message.reply_text(
-                        "❌ An error occurred. Please try again later."
-                    )
-                elif update.callback_query:
-                    await update.callback_query.edit_message_text(
-                        "❌ An error occurred. Please try again later."
-                    )
-            except:
-                pass  # Ignore if we can't send error message
+                error_message = format_error_for_user(context.error)
+                await update.effective_chat.send_message(error_message)
+            except Exception as e:
+                logger.error(f"Could not send error message to user: {e}")
 
-            return None
-
-    return wrapper
+    except Exception as e:
+        logger.error(f"Error in error handler: {e}")
 
 
-def log_error(error_message, user_id=None, additional_info=None):
-    """Log error with additional context."""
-    log_msg = f"Error: {error_message}"
-    if user_id:
-        log_msg += f" | User: {user_id}"
-    if additional_info:
-        log_msg += f" | Info: {additional_info}"
-
-    logger.error(log_msg)
+def log_error(error_type, error_message, traceback=None, update_data=None):
+    """Log error details to file."""
+    try:
+        import os
+        os.makedirs("logs", exist_ok=True)
+        
+        with open("logs/errors.log", "a", encoding="utf-8") as f:
+            f.write(f"\n{'='*50}\n")
+            f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+            f.write(f"Error Type: {error_type}\n")
+            f.write(f"Error Message: {error_message}\n")
+            if traceback:
+                f.write(f"Traceback:\n{traceback}\n")
+            if update_data:
+                f.write(f"Update Data: {update_data}\n")
+            f.write(f"{'='*50}\n")
+    
+    except Exception as e:
+        logger.error(f"Failed to log error to file: {e}")
 
 
 def format_error_for_user(error):
@@ -57,5 +67,9 @@ def format_error_for_user(error):
         return "❌ Processing timeout. Please try with a smaller file."
     elif "permission" in str(error).lower():
         return "❌ Permission error. Please try again."
+    elif "network" in str(error).lower():
+        return "❌ Network error. Please check your connection and try again."
+    elif "invalid" in str(error).lower():
+        return "❌ Invalid file format. Please check supported formats."
     else:
         return "❌ An unexpected error occurred. Please try again later."

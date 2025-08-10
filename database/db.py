@@ -204,6 +204,131 @@ def get_all_users():
         return []
 
 
+def add_user(user_id, first_name, username=None, last_name=None):
+    """Add a new user to the database."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO users 
+            (user_id, username, first_name, last_name) 
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, username, first_name, last_name)
+        )
+
+        conn.commit()
+        conn.close()
+        logger.info(f"User {user_id} added to database")
+
+    except Exception as e:
+        logger.error(f"Error adding user {user_id}: {e}")
+
+
+def update_premium_status(user_id, is_premium, expires_at=None):
+    """Update user premium status."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            UPDATE users 
+            SET is_premium = ?, premium_expires = ? 
+            WHERE user_id = ?
+            """,
+            (is_premium, expires_at, user_id)
+        )
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Premium status updated for user {user_id}")
+
+    except Exception as e:
+        logger.error(f"Error updating premium status for user {user_id}: {e}")
+
+
+def get_pending_payments():
+    """Get all pending payments."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT * FROM payments WHERE status = 'pending'"
+        )
+        results = cursor.fetchall()
+
+        conn.close()
+
+        payments = []
+        for result in results:
+            payments.append({
+                "id": result[0],
+                "user_id": result[1],
+                "plan_type": result[2],
+                "amount": result[3],
+                "status": result[4],
+                "screenshot_file_id": result[5],
+                "created_at": result[6],
+                "processed_at": result[7],
+            })
+
+        return payments
+
+    except Exception as e:
+        logger.error(f"Error getting pending payments: {e}")
+        return []
+
+
+def approve_payment(payment_id):
+    """Approve a payment."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            UPDATE payments 
+            SET status = 'approved', processed_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            """,
+            (payment_id,)
+        )
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Payment {payment_id} approved")
+
+    except Exception as e:
+        logger.error(f"Error approving payment {payment_id}: {e}")
+
+
+def reject_payment(payment_id):
+    """Reject a payment."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            UPDATE payments 
+            SET status = 'rejected', processed_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            """,
+            (payment_id,)
+        )
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Payment {payment_id} rejected")
+
+    except Exception as e:
+        logger.error(f"Error rejecting payment {payment_id}: {e}")
+
+
 def get_pending_payments():
     """Get all pending payments."""
     try:

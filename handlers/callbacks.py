@@ -1,8 +1,6 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from database.db import get_user
-from config import PREMIUM_PLANS, PAYMENT_ACCOUNT, PAYMENT_BANK, PAYMENT_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -45,25 +43,13 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         elif callback_data.startswith("pay_"):
             await handle_payment_selection(update, context, callback_data)
         elif callback_data.startswith("payment_"):
-            await handle_payment_proceed(update, context, callback_data)
-
-        # Tool actions
-        elif callback_data == "tool_pdf_to_word":
-            await query.edit_message_text(
-                "📄 Please upload a PDF file to convert to Word."
-            )
-        elif callback_data == "tool_word_to_pdf":
-            await query.edit_message_text(
-                "📝 Please upload a Word document to convert to PDF."
-            )
-        elif callback_data == "tool_image_to_pdf":
-            await query.edit_message_text("🖼️ Please upload an image to convert to PDF.")
+            await handle_payment_callback(update, context, callback_data)
 
         # Admin callbacks
         elif callback_data.startswith("admin_"):
             from handlers.admin import handle_admin_callback
 
-            await handle_admin_callback(update, context)
+            await handle_admin_callback(update, context, callback_data)
 
     except Exception as e:
         logger.error(f"Error handling callback query: {e}")
@@ -109,135 +95,117 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show tools menu."""
-    keyboard = [
-        [InlineKeyboardButton("📄 PDF Tools", callback_data="menu_pdf_tools")],
-        [InlineKeyboardButton("📝 Word Tools", callback_data="menu_word_tools")],
-        [InlineKeyboardButton("🖼️ Image Tools", callback_data="menu_image_tools")],
-        [InlineKeyboardButton("🔙 Back", callback_data="main_menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    """Show document tools menu."""
+    try:
+        keyboard = [
+            [InlineKeyboardButton("📄 PDF Tools", callback_data="menu_pdf_tools")],
+            [InlineKeyboardButton("📝 Word Tools", callback_data="menu_word_tools")],
+            [InlineKeyboardButton("🖼️ Image Tools", callback_data="menu_image_tools")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.callback_query.edit_message_text(
-        "🛠️ **Document Tools**\n\nSelect a category:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown",
-    )
+        tools_text = "🛠️ **Document Tools**\n\n" "Choose a category:"
+
+        await update.callback_query.edit_message_text(
+            tools_text, reply_markup=reply_markup, parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logger.error(f"Error showing tools menu: {e}")
 
 
 async def show_pdf_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show PDF tools submenu."""
-    keyboard = [
-        [InlineKeyboardButton("📄➡️📝 PDF to Word", callback_data="tool_pdf_to_word")],
-        [InlineKeyboardButton("📄✂️ Split PDF", callback_data="tool_split_pdf")],
-        [InlineKeyboardButton("📄🔗 Merge PDF", callback_data="tool_merge_pdf")],
-        [InlineKeyboardButton("📄🗜️ Compress PDF", callback_data="tool_compress_pdf")],
-        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📄→📝 PDF to Word", callback_data="tool_pdf_to_word"
+                )
+            ],
+            [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
+            [InlineKeyboardButton("🔗 Merge PDFs", callback_data="tool_merge_pdf")],
+            [InlineKeyboardButton("🗜️ Compress PDF", callback_data="tool_compress_pdf")],
+            [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.callback_query.edit_message_text(
-        "📄 **PDF Tools**\n\nSelect a tool:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown",
-    )
+        await update.callback_query.edit_message_text(
+            "📄 **PDF Tools**\n\nSelect a PDF operation:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown",
+        )
+
+    except Exception as e:
+        logger.error(f"Error showing PDF tools menu: {e}")
 
 
 async def show_word_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show Word tools submenu."""
-    keyboard = [
-        [InlineKeyboardButton("📝➡️📄 Word to PDF", callback_data="tool_word_to_pdf")],
-        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝→📄 Word to PDF", callback_data="tool_word_to_pdf"
+                )
+            ],
+            [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.callback_query.edit_message_text(
-        "📝 **Word Tools**\n\nSelect a tool:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown",
-    )
+        await update.callback_query.edit_message_text(
+            "📝 **Word Tools**\n\nSelect a Word operation:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown",
+        )
+
+    except Exception as e:
+        logger.error(f"Error showing Word tools menu: {e}")
 
 
 async def show_image_tools_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show Image tools submenu."""
-    keyboard = [
-        [InlineKeyboardButton("🖼️➡️📄 Image to PDF", callback_data="tool_image_to_pdf")],
-        [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.callback_query.edit_message_text(
-        "🖼️ **Image Tools**\n\nSelect a tool:",
-        reply_markup=reply_markup,
-        parse_mode="Markdown",
-    )
-
-
-async def handle_payment_selection(update, context, callback_data):
-    """Handle payment plan selection."""
-    plan_map = {
-        "pay_daily": ("Daily", PREMIUM_PLANS["daily"]["price"], "24 hours"),
-        "pay_3month": ("3-Month", PREMIUM_PLANS["3month"]["price"], "90 days"),
-        "pay_lifetime": ("Lifetime", PREMIUM_PLANS["lifetime"]["price"], "Forever"),
-    }
-
-    plan_type = callback_data.replace("pay_", "")
-    if plan_type in ["daily", "3month", "lifetime"]:
-        plan_name, amount, duration = plan_map.get(
-            callback_data, ("Unknown", 0, "Unknown")
-        )
-
+    try:
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "💳 Proceed to Payment", callback_data=f"payment_{plan_type}"
+                    "🖼️→📄 Image to PDF", callback_data="tool_image_to_pdf"
                 )
             ],
-            [InlineKeyboardButton("⬅️ Back to Plans", callback_data="upgrade_menu")],
+            [InlineKeyboardButton("🔙 Back", callback_data="tools_menu")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message = (
-            f"💰 **{plan_name} Plan Selected**\n\n"
-            f"💵 **Amount:** ₦{amount:,}\n"
-            f"⏰ **Duration:** {duration}\n\n"
-            f"**Payment Details:**\n"
-            f"🏦 Bank: {PAYMENT_BANK}\n"
-            f"🔢 Account: {PAYMENT_ACCOUNT}\n"
-            f"👤 Name: {PAYMENT_NAME}\n\n"
-            f"Click 'Proceed to Payment' to continue."
-        )
-
         await update.callback_query.edit_message_text(
-            message, reply_markup=reply_markup, parse_mode="Markdown"
+            "🖼️ **Image Tools**\n\nSelect an image operation:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown",
         )
 
+    except Exception as e:
+        logger.error(f"Error showing Image tools menu: {e}")
 
-async def handle_payment_proceed(update, context, callback_data):
-    """Handle payment proceed action."""
-    plan_type = callback_data.replace("payment_", "")
-    plan_info = PREMIUM_PLANS.get(plan_type, {})
 
-    message = (
-        f"💳 **Payment Instructions for {plan_info.get('name', 'Unknown')} Plan**\n\n"
-        f"💰 **Amount to Pay:** ₦{plan_info.get('price', 0):,}\n\n"
-        f"**Transfer Details:**\n"
-        f"🏦 **Bank:** {PAYMENT_BANK}\n"
-        f"🔢 **Account Number:** {PAYMENT_ACCOUNT}\n"
-        f"👤 **Account Name:** {PAYMENT_NAME}\n\n"
-        f"**After Payment:**\n"
-        f"1. Take a screenshot of your payment confirmation\n"
-        f"2. Send the screenshot here with caption '{plan_type}'\n"
-        f"3. Wait for admin approval (usually within 24 hours)\n\n"
-        f"⚠️ **Important:** Include '{plan_type}' in your screenshot caption!"
-    )
+async def handle_payment_selection(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str
+):
+    """Handle payment plan selection."""
+    try:
+        from handlers.upgrade import handle_payment_selection as upgrade_payment_handler
 
-    keyboard = [
-        [InlineKeyboardButton("⬅️ Back to Plans", callback_data="upgrade_menu")],
-        [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        await upgrade_payment_handler(update, context, callback_data)
+    except Exception as e:
+        logger.error(f"Error handling payment selection: {e}")
 
-    await update.callback_query.edit_message_text(
-        message, reply_markup=reply_markup, parse_mode="Markdown"
-    )
+
+async def handle_payment_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, callback_data: str
+):
+    """Handle payment-related callbacks."""
+    try:
+        from handlers.upgrade import handle_payment_callback as upgrade_payment_callback
+
+        await upgrade_payment_callback(update, context, callback_data)
+    except Exception as e:
+        logger.error(f"Error handling payment callback: {e}")

@@ -128,3 +128,105 @@ async def handle_premium_callbacks(update: Update, context: ContextTypes.DEFAULT
         logger.error(f"Error handling premium callbacks: {e}")
         await query.answer("❌ Error occurred.", show_alert=True)ng premium callback: {e}")
         await query.edit_message_text("❌ An error occurred.")
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+from database.db import get_user
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+async def premium_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show premium status information."""
+    try:
+        user_id = update.effective_user.id
+        user = get_user(user_id)
+
+        if not user:
+            await update.message.reply_text("❌ Please register with /start first.")
+            return
+
+        keyboard = [
+            [InlineKeyboardButton("💎 Upgrade to Premium", callback_data="upgrade_pro")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        # Check premium status
+        is_premium = user[3] if len(user) > 3 else False  # Assuming premium status is at index 3
+        
+        if is_premium:
+            # Check expiry date
+            expiry_date = user[4] if len(user) > 4 else None  # Assuming expiry is at index 4
+            if expiry_date:
+                try:
+                    if isinstance(expiry_date, str):
+                        expiry_dt = datetime.fromisoformat(expiry_date.replace('Z', '+00:00'))
+                    else:
+                        expiry_dt = expiry_date
+                    
+                    if expiry_dt > datetime.now():
+                        days_left = (expiry_dt - datetime.now()).days
+                        status_text = (
+                            f"💎 **Premium Status: ACTIVE**\n\n"
+                            f"✅ You have unlimited access!\n"
+                            f"📅 Expires in: {days_left} days\n"
+                            f"🗓️ Expiry date: {expiry_dt.strftime('%Y-%m-%d')}\n\n"
+                            f"**Premium Benefits:**\n"
+                            f"• Unlimited conversions\n"
+                            f"• Priority processing\n"
+                            f"• Larger file sizes\n"
+                            f"• No ads\n"
+                        )
+                    else:
+                        status_text = (
+                            f"❌ **Premium Status: EXPIRED**\n\n"
+                            f"Your premium subscription has expired.\n"
+                            f"Upgrade now to continue enjoying unlimited access!"
+                        )
+                except Exception:
+                    status_text = (
+                        f"💎 **Premium Status: ACTIVE**\n\n"
+                        f"✅ You have unlimited access!\n"
+                        f"**Premium Benefits:**\n"
+                        f"• Unlimited conversions\n"
+                        f"• Priority processing\n"
+                        f"• Larger file sizes\n"
+                        f"• No ads\n"
+                    )
+            else:
+                status_text = (
+                    f"💎 **Premium Status: ACTIVE**\n\n"
+                    f"✅ You have unlimited access!\n"
+                    f"**Premium Benefits:**\n"
+                    f"• Unlimited conversions\n"
+                    f"• Priority processing\n"
+                    f"• Larger file sizes\n"
+                    f"• No ads\n"
+                )
+        else:
+            status_text = (
+                f"🆓 **Premium Status: FREE**\n\n"
+                f"You're currently using the free version.\n\n"
+                f"**Free Plan Limits:**\n"
+                f"• 3 conversions per day\n"
+                f"• Standard processing speed\n"
+                f"• 10MB file size limit\n\n"
+                f"**Upgrade to Premium for:**\n"
+                f"• Unlimited conversions\n"
+                f"• Priority processing\n"
+                f"• 50MB file size limit\n"
+                f"• No ads\n"
+            )
+
+        await update.message.reply_text(
+            status_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+        logger.info(f"Premium status shown to user {user_id}")
+
+    except Exception as e:
+        logger.error(f"Error showing premium status for user {user_id}: {e}")
+        await update.message.reply_text("❌ Error retrieving premium status.")

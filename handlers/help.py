@@ -1,3 +1,4 @@
+
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -21,38 +22,32 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        help_text = (
-            "❓ **DocuLuna Help Center**\n\n"
-            "Welcome to DocuLuna! Here's how to get started:\n\n"
-            "**📄 Document Conversion:**\n"
-            "• Upload any supported file (PDF, DOCX, images)\n"
-            "• Choose your conversion option\n"
-            "• Download your converted file\n\n"
-            "**🆓 Free Usage:**\n"
-            "• 3 free conversions per day\n"
-            "• Basic features included\n\n"
-            "**💎 Premium Benefits:**\n"
-            "• Unlimited conversions\n"
-            "• No watermarks\n"
-            "• Faster processing\n"
-            "• Priority support\n\n"
-            "**📱 How to Use:**\n"
-            "1. Send a document or image\n"
-            "2. Select conversion type\n"
-            "3. Wait for processing\n"
-            "4. Download result\n\n"
-            "Need more help? Choose an option below:"
+        help_message = (
+            "🔧 **DocuLuna Help Center**\n\n"
+            "**Available Commands:**\n"
+            "• /start - Start the bot\n"
+            "• /help - Show this help menu\n"
+            "• /premium - Check premium status\n"
+            "• /upgrade - Upgrade to premium\n"
+            "• /referral - Referral information\n\n"
+            "**How to use:**\n"
+            "1️⃣ Send any document or image\n"
+            "2️⃣ Choose your processing option\n"
+            "3️⃣ Download your converted file\n\n"
+            "**Supported formats:**\n"
+            "📄 PDF, Word (DOC/DOCX)\n"
+            "🖼️ JPG, PNG, GIF\n\n"
+            "Choose an option below for detailed help:"
         )
 
-        if update.callback_query:
-            await update.callback_query.edit_message_text(
-                help_text, reply_markup=reply_markup, parse_mode="Markdown"
-            )
-        else:
-            await update.message.reply_text(
-                help_text, reply_markup=reply_markup, parse_mode="Markdown"
-            )
+        await update.message.reply_text(
+            help_message,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+        logger.info(f"Help command used by user {update.effective_user.id}")
 
     except Exception as e:
         logger.error(f"Error in help command: {e}")
-        await update.message.reply_text("❌ An error occurred. Please try again later.")
+        await update.message.reply_text("❌ Error displaying help. Please try again.")

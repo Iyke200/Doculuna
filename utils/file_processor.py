@@ -135,3 +135,41 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error processing file: {e}")
         await update.message.reply_text("❌ Error processing file. Please try again.")
+
+
+import logging
+from telegram import Update
+from telegram.ext import ContextTypes
+
+logger = logging.getLogger(__name__)
+
+
+async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process uploaded files."""
+    try:
+        user_id = update.effective_user.id
+
+        if update.message.document:
+            file_name = update.message.document.file_name
+            file_size = update.message.document.file_size
+
+            await update.message.reply_text(
+                f"📄 **File Received**\n\n"
+                f"📁 Name: {file_name}\n"
+                f"📏 Size: {file_size/1024/1024:.2f} MB\n\n"
+                f"🔄 Processing will be available soon!\n"
+                f"This feature is under development."
+            )
+
+        elif update.message.photo:
+            await update.message.reply_text(
+                "🖼️ **Image Received**\n\n"
+                "🔄 Image processing will be available soon!\n"
+                "This feature is under development."
+            )
+
+        logger.info(f"File processed for user {user_id}")
+
+    except Exception as e:
+        logger.error(f"Error processing file for user {user_id}: {e}")
+        await update.message.reply_text("❌ Error processing file.")

@@ -144,3 +144,41 @@ def add_watermark_to_file(file_path, is_premium=False):
     except Exception as e:
         logger.error(f"Error adding watermark: {e}")
         return False
+
+
+import logging
+from database.db import get_user
+from config import FREE_USAGE_LIMIT
+
+logger = logging.getLogger(__name__)
+
+
+async def check_usage_limit(user_id):
+    """Check if user has reached usage limit."""
+    try:
+        user = get_user(user_id)
+        if not user:
+            return False
+
+        # If user is premium, no limits
+        if user[3]:  # is_premium column
+            return True
+
+        # For free users, check daily limit (simplified - just return True for now)
+        return True
+
+    except Exception as e:
+        logger.error(f"Error checking usage limit for user {user_id}: {e}")
+        return False
+
+
+async def increment_usage(user_id, action):
+    """Increment user's usage count."""
+    try:
+        # For now, just log the usage
+        logger.info(f"User {user_id} performed action: {action}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error incrementing usage for user {user_id}: {e}")
+        return False

@@ -26,18 +26,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        welcome_message = (
-            f"🌟 **Welcome to DocuLuna, {first_name}!**\n\n"
-            "🚀 Your ultimate document processing companion!\n\n"
-            "✨ **What I can do:**\n"
-            "📄 Convert PDF ↔ Word documents\n"
-            "🖼️ Transform images to PDF\n"
-            "✂️ Split & merge PDF files\n"
-            "🗜️ Compress large documents\n\n"
-            "🆓 **Free Plan:** 3 uses per day\n"
-            "💎 **Premium:** Unlimited access\n\n"
-            "Ready to get started? Choose an option below!"
-        )
+        if existing_user:
+            # Returning user
+            welcome_message = f"👋 Welcome back, {first_name}! Use /help to explore features or upload a document to begin."
+        else:
+            # New user
+            welcome_message = (
+                f"🌟 **Welcome to DocuLuna, {first_name}!**\n\n"
+                "🚀 Your ultimate document processing companion!\n\n"
+                "✨ **What I can do:**\n"
+                "📄 Convert PDF ↔ Word documents\n"
+                "🖼️ Transform images to PDF\n"
+                "✂️ Split & merge PDF files\n"
+                "🗜️ Compress large documents\n\n"
+                "🆓 **Free Plan:** 3 uses per day\n"
+                "💎 **Premium:** Unlimited access\n\n"
+                "Ready to get started? Choose an option below!"
+            )
 
         await update.message.reply_text(
             welcome_message,
@@ -49,28 +54,4 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error in start command for user {user_id}: {e}")
-        await update.message.reply_text("❌ Welcome! Something went wrong, but you can still use the bot.")kup(keyboard)
-
-        if existing_user:
-            # Returning user
-            message = f"👋 Welcome back, {first_name}! Use /help to explore features or upload a document to begin."
-        else:
-            # New user
-            message = (
-                f"👋 Hello {first_name}!\n"
-                f"Welcome to **DocuLuna** – your AI-powered document toolkit on Telegram.\n\n"
-                f"Get started by sending a document or use /help to explore commands.\n"
-                f"Need premium tools? Use /upgrade to unlock full access."
-            )
-
-        await update.message.reply_text(
-            message,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-
-        logger.info(f"Start command processed for user {user_id}")
-
-    except Exception as e:
-        logger.error(f"Error in start command for user {user_id}: {e}")
-        await update.message.reply_text("❌ An error occurred. Please try again later.")
+        await update.message.reply_text("❌ Welcome! Something went wrong, but you can still use the bot.")

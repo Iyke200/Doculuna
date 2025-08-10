@@ -1,29 +1,50 @@
-
 import logging
 import traceback
-from datetime import datetime
+from functools import wraps
+from telegram import Update
+from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
 
-async def error_handler(update, context):
-    """Handle errors in bot operations."""
-    try:
-        error_msg = str(context.error)
-        user_id = update.effective_user.id if update and update.effective_user else "Unknown"
-        
-        logger.error(f"Error for user {user_id}: {error_msg}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        
-        if update and update.effective_chat:
-            await update.effective_chat.send_message(
-                "❌ An error occurred. Our team has been notified."
-            )
+def error_handler(func):
+    """Decorator to handle errors in handler functions."""
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        try:
+            return await func(update, context, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {e}")
+            logger.error(traceback.format_exc())
             
-    except Exception as e:
-        logger.error(f"Error in error handler: {e}")
+            # Try to send error message to user
+            try:
+                if update.message:
+                    await update.message.reply_text("❌ An error occurred. Please try again later.")
+                elif update.callback_query:
+                    await update.callback_query.edit_message_text("❌ An error occurred. Please try again later.")
+            except:
+                pass  # Ignore if we can't send error message
+                
+            return None
+    return wrapper
 
-def log_error(error, context="Unknown"):
-    """Log error with context."""
-    timestamp = datetime.now().isoformat()
-    logger.error(f"[{timestamp}] {context}: {error}")
-    logger.error(f"Traceback: {traceback.format_exc()}")
+def log_error(error_message, user_id=None, additional_info=None):
+    """Log error with additional context."""
+    log_msg = f"Error: {error_message}"
+    if user_id:
+        log_msg += f" | User: {user_id}"
+    if additional_info:
+        log_msg += f" | Info: {additional_info}"
+    
+    logger.error(log_msg)
+
+def format_error_for_user(error):
+    """Format error message for user display."""
+    if "file not found" in str(error).lower():
+        return "❌ File not found. Please try uploading the file again."
+    elif "timeout" in str(error).lower():
+        return "❌ Processing timeout. Please try with a smaller file."
+    elif "permission" in str(error).lower():
+        return "❌ Permission error. Please try again."
+    else:
+        return "❌ An unexpected error occurred. Please try again later."

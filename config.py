@@ -1,42 +1,91 @@
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
-# Bot Configuration
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_USER_IDS = [int(x) for x in os.getenv("ADMIN_USER_IDS", "").split(",") if x.strip()]
-ADMIN_IDS = ADMIN_USER_IDS  # Alias for compatibility
+# Telegram Bot Token
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8129574913:AAFTvBu_d4R4WDDTAYSJUxUwPhWgdozlbH4")
 
-# Database Configuration
-DB_PATH = "database/doculuna.db"
+# Usage limits for freemium model
+FREE_USAGE_LIMIT = 3  # Number of free uses per day
+PREMIUM_USAGE_LIMIT = 999999  # Unlimited
+REFERRAL_BONUS = 1   # Extra uses per successful referral
 
-# Payment Configuration
+# Pricing for premium subscriptions (in Naira)
+DAILY_PREMIUM_PRICE = 3500
+THREE_MONTH_PREMIUM_PRICE = 9000
+LIFETIME_PREMIUM_PRICE = 25000
+
+# Payment details
+PAYMENT_ACCOUNT = "9057203030"
+PAYMENT_BANK = "Moniepoint"
+PAYMENT_NAME = "Ebere Nwankwo"
+
+# Payment Methods (additional options)
 PAYMENT_METHODS = {
-    "bkash": {
-        "number": "+8801700000000",
-        "account_type": "Personal"
-    },
-    "nagad": {
-        "number": "+8801700000000", 
-        "account_type": "Personal"
-    }
+    "upi": "your-upi-id@bank",
+    "paytm": "9876543210",
+    "gpay": "9876543210"
 }
 
-# Premium Plans
-PREMIUM_PLANS = {
-    "daily": {"price": 20, "days": 1},
-    "3month": {"price": 300, "days": 90},
-    "lifetime": {"price": 1000, "days": None}
-}
+# Database configuration
+DB_PATH = "database/doculuna.db"
+DATABASE_URL = "database/doculuna.db"
 
-# Usage Limits
-FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "3"))
-PREMIUM_DAILY_LIMIT = int(os.getenv("PREMIUM_DAILY_LIMIT", "1000"))
+# Logging configuration
+LOG_FILE = "doculuna.log"
+LOG_LEVEL = "DEBUG"
 
-# File Size Limits (in MB)
-MAX_FILE_SIZE_FREE = int(os.getenv("MAX_FILE_SIZE_FREE", "10"))
-MAX_FILE_SIZE_PREMIUM = int(os.getenv("MAX_FILE_SIZE_PREMIUM", "100"))
+# Abuse prevention
+MAX_DAILY_REQUESTS = 50  # Max requests per user per day
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 
-# Referral Configuration
-REFERRAL_BONUS_DAYS = 1
+# Admin configuration
+ADMIN_USER_IDS = [6857550239]  # Admin user IDs
+
+# Production settings
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+DEBUG = ENVIRONMENT == "development"
+
+# Rate limiting
+RATE_LIMIT_REQUESTS = 10
+RATE_LIMIT_WINDOW = 60  # seconds
+
+# File processing limits
+MAX_CONCURRENT_PROCESSES = 5
+PROCESSING_TIMEOUT = 300  # 5 minutes
+MAX_MERGE_FILES = 10
+
+# Business analytics
+ANALYTICS_ENABLED = True
+BACKUP_INTERVAL_HOURS = 6
+
+# Marketing settings
+REFERRAL_REWARD_USES = 1
+WELCOME_SERIES_ENABLED = True
+RETENTION_CAMPAIGN_ENABLED = True
+
+# Security settings
+MAX_LOGIN_ATTEMPTS = 5
+SESSION_TIMEOUT_HOURS = 24
+
+# Webhook settings (for production)
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+WEBHOOK_PORT = int(os.getenv("PORT", 5000))
+
+# External services
+PAYMENT_VERIFICATION_API = os.getenv("PAYMENT_VERIFICATION_API", "")
+
+# Feature flags
+ENABLE_PREMIUM_FEATURES = True
+ENABLE_ANALYTICS = True
+ENABLE_NOTIFICATIONS = True
+
+# Directories
+TEMP_DIR = "data/temp"
+PAYMENTS_DIR = "payments"
+BACKUPS_DIR = "backups"
+
+# File Configuration
+ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.gif']

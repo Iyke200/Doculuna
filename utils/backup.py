@@ -1,48 +1,40 @@
+# utils/backup.py
 import logging
-import shutil
 import os
-import json
-from datetime import datetime
+import shutil
+import time
+import asyncio
+from config import DATABASE_PATH, BACKUP_DIR, BACKUP_INTERVAL
 
 logger = logging.getLogger(__name__)
 
-
-class BackupSystem:
-    """Simple backup system for bot data."""
-
-    def __init__(self):
-        self.backup_dir = "backups"
-        os.makedirs(self.backup_dir, exist_ok=True)
-
-    def create_backup(self):
-        """Create a backup of the database."""
+async def async_backup_database():
+    while True:
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_filename = f"backup_{timestamp}.db"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
-
-            # Ensure database exists
-            if os.path.exists("database/doculuna.db"):
-                shutil.copy2("database/doculuna.db", backup_path)
-                logger.info(f"Backup created: {backup_filename}")
-                return True
-            else:
-                logger.warning("Database file not found for backup")
-                return False
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+            stat = shutil.disk_usage(BACKUP_DIR)
+            if stat.free < 50 * 1024 * 1024:
+                logger.warning("Low disk space, skipping backup")
+                clean_old_backups()
+                await asyncio.sleep(BACKUP_INTERVAL * 3600)
+                continue
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(BACKUP_DIR, f"backup_{timestamp}.db")
+            shutil.copy(DATABASE_PATH, backup_path)
+            logger.info(f"Database backed up to {backup_path}")
+            clean_old_backups()
         except Exception as e:
-            logger.error(f"Backup failed: {e}")
-            return False
+            logger.error(f"Error in backup: {e}")
+        await asyncio.sleep(BACKUP_INTERVAL * 3600)
 
-    def cleanup_old_backups(self, keep_days=30):
-        """Clean up old backup files."""
-        try:
-            cutoff_time = datetime.now().timestamp() - (keep_days * 24 * 3600)
-
-            for filename in os.listdir(self.backup_dir):
-                filepath = os.path.join(self.backup_dir, filename)
-                if os.path.getmtime(filepath) < cutoff_time:
-                    os.remove(filepath)
-                    logger.info(f"Removed old backup: {filename}")
-
-        except Exception as e:
-            logger.error(f"Error cleaning up backups: {e}")
+def clean_old_backups():
+    try:
+        retention_days = 2
+        cutoff_time = time.time() - (retention_days * 24 * 60 * 60)
+        for file_name in os.listdir(BACKUP_DIR):
+            file_path = os.path.join(BACKUP_DIR, file_name)
+            if os.path.isfile(file_path) and os.path.getmtime(file_path) < cutoff_time:
+                os.remove(file_path)
+                logger.info(f"Removed old backup: {file_path}")
+    except Exception as e:
+        logger.error(f"Error cleaning backups: {e}")

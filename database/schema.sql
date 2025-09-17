@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS referrals (
     referral_code TEXT UNIQUE,
     referral_count INTEGER DEFAULT 0,
     premium_days_earned INTEGER DEFAULT 0,
+    total_earnings INTEGER DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -28,5 +29,32 @@ CREATE TABLE IF NOT EXISTS feedback (
     user_id INTEGER,
     feedback TEXT,
     timestamp DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS payment_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount INTEGER,
+    plan_type TEXT,
+    payment_method TEXT,
+    timestamp DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS referral_rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount INTEGER,
+    plan_type TEXT,
+    timestamp DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS premium_expiry_warnings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    warning_sent DATETIME,
+    expiry_date DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );

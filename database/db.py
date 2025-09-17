@@ -188,3 +188,81 @@ def get_pending_payments():
 def get_user(user_id: int):
     """Alias for get_user_by_id for compatibility."""
     return get_user_by_id(user_id)
+
+def add_payment_log(user_id: int, amount: int, plan_type: str, payment_method: str):
+    """Log payment transaction."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO payment_logs (user_id, amount, plan_type, payment_method, timestamp)
+                VALUES (?, ?, ?, ?, datetime('now'))
+            """, (user_id, amount, plan_type, payment_method))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Error logging payment for user {user_id}: {e}")
+
+def add_referral_reward(user_id: int, amount: int, plan_type: str):
+    """Add referral reward to user."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO referral_rewards (user_id, amount, plan_type, timestamp)
+                VALUES (?, ?, ?, datetime('now'))
+            """, (user_id, amount, plan_type))
+            # Also update referral stats
+            cursor.execute("""
+                UPDATE referrals 
+                SET total_earnings = COALESCE(total_earnings, 0) + ?
+                WHERE user_id = ?
+            """, (amount, user_id))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Error adding referral reward for user {user_id}: {e}")
+
+def get_users_by_premium_status(is_premium: bool | None = None):
+    """Get users filtered by premium status."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            if is_premium is None:
+                cursor.execute("SELECT * FROM users")
+            else:
+                cursor.execute("SELECT * FROM users WHERE is_premium = ?", (1 if is_premium else 0,))
+            return cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Error getting users by premium status: {e}")
+        return []
+
+def check_premium_expiry_warnings():
+    """Check for users whose premium expires in 3 days."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT user_id, premium_expiry FROM users 
+                WHERE is_premium = 1 AND premium_expiry IS NOT NULL
+                AND date(premium_expiry) = date('now', '+3 days')
+                AND user_id NOT IN (
+                    SELECT user_id FROM premium_expiry_warnings 
+                    WHERE date(warning_sent) = date('now')
+                )
+            """)
+            return cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Error checking premium expiry warnings: {e}")
+        return []
+
+def mark_expiry_warning_sent(user_id: int, expiry_date: str):
+    """Mark that expiry warning has been sent."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO premium_expiry_warnings (user_id, warning_sent, expiry_date)
+                VALUES (?, datetime('now'), ?)
+            """, (user_id, expiry_date))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Error marking expiry warning sent: {e}")

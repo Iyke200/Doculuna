@@ -4,15 +4,19 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Telegram Bot Token
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8129574913:AAFTvBu_d4R4WDDTAYSJUxUwPhWgdozlbH4")
+# Telegram Bot Token - SECURITY: No default token for production
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Usage limits for freemium model
 FREE_USAGE_LIMIT = 3  # Number of free uses per day
 PREMIUM_USAGE_LIMIT = 999999  # Unlimited
 REFERRAL_BONUS = 1  # Extra uses per successful referral
 
-# Pricing for premium subscriptions (in Naira)
+# Pricing for premium subscriptions (in Naira) - PRODUCTION PRICING
+WEEKLY_PREMIUM_PRICE = 3500  # Weekly plan
+MONTHLY_PREMIUM_PRICE = 1000  # Monthly plan
+
+# Legacy pricing (deprecated)
 DAILY_PREMIUM_PRICE = 3500
 THREE_MONTH_PREMIUM_PRICE = 9000
 LIFETIME_PREMIUM_PRICE = 25000
@@ -41,8 +45,24 @@ LOG_LEVEL = "DEBUG"
 MAX_DAILY_REQUESTS = 50  # Max requests per user per day
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 
-# Premium plans configuration
+# Premium plans configuration - PRODUCTION PLANS
 PREMIUM_PLANS = {
+    "weekly": {
+        "price": WEEKLY_PREMIUM_PRICE,  # 3500 NGN
+        "duration_days": 7,
+        "name": "Weekly Pro",
+        "description": "Perfect for quick projects"
+    },
+    "monthly": {
+        "price": MONTHLY_PREMIUM_PRICE,  # 1000 NGN
+        "duration_days": 30,
+        "name": "Monthly Pro", 
+        "description": "Best value for regular users"
+    },
+}
+
+# Legacy plans (deprecated)
+LEGACY_PLANS = {
     "daily": {"price": DAILY_PREMIUM_PRICE, "duration_days": 1, "name": "Daily Plan"},
     "3month": {
         "price": THREE_MONTH_PREMIUM_PRICE,
@@ -51,7 +71,7 @@ PREMIUM_PLANS = {
     },
     "lifetime": {
         "price": LIFETIME_PREMIUM_PRICE,
-        "duration_days": 36500,  # 100 years
+        "duration_days": 36500,
         "name": "Lifetime Plan",
     },
 }
@@ -77,8 +97,12 @@ MAX_MERGE_FILES = 10
 ANALYTICS_ENABLED = True
 BACKUP_INTERVAL_HOURS = 6
 
-# Marketing settings
+# Marketing settings - PRODUCTION REFERRAL SYSTEM
 REFERRAL_REWARD_USES = 1
+REFERRAL_REWARDS = {
+    "monthly": 500,  # 500 NGN for referring monthly premium user
+    "weekly": 150,   # 150 NGN for referring weekly premium user
+}
 WELCOME_SERIES_ENABLED = True
 RETENTION_CAMPAIGN_ENABLED = True
 
@@ -90,7 +114,13 @@ SESSION_TIMEOUT_HOURS = 24
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PORT = int(os.getenv("PORT", 5000))
 
-# External services
+# External services - PAYSTACK INTEGRATION
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
+PAYSTACK_VERIFY_URL = "https://api.paystack.co/transaction/verify/"
+PAYSTACK_INITIALIZE_URL = "https://api.paystack.co/transaction/initialize"
+
+# Legacy
 PAYMENT_VERIFICATION_API = os.getenv("PAYMENT_VERIFICATION_API", "")
 
 # Feature flags

@@ -13,17 +13,29 @@ async def premium_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_premium_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        from config import PREMIUM_PLANS
+        weekly_plan = PREMIUM_PLANS["weekly"]
+        monthly_plan = PREMIUM_PLANS["monthly"]
+        
         message = (
-            "💎 **DocuLuna Pro – Elevate Your Docs!**\n\n"
-            "Unlock watermark-free PDFs, 50 MB file support, and unlimited conversions for WAEC, NYSC, or business needs!\n\n"
-            "📅 **Monthly**: 3,500 NGN – Unlimited access\n"
-            "📆 **Weekly**: 1,000 NGN – Perfect for quick tasks\n"
-            "📈 **Mid-Tier**: 2,000 NGN – 20 uses/day, no watermarks"
+            "💎 **DocuLuna Pro – Compete with the Best!**\n\n"
+            "🚀 **Premium Quality. Professional Results.**\n\n"
+            f"📆 **{weekly_plan['name']}**: ₦{weekly_plan['price']:,}\n"
+            f"   ✨ {weekly_plan['description']}\n"
+            f"   ⏰ {weekly_plan['duration_days']} days access\n\n"
+            f"📅 **{monthly_plan['name']}**: ₦{monthly_plan['price']:,}\n"
+            f"   ✨ {monthly_plan['description']}\n" 
+            f"   ⏰ {monthly_plan['duration_days']} days access\n\n"
+            "**What You Get:**\n"
+            "✅ Unlimited conversions\n"
+            "✅ Zero watermarks\n"
+            "✅ Lightning-fast processing\n"
+            "✅ Large files up to 50MB\n"
+            "✅ Priority support"
         )
         keyboard = [
-            [InlineKeyboardButton("📅 Monthly (3,500 NGN)", callback_data="initiate_payment_monthly")],
-            [InlineKeyboardButton("📆 Weekly (1,000 NGN)", callback_data="initiate_payment_weekly")],
-            [InlineKeyboardButton("📈 Mid-Tier (2,000 NGN)", callback_data="initiate_payment_midtier")],
+            [InlineKeyboardButton(f"📆 {weekly_plan['name']} - ₦{weekly_plan['price']:,}", callback_data="premium_payment_weekly")],
+            [InlineKeyboardButton(f"📅 {monthly_plan['name']} - ₦{monthly_plan['price']:,}", callback_data="premium_payment_monthly")],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
         ]
         for attempt in range(3):

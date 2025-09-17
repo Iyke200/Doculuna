@@ -1,112 +1,71 @@
-import logging
-import os
-import zipfile
-from PIL import Image
-import PyPDF2
-from telegram import Update
-from telegram.ext import ContextTypes
-from utils.usage_tracker import increment_usage
-from utils.premium_utils import is_premium
-
-logger = logging.getLogger(__name__)
-
-
-async def handle_compress_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle PDF compression request."""
-    try:
-        await update.message.reply_text("🔄 Compressing PDF...")
-
-        # For now, return a placeholder response
-        await update.message.reply_text(
-            "⚠️ PDF compression is under maintenance.\n"
-            "Please try again later or contact support."
-        )
-
-        logger.info(f"PDF compression requested by user {update.effective_user.id}")
-
-    except Exception as e:
-        logger.error(f"Error in PDF compression: {e}")
-        await update.message.reply_text("❌ Error compressing file. Please try again.")
-
-
-async def compress_file(file_path, output_path=None, compression_quality=85):
-    """Compress various file types."""
-    try:
-        file_ext = os.path.splitext(file_path)[1].lower()
-
-        if not output_path:
-            base_name = os.path.splitext(os.path.basename(file_path))[0]
-            output_path = f"temp/{base_name}_compressed{file_ext}"
-
-        # Ensure temp directory exists
-        os.makedirs("temp", exist_ok=True)
-
-        if file_ext in [".jpg", ".jpeg", ".png", ".bmp"]:
-            # Compress image
-            with Image.open(file_path) as img:
-                img.save(output_path, optimize=True, quality=compression_quality)
-
-        elif file_ext == ".pdf":
-            # Compress PDF (basic compression)
-            with open(file_path, "rb") as file:
-                reader = PyPDF2.PdfReader(file)
-                writer = PyPDF2.PdfWriter()
-
-                for page in reader.pages:
-                    writer.add_page(page)
-
-                with open(output_path, "wb") as output_file:
-                    writer.write(output_file)
-
-        else:
-            # Generic compression using ZIP
-            zip_path = f"{output_path}.zip"
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(file_path, os.path.basename(file_path))
-            output_path = zip_path
-
-        logger.info(f"Successfully compressed {file_path} to {output_path}")
-        return output_path
-
-    except Exception as e:
-        logger.error(f"Error compressing file: {e}")
-        return None
-
-
-async def handle_compress_document(update, context):
-    """Handle document compression from Telegram."""
-    try:
-        from telegram import InputFile
-
-        # Download the file
-        file = await update.message.document.get_file()
-        file_path = f"temp/{update.message.document.file_name}"
-
-        # Ensure temp directory exists
-        os.makedirs("temp", exist_ok=True)
-
-        await file.download_to_drive(file_path)
-
-        # Compress the file
-        compressed_path = await compress_file(file_path)
-
-        if compressed_path:
-            with open(compressed_path, "rb") as compressed_file:
-                await update.message.reply_document(
-                    document=InputFile(
-                        compressed_file, filename=os.path.basename(compressed_path)
-                    ),
-                    caption="🗜 Your compressed file is ready!",
-                )
-
-            # Cleanup
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if os.path.exists(compressed_path):
-                os.remove(compressed_path)
-        else:
-            await update.message.reply_text("❌ Failed to compress the file.")
-
-    except Exception as e:
-        logger.error(f"Error handling document compression: {e}")
-        await update.message.reply_text("❌ Error processing file for compression.")
+‎# tools/compress.py
+‎import logging
+‎import os
+‎import shutil
+‎from telegram import Update
+‎from telegram.ext import ContextTypes
+‎from telegram.error import RetryAfter
+‎from PyPDF2 import PdfReader, PdfWriter
+‎from config import MAX_FILE_SIZE_FREE, MAX_FILE_SIZE_PREMIUM
+‎from database.db import get_user_by_id, add_usage_log
+‎from utils.watermark import add_pdf_watermark
+‎
+‎logger = logging.getLogger(__name__)
+‎
+‎async def handle_compress_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+‎    try:
+‎        stat = shutil.disk_usage("data")
+‎        if stat.free < 50 * 1024 * 1024:
+‎            logger.error("Low storage, cannot process file")
+‎            await update.callback_query.edit_message_text("❌ Server storage full. Try again later.")
+‎            return
+‎        user_id = update.effective_user.id
+‎        user = get_user_by_id(user_id)
+‎        if not user:
+‎            await update.callback_query.edit_message_text("❌ Register with /start first.")
+‎            return
+‎        is_premium = user[2]
+‎        document = context.user_data.get("last_file")
+‎        if not document or not document.file_name.lower().endswith('.pdf'):
+‎            await update.callback_query.edit_message_text("❌ Upload a PDF first.")
+‎            return
+‎        file_size = document.file_size
+‎        max_file_size = MAX_FILE_SIZE_PREMIUM if is_premium else MAX_FILE_SIZE_FREE
+‎        if file_size > max_file_size:
+‎            await update.callback_query.edit_message_text(f"❌ File too large. Max: {max_file_size / 1024 / 1024} MB. Go Pro for 50 MB files!")
+‎            return
+‎        file = await context.bot.get_file(document.file_id)
+‎        input_path = f"data/temp/pdf_{user_id}.pdf"
+‎        output_path = f"data/temp/compressed_{user_id}.pdf"
+‎        os.makedirs("data/temp", exist_ok=True)
+‎        await file.download_to_drive(input_path)
+‎        reader = PdfReader(input_path)
+‎        writer = PdfWriter()
+‎        for page in reader.pages:
+‎            writer.add_page(page)
+‎        writer.add_metadata(reader.metadata)
+‎        with open(output_path, "wb") as f:
+‎            writer.write(f)
+‎        if not is_premium:
+‎            add_pdf_watermark(output_path)
+‎        with open(output_path, "rb") as f:
+‎            for attempt in range(3):
+‎                try:
+‎                    await context.bot.send_document(
+‎                        chat_id=update.effective_chat.id,
+‎                        document=f,
+‎                        filename="compressed.pdf",
+‎                        caption="✅ Compressed your PDF – save space for business docs! Go Pro for watermark-free outputs."
+‎                    )
+‎                    add_usage_log(user_id, "compress_pdf", True)
+‎                    break
+‎                except RetryAfter as e:
+‎                    logger.warning(f"Rate limit hit in handle_compress_pdf: {e}")
+‎                    await asyncio.sleep(e.retry_after)
+‎        os.remove(input_path)
+‎        os.remove(output_path)
+‎        await update.callback_query.answer()
+‎    except Exception as e:
+‎        logger.error(f"Error in handle_compress_pdf: {e}")
+‎        add_usage_log(user_id, "compress_pdf", False)
+‎        await update.callback_query.edit_message_text("❌ Compression failed. Try again.")

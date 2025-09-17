@@ -105,3 +105,18 @@ BACKUPS_DIR = "backups"
 
 # File Configuration
 ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png", ".gif"]
+
+# Welcome message
+WELCOME_MESSAGE = """
+🌟 *Welcome to DocuLuna Bot!* 🌟
+
+Your all-in-one document processing assistant. I can help you with:
+
+📄 PDF to Word conversion
+📝 Word to PDF conversion  
+🖼️ Image to PDF conversion
+📊 PDF merging and splitting
+🗜️ File compression
+
+Click the button below to get started!
+"""

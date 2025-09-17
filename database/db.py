@@ -3,7 +3,7 @@ import sqlite3
 import logging
 import os
 import shutil
-from config import DATABASE_PATH
+from config import DB_PATH as DATABASE_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def init_db():
             logger.error("Insufficient storage for database initialization")
             raise Exception("Low disk space")
         with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
-            with open("schema.sql", "r") as f:
+            with open("database/schema.sql", "r") as f:
                 conn.executescript(f.read())
             conn.commit()
             logger.info("Database initialized")
@@ -164,3 +164,27 @@ def add_feedback(user_id: int, feedback: str):
             conn.commit()
     except Exception as e:
         logger.error(f"Error adding feedback for user {user_id}: {e}")
+
+def get_all_users():
+    """Get all users from the database."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users")
+            return cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Error fetching all users: {e}")
+        return []
+
+def get_pending_payments():
+    """Get pending payments - placeholder function."""
+    try:
+        # For now, return empty list as payment system might need separate table
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching pending payments: {e}")
+        return []
+
+def get_user(user_id: int):
+    """Alias for get_user_by_id for compatibility."""
+    return get_user_by_id(user_id)

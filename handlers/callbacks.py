@@ -30,12 +30,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         elif data == "tools_menu":
             keyboard = [
-                [InlineKeyboardButton("📄➡️📝 PDF to Word", callback_data="pdf_to_word")],
-                [InlineKeyboardButton("📝➡️📄 Word to PDF", callback_data="word_to_pdf")],
-                [InlineKeyboardButton("🖼️➡️📄 Image to PDF", callback_data="image_to_pdf")],
-                [InlineKeyboardButton("🔗 Merge PDFs", callback_data="merge_pdf")],
-                [InlineKeyboardButton("✂️ Split PDF", callback_data="split_pdf")],
-                [InlineKeyboardButton("🗜️ Compress", callback_data="compress")],
+                [InlineKeyboardButton("📄➡️📝 PDF to Word", callback_data="tool_pdf_to_word")],
+                [InlineKeyboardButton("📝➡️📄 Word to PDF", callback_data="tool_word_to_pdf")], 
+                [InlineKeyboardButton("🖼️➡️📄 Image to PDF", callback_data="tool_image_to_pdf")],
+                [InlineKeyboardButton("🔗 Merge PDFs", callback_data="tool_merge")],
+                [InlineKeyboardButton("✂️ Split PDF", callback_data="tool_split_pdf")],
+                [InlineKeyboardButton("🗜️ Compress", callback_data="tool_compress")],
                 [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
             ]
             await query.edit_message_text(
@@ -43,8 +43,27 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode="Markdown"
             )
+        elif data == "tool_pdf_to_word":
+            from tools.pdf_to_word import handle_pdf_to_word
+            await handle_pdf_to_word(update, context)
+        elif data == "tool_word_to_pdf":
+            from tools.word_to_pdf import handle_word_to_pdf
+            await handle_word_to_pdf(update, context)
+        elif data == "tool_image_to_pdf":
+            from tools.image_to_pdf import handle_image_to_pdf
+            await handle_image_to_pdf(update, context)
+        elif data in ["tool_split_pdf", "tool_compress", "tool_merge"]:
+            await query.edit_message_text("🔧 This tool is coming soon! More features being added.")
+        elif data == "premium_payment_weekly":
+            from handlers.paystack import initiate_premium_payment
+            context.user_data['selected_plan'] = 'weekly'
+            await initiate_premium_payment(update, context)
+        elif data == "premium_payment_monthly":
+            from handlers.paystack import initiate_premium_payment  
+            context.user_data['selected_plan'] = 'monthly'
+            await initiate_premium_payment(update, context)
         else:
-            await query.edit_message_text("❌ Tool functionality coming soon! Check back later.")
+            await query.edit_message_text("❌ Unknown action. Please try again.")
             
         await query.answer()
     except RetryAfter as e:

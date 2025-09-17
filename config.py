@@ -93,6 +93,10 @@ MAX_CONCURRENT_PROCESSES = 5
 PROCESSING_TIMEOUT = 300  # 5 minutes
 MAX_MERGE_FILES = 10
 
+# File size limits (in bytes)
+MAX_FILE_SIZE_FREE = 20 * 1024 * 1024  # 20MB for free users
+MAX_FILE_SIZE_PREMIUM = 50 * 1024 * 1024  # 50MB for premium users
+
 # Business analytics
 ANALYTICS_ENABLED = True
 BACKUP_INTERVAL_HOURS = 6

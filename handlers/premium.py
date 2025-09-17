@@ -38,6 +38,20 @@ async def show_premium_options(update: Update, context: ContextTypes.DEFAULT_TYP
             [InlineKeyboardButton(f"📅 {monthly_plan['name']} - ₦{monthly_plan['price']:,}", callback_data="premium_payment_monthly")],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
         ]
+        
+        # Add callback handler connection in callbacks.py
+        if hasattr(update, 'callback_query') and update.callback_query and update.callback_query.data:
+            callback_data = update.callback_query.data
+            if callback_data == "premium_payment_weekly":
+                from handlers.paystack import initiate_premium_payment
+                context.user_data['selected_plan'] = 'weekly'
+                await initiate_premium_payment(update, context)
+                return
+            elif callback_data == "premium_payment_monthly":
+                from handlers.paystack import initiate_premium_payment
+                context.user_data['selected_plan'] = 'monthly'
+                await initiate_premium_payment(update, context)
+                return
         for attempt in range(3):
             try:
                 if hasattr(update, 'callback_query') and update.callback_query:

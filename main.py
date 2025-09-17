@@ -177,8 +177,8 @@ def start_bot_clean():
     logger.info("✅ DocuLuna started successfully")
 
     # Production webhook mode vs development polling mode
-    if os.getenv("ENVIRONMENT") == "production" and os.getenv("WEBHOOK_URL"):
-        webhook_url = os.getenv("WEBHOOK_URL")
+    webhook_url = os.getenv("WEBHOOK_URL")
+    if os.getenv("ENVIRONMENT") == "production" and webhook_url:
         port = int(os.getenv("PORT", 5000))
         logger.info(f"🌐 Starting webhook mode on port {port}")
         print(f"🌐 Webhook mode: {webhook_url}")

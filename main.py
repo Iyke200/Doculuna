@@ -4,6 +4,12 @@ import time
 import traceback
 import sys
 import asyncio
+
+# Runtime guard to verify correct telegram module (moved before imports)
+import telegram as _tg
+if not hasattr(_tg, "Update"):
+    raise ImportError(f"Conflicting 'telegram' module loaded from {getattr(_tg, '__file__', 'unknown')}. Uninstall 'telegram' and keep 'python-telegram-bot'.")
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -23,13 +29,17 @@ os.makedirs("backups", exist_ok=True)
 os.makedirs("analytics", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
-# Setup logging
+# Setup logging with security hardening
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.FileHandler("logs/doculuna.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
+# Prevent token leakage in HTTP logs (CRITICAL SECURITY FIX)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def import_handlers():
@@ -166,9 +176,26 @@ def start_bot_clean():
 
     logger.info("✅ DocuLuna started successfully")
 
-    app.run_polling(
-        allowed_updates=["message", "callback_query"], drop_pending_updates=True
-    )
+    # Production webhook mode vs development polling mode
+    if os.getenv("ENVIRONMENT") == "production" and os.getenv("WEBHOOK_URL"):
+        webhook_url = os.getenv("WEBHOOK_URL")
+        port = int(os.getenv("PORT", 5000))
+        logger.info(f"🌐 Starting webhook mode on port {port}")
+        print(f"🌐 Webhook mode: {webhook_url}")
+        
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=webhook_url,
+            allowed_updates=["message", "callback_query"],
+            drop_pending_updates=True
+        )
+    else:
+        logger.info("🔄 Starting polling mode (development)")
+        print("🔄 Polling mode (development)")
+        app.run_polling(
+            allowed_updates=["message", "callback_query"], drop_pending_updates=True
+        )
 
 
 if __name__ == "__main__":

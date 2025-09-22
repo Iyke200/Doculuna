@@ -1,85 +1,141 @@
-# handlers/admin.py
+# admin.py
 import logging
-import sqlite3
-import asyncio
-from telegram import Update
-from telegram.ext import CommandHandler, ContextTypes
-from telegram.error import RetryAfter
-from config import ADMIN_USER_IDS, DB_PATH as DATABASE_PATH
+import time
+import os
+from typing import Callable, Awaitable
 
+from aiogram import Dispatcher, types
+from aiogram.dispatcher.filters import Command
+from dotenv import load_dotenv
+
+# Assuming a separate db.py module handles database interactions (e.g., using SQLite or similar).
+# For production, db.py would use thread-safe connections and proper error handling.
+from db import get_user_role, ban_user, unban_user, get_all_users  # type: ignore
+
+load_dotenv()
+
+# Define role levels
+ROLE_LEVELS = {
+    'superadmin': 3,
+    'moderator': 2,
+    'support': 1,
+    'user': 0
+}
+
+# In-memory rate limiting (requests per minute). For production scale, replace with Redis.
+RATE_LIMIT = 5  # max commands per minute per admin
+user_command_times: dict[int, list[float]] = {}
+
+# Structured logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - user_id=%(user_id)s - action=%(action)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show admin panel."""
-    try:
-        user_id = update.effective_user.id
-        if user_id not in ADMIN_USER_IDS:
-            await update.message.reply_text("❌ Unauthorized access. Contact support.")
-            return
-        await admin_stats(update, context)
-    except Exception as e:
-        logger.error(f"Error in admin_panel: {e}")
-        await update.message.reply_text("❌ Error accessing admin panel.")
+def rate_limit_check(user_id: int) -> bool:
+    """
+    Simple in-memory rate limiter. Checks if user exceeded command limit in the last 60 seconds.
+    """
+    now = time.time()
+    if user_id in user_command_times:
+        recent_times = [t for t in user_command_times[user_id] if now - t < 60]
+        if len(recent_times) >= RATE_LIMIT:
+            return False
+        recent_times.append(now)
+        user_command_times[user_id] = recent_times
+    else:
+        user_command_times[user_id] = [now]
+    return True
 
-async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_id = update.effective_user.id
-        if user_id not in ADMIN_USER_IDS:
-            await update.message.reply_text("❌ Unauthorized access. Contact support.")
-            return
-        
-        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users")
-            user_count = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM users WHERE is_premium = 1")
-            premium_count = cursor.fetchone()[0]
-        
-        message = (
-            f"📊 **Admin Stats: Know Your Users!**\n\n"
-            f"👤 Total Users: {user_count}\n"
-            f"💎 Premium Users: {premium_count}\n"
-            f"💰 Est. Monthly Revenue: {premium_count * 3500:,} NGN\n\n"
-            "Keep growing with DocuLuna!"
-        )
-        for attempt in range(3):
+def admin_only(min_role: str = 'support') -> Callable:
+    """
+    Decorator for role-based access control with rate limiting.
+    Authentication is based on Telegram user_id validated against DB roles.
+    No separate token/session needed as Telegram handles session implicitly via user_id.
+    """
+    min_level = ROLE_LEVELS.get(min_role, 1)
+
+    def decorator(handler: Callable[[types.Message], Awaitable[None]]) -> Callable:
+        async def wrapper(message: types.Message) -> None:
+            user_id = message.from_user.id
+            role = get_user_role(user_id)
+            role_level = ROLE_LEVELS.get(role, 0)
+            if role_level < min_level:
+                await message.reply("You are not authorized for this action.")
+                return
+            if not rate_limit_check(user_id):
+                await message.reply("Rate limit exceeded. Please try again later.")
+                return
             try:
-                await update.message.reply_text(message, parse_mode="Markdown")
-                break
-            except RetryAfter as e:
-                logger.warning(f"Rate limit hit in admin_stats: {e}")
-                await asyncio.sleep(e.retry_after)
-    except Exception as e:
-        logger.error(f"Error in admin_stats: {e}")
-        await update.message.reply_text("❌ Error fetching admin stats. Try again.")
+                await handler(message)
+            except Exception as e:
+                # Isolate errors to prevent system crash
+                logger.error("Error in admin handler", exc_info=True, extra={'user_id': user_id, 'action': handler.__name__})
+                await message.reply("An error occurred. Please try again.")
 
-async def grant_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Grant premium access."""
+        return wrapper
+    return decorator
+
+@admin_only(min_role='moderator')
+async def ban_handler(message: types.Message) -> None:
     try:
-        await update.message.reply_text("🔧 Grant premium functionality coming soon!")
-    except Exception as e:
-        logger.error(f"Error in grant_premium_command: {e}")
+        parts = message.text.split()
+        if len(parts) != 2:
+            raise ValueError("Invalid format")
+        user_id_to_ban = int(parts[1])  # Input validation: must be integer
+        if user_id_to_ban <= 0:
+            raise ValueError("Invalid user ID")
+    except ValueError:
+        await message.reply("Usage: /ban <user_id> (positive integer)")
+        return
 
-async def revoke_premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Revoke premium access.""" 
+    ban_user(user_id_to_ban)
+    logger.info("Admin banned user", extra={'user_id': message.from_user.id, 'action': 'ban', 'target_user': user_id_to_ban})
+    await message.reply(f"User {user_id_to_ban} has been banned.")
+
+@admin_only(min_role='moderator')
+async def unban_handler(message: types.Message) -> None:
     try:
-        await update.message.reply_text("🔧 Revoke premium functionality coming soon!")
-    except Exception as e:
-        logger.error(f"Error in revoke_premium_command: {e}")
+        parts = message.text.split()
+        if len(parts) != 2:
+            raise ValueError("Invalid format")
+        user_id_to_unban = int(parts[1])  # Input validation: must be integer
+        if user_id_to_unban <= 0:
+            raise ValueError("Invalid user ID")
+    except ValueError:
+        await message.reply("Usage: /unban <user_id> (positive integer)")
+        return
 
-async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Broadcast message to users."""
-    try:
-        await update.message.reply_text("📢 Broadcast functionality coming soon!")
-    except Exception as e:
-        logger.error(f"Error in broadcast_message: {e}")
+    unban_user(user_id_to_unban)
+    logger.info("Admin unbanned user", extra={'user_id': message.from_user.id, 'action': 'unban', 'target_user': user_id_to_unban})
+    await message.reply(f"User {user_id_to_unban} has been unbanned.")
 
-async def force_upgrade_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Force upgrade user."""
-    try:
-        await update.message.reply_text("⚡ Force upgrade functionality coming soon!")
-    except Exception as e:
-        logger.error(f"Error in force_upgrade_command: {e}")
+@admin_only(min_role='superadmin')
+async def broadcast_handler(message: types.Message) -> None:
+    text = message.text.replace("/broadcast", "").strip()
+    if not text:
+        await message.reply("Usage: /broadcast <message>")
+        return
 
-def register_admin_handlers(app):
-    app.add_handler(CommandHandler("adminstats", admin_stats))
+    users = get_all_users()
+    sent_count = 0
+    for user_id in users:
+        try:
+            await message.bot.send_message(user_id, text)
+            sent_count += 1
+        except Exception:
+            # Isolate per-user errors
+            logger.warning("Failed to send broadcast to user", extra={'user_id': user_id, 'action': 'broadcast'})
+
+    logger.info("Admin broadcasted message", extra={'user_id': message.from_user.id, 'action': 'broadcast', 'sent_count': sent_count, 'message': text})
+    await message.reply(f"Broadcast sent to {sent_count} users.")
+
+def register_admin_handlers(dp: Dispatcher) -> None:
+    """
+    Register all admin handlers with the dispatcher.
+    """
+    dp.register_message_handler(ban_handler, Command("ban"))
+    dp.register_message_handler(unban_handler, Command("unban"))
+    dp.register_message_handler(broadcast_handler, Command("broadcast"))

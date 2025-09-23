@@ -263,8 +263,8 @@ def create_option_keyboard(options: list, category: str = "general") -> types.In
 
 def register_callback_handlers(dp: Dispatcher) -> None:
     """Register all callback query handlers."""
-    dp.register_callback_query_handler(
+    # aiogram 3.x syntax
+    dp.callback_query.register(
         process_callback_query, 
-        lambda c: True,  # Catch all callback queries
-        state="*"
-)
+        lambda c: True  # Catch all callback queries
+    )

@@ -11,6 +11,7 @@ import aiohttp
 from cryptography.fernet import Fernet
 
 from aiogram import Dispatcher, types
+from aiogram.filters import Command
 from dotenv import load_dotenv
 
 # Import from handlers.payments
@@ -645,16 +646,15 @@ def register_paystack_handlers(dp: Dispatcher) -> None:
     # Initialize gateway on first registration
     initialize_paystack()
     
-    dp.register_message_handler(
+    # aiogram 3.x syntax
+    dp.message.register(
         paystack_payment_handler,
-        commands=['paystack'],
-        state="*"
+        Command('paystack')
     )
     
-    dp.register_message_handler(
+    dp.message.register(
         paystack_status_handler,
-        commands=['paystack_status'],
-        state="*"
+        Command('paystack_status')
     )
 
 # Webhook processing function (called from payments webhook handler)

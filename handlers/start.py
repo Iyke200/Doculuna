@@ -1041,11 +1041,11 @@ async def handle_onboarding_callbacks(callback: types.CallbackQuery, state: FSMC
 
 def register_start_handlers(dp: Dispatcher) -> None:
     """Register all start-related handlers."""
-    # Main start command
-    dp.register_message_handler(start_command_handler, Command("start"), state="*")
+    # Main start command - aiogram 3.x syntax
+    dp.message.register(start_command_handler, Command("start"))
     
     # Onboarding callbacks (extend existing callback handler)
-    from callbacks import process_callback_query
+    from handlers.callbacks import process_callback_query
     original_process = process_callback_query
     
     async def enhanced_callback_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
@@ -1062,7 +1062,7 @@ def register_start_handlers(dp: Dispatcher) -> None:
         await original_process(callback, state)
     
     # Monkey patch the callback handler
-    import callbacks
+    import handlers.callbacks as callbacks
     callbacks.process_callback_query = enhanced_callback_handler
     
     logger.info("Start handlers registered with onboarding integration")

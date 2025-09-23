@@ -15,6 +15,7 @@ from aiogram import Dispatcher, types
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType
 from aiogram.exceptions import TelegramRetryAfter as RetryAfter
+from aiogram.filters import Command
 from dotenv import load_dotenv
 import aiohttp
 import asyncio
@@ -505,16 +506,15 @@ async def webhook_handler(request: Dict[str, Any]) -> Dict[str, Any]:
 
 def register_payment_handlers(dp: Dispatcher) -> None:
     """Register payment-related handlers."""
-    dp.register_message_handler(
+    # aiogram 3.x syntax
+    dp.message.register(
         process_payment_message,
-        commands=['pay'],
-        state="*"
+        Command('pay')
     )
     
-    dp.register_message_handler(
+    dp.message.register(
         check_payment_status,
-        commands=['status'],
-        state="*"
+        Command('status')
     )
 
 # Export orchestrator for gateway registration

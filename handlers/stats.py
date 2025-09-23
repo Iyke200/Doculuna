@@ -910,14 +910,14 @@ def register_stats_handlers(dp: Dispatcher) -> None:
         
         await stats_dashboard_handler(message, state, period)
     
-    dp.register_message_handler(
+    # aiogram 3.x syntax
+    dp.message.register(
         stats_command_wrapper,
-        Command("stats"),
-        state="*"
+        Command("stats")
     )
     
     # Register callback handlers
-    from callbacks import process_callback_query
+    from handlers.callbacks import process_callback_query
     original_process = process_callback_query
     
     async def enhanced_stats_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -930,7 +930,7 @@ def register_stats_handlers(dp: Dispatcher) -> None:
         await original_process(callback, state)
     
     # Monkey patch
-    import callbacks
+    import handlers.callbacks as callbacks
     if hasattr(callbacks, 'original_callback_process'):
         callbacks.process_callback_query = enhanced_stats_callback
     else:

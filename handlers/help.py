@@ -375,23 +375,20 @@ async def command_details_handler(message: types.Message) -> None:
 
 def register_help_handlers(dp: Dispatcher) -> None:
     """Register all help-related handlers."""
-    # Main help command with optional search
-    dp.register_message_handler(
+    # Main help command with optional search - aiogram 3.x syntax
+    dp.message.register(
         help_command_handler, 
-        Command("help"),
-        state="*"
+        Command("help")
     )
     
     # Detailed command help
-    dp.register_message_handler(
+    dp.message.register(
         command_details_handler,
-        Text(startswith=["/help "], ignore_case=True),
-        state="*"
+        lambda message: message.text and message.text.startswith("/help ")
     )
     
     # Legacy command pattern support
-    dp.register_message_handler(
+    dp.message.register(
         command_details_handler,
-        lambda message: message.text and message.text.startswith("/"),
-        state="*"
+        lambda message: message.text and message.text.startswith("/")
     )

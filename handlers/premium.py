@@ -840,14 +840,15 @@ async def downgrade_premium_handler(message: types.Message, state: FSMContext) -
 
 def register_premium_handlers(dp: Dispatcher) -> None:
     """Register all premium handlers."""
-    dp.register_message_handler(premium_command_handler, Command("premium"))
-    dp.register_message_handler(purchase_premium_handler, Command("upgrade"))
-    dp.register_message_handler(activate_premium_handler, Command("activate"))
-    dp.register_message_handler(renew_premium_handler, Command("renew"))
-    dp.register_message_handler(downgrade_premium_handler, Command("downgrade"))
+    # aiogram 3.x syntax
+    dp.message.register(premium_command_handler, Command("premium"))
+    dp.message.register(purchase_premium_handler, Command("upgrade"))
+    dp.message.register(activate_premium_handler, Command("activate"))
+    dp.message.register(renew_premium_handler, Command("renew"))
+    dp.message.register(downgrade_premium_handler, Command("downgrade"))
     
     # Register callback handlers for plan selection
-    from callbacks import process_callback_query
+    from handlers.callbacks import process_callback_query
     
     # Extend callback processing for premium-specific actions
     async def handle_premium_callbacks(callback: types.CallbackQuery, state: FSMContext) -> None:
@@ -903,9 +904,8 @@ def register_premium_handlers(dp: Dispatcher) -> None:
             await callback.message.edit_text("✅ Premium subscription kept active.")
             await callback.answer("Kept active", show_alert=True)
     
-    # Register premium callback handler
-    dp.register_callback_query_handler(
+    # Register premium callback handler - aiogram 3.x syntax
+    dp.callback_query.register(
         handle_premium_callbacks,
-        lambda c: c.data and c.data.startswith(('upgrade_plan|', 'cancel_upgrade|', 'confirm_downgrade|', 'cancel_downgrade|')),
-        state="*"
-)
+        lambda c: c.data and c.data.startswith(('upgrade_plan|', 'cancel_upgrade|', 'confirm_downgrade|', 'cancel_downgrade|'))
+    )

@@ -1123,13 +1123,13 @@ def format_currency(amount: float) -> str:
 
 def register_referral_handlers(dp: Dispatcher) -> None:
     """Register all referral handlers."""
-    dp.register_message_handler(refer_command_handler, Command("refer"))
+    # aiogram 3.x syntax
+    dp.message.register(refer_command_handler, Command("refer"))
     
     # Override start handler to handle referral deep links
-    dp.register_message_handler(
+    dp.message.register(
         referral_start_handler,
-        lambda message: message.text and message.text.startswith('/start'),
-        state="*"
+        lambda message: message.text and message.text.startswith('/start')
     )
 
 # Admin utility commands

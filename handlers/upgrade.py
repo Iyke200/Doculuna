@@ -1345,13 +1345,13 @@ def format_currency(amount: float) -> str:
 
 def register_upgrade_handlers(dp: Dispatcher) -> None:
     """Register all upgrade handlers."""
-    # Main commands
-    dp.register_message_handler(upgrade_command_handler, Command("upgrade"), state="*")
-    dp.register_message_handler(activate_upgrade_handler, Command("activate"), state="*")
-    dp.register_message_handler(downgrade_command_handler, Command("downgrade"), state="*")
+    # Main commands - aiogram 3.x syntax
+    dp.message.register(upgrade_command_handler, Command("upgrade"))
+    dp.message.register(activate_upgrade_handler, Command("activate"))
+    dp.message.register(downgrade_command_handler, Command("downgrade"))
     
     # Callback handlers
-    from callbacks import process_callback_query
+    from handlers.callbacks import process_callback_query
     original_process = process_callback_query
     
     async def enhanced_upgrade_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -1364,7 +1364,7 @@ def register_upgrade_handlers(dp: Dispatcher) -> None:
         await original_process(callback, state)
     
     # Monkey patch
-    import callbacks
+    import handlers.callbacks as callbacks
     if not hasattr(callbacks, 'original_callback_process'):
         callbacks.original_callback_process = original_process
     callbacks.process_callback_query = enhanced_upgrade_callback

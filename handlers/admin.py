@@ -136,6 +136,7 @@ def register_admin_handlers(dp: Dispatcher) -> None:
     """
     Register all admin handlers with the dispatcher.
     """
-    dp.register_message_handler(ban_handler, Command("ban"))
-    dp.register_message_handler(unban_handler, Command("unban"))
-    dp.register_message_handler(broadcast_handler, Command("broadcast"))
+    # aiogram 3.x syntax
+    dp.message.register(ban_handler, Command("ban"))
+    dp.message.register(unban_handler, Command("unban"))
+    dp.message.register(broadcast_handler, Command("broadcast"))

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 from aiogram import Dispatcher, types
-from aiogram.dispatcher.filters import Command, Text
-from aiogram.utils.markdown import hbold, hcode, hlink
-from aiogram.types import ParseMode
+from aiogram.filters import Command, Text
+from aiogram.utils.markdown import bold as hbold, code as hcode, link as hlink
+from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 
 # Assuming db.py for role-based help content

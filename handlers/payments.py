@@ -12,9 +12,9 @@ from enum import Enum
 from datetime import datetime, timedelta
 
 from aiogram import Dispatcher, types
-from aiogram.dispatcher import FSMContext
-from aiogram.types import ContentType
-from aiogram.utils.exceptions import RetryAfter
+from aiogram.fsm.context import FSMContext
+from aiogram.enums import ContentType
+from aiogram.exceptions import TelegramRetryAfter as RetryAfter
 from dotenv import load_dotenv
 import aiohttp
 import asyncio

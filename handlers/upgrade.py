@@ -8,10 +8,10 @@ from enum import Enum
 from contextlib import contextmanager
 
 from aiogram import Dispatcher, types
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Command
-from aiogram.utils.exceptions import RetryAfter
-from aiogram.utils.markdown import hbold, hcode
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
+from aiogram.exceptions import TelegramRetryAfter as RetryAfter
+from aiogram.utils.markdown import bold as hbold, code as hcode
 from dotenv import load_dotenv
 
 # Import from other modules

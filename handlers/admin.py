@@ -5,7 +5,7 @@ import os
 from typing import Callable, Awaitable
 
 from aiogram import Dispatcher, types
-from aiogram.dispatcher.filters import Command
+from aiogram.filters import Command
 from dotenv import load_dotenv
 
 # Assuming a separate db.py module handles database interactions (e.g., using SQLite or similar).

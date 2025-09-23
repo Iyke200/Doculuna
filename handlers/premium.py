@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from aiogram import Dispatcher, types
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Command
-from aiogram.utils.markdown import hbold, hcode
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
+from aiogram.utils.markdown import bold as hbold, code as hcode
 from dotenv import load_dotenv
 
 # Assuming Redis for premium storage (fallback to in-memory)

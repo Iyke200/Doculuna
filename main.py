@@ -1,25 +1,17 @@
 import logging
 import os
-import time
-import traceback
 import sys
 import asyncio
+from typing import Any
 
-# Runtime guard to verify correct telegram module (moved before imports)
-import telegram as _tg
-if not hasattr(_tg, "Update"):
-    raise ImportError(f"Conflicting 'telegram' module loaded from {getattr(_tg, '__file__', 'unknown')}. Uninstall 'telegram' and keep 'python-telegram-bot'.")
+# aiogram 3.22 imports
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.filters import Command
+from aiogram.types import Message, CallbackQuery, ErrorEvent
+from aiogram.fsm.storage.memory import MemoryStorage
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    filters,
-    ContextTypes,
-)
-from telegram.error import NetworkError, Forbidden
 from config import BOT_TOKEN
 
 # Ensure required directories exist
@@ -40,13 +32,16 @@ logger = logging.getLogger(__name__)
 # Prevent token leakage in HTTP logs (CRITICAL SECURITY FIX)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
+# Global dispatcher
+dp = Dispatcher(storage=MemoryStorage())
 
 def import_handlers():
     """Import handlers with error handling."""
     try:
         from database.db import init_db, get_all_users, get_pending_payments
-        from handlers.start import start
+        from handlers.start import start_command_handler
         from handlers.referrals import referrals
         from handlers.premium import premium_status
         from handlers.upgrade import upgrade, handle_payment_submission
@@ -60,7 +55,7 @@ def import_handlers():
 
         return {
             "init_db": init_db,
-            "start": start,
+            "start": start_command_handler,
             "referrals": referrals,
             "premium_status": premium_status,
             "upgrade": upgrade,
@@ -75,21 +70,24 @@ def import_handlers():
         logger.error(f"Error importing handlers: {e}")
         raise
 
-
-async def error_callback(update, context):
+@dp.error()
+async def error_callback(event: ErrorEvent) -> None:
     """Global error handler for the bot."""
     try:
-        logger.error(f"Update {update} caused error {context.error}")
-
-        if isinstance(context.error, NetworkError):
-            return
-
-        if isinstance(context.error, Forbidden):
-            return
-
-        if update and update.effective_chat:
+        logger.error(f"Update {event.update} caused error {event.exception}")
+        
+        # Get the update information
+        update = event.update
+        if update and hasattr(update, 'message') and update.message:
             try:
-                await update.effective_chat.send_message(
+                await update.message.answer(
+                    "❌ An unexpected error occurred. Please try again later."
+                )
+            except:
+                pass
+        elif update and hasattr(update, 'callback_query') and update.callback_query:
+            try:
+                await update.callback_query.message.answer(
                     "❌ An unexpected error occurred. Please try again later."
                 )
             except:
@@ -98,46 +96,25 @@ async def error_callback(update, context):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
-
-def start_bot_clean():
-    """Start the bot with clean initialization."""
-    logger.info("🚀 Starting DocuLuna Bot...")
-
-    if not BOT_TOKEN:
-        logger.critical("BOT_TOKEN not found")
-        raise ValueError("BOT_TOKEN is required")
-    logger.info("✓ Bot token found")
-
+def register_handlers():
+    """Register all bot handlers with the dispatcher."""
+    logger.info("Registering handlers...")
+    
     # Import handlers
     handlers = import_handlers()
-
-    # Initialize database
-    logger.info("Initializing database...")
-    handlers["init_db"]()
-    logger.info("✓ Database initialized")
-
-    # Create Application
-    logger.info("Creating Telegram application...")
-    app = Application.builder().token(BOT_TOKEN).build()
-    logger.info("✓ Application created")
-
-    # Add global error handler
-    app.add_error_handler(error_callback)
-
+    
     # Register command handlers
-    logger.info("Registering handlers...")
-    app.add_handler(CommandHandler("start", handlers["start"]))
-    app.add_handler(CommandHandler("referral", handlers["referrals"]))
-    app.add_handler(CommandHandler("premium", handlers["premium_status"]))
-    app.add_handler(CommandHandler("upgrade", handlers["upgrade"]))
-    app.add_handler(CommandHandler("help", handlers["help_command"]))
-    app.add_handler(CommandHandler("admin", handlers["admin_panel"]))
-
-    # Import and add additional handlers with error handling
+    dp.message.register(handlers["start"], Command("start"))
+    dp.message.register(handlers["referrals"], Command("referral"))
+    dp.message.register(handlers["premium_status"], Command("premium"))
+    dp.message.register(handlers["upgrade"], Command("upgrade"))
+    dp.message.register(handlers["help_command"], Command("help"))
+    dp.message.register(handlers["admin_panel"], Command("admin"))
+    
+    # Import and register additional handlers with error handling
     try:
         from handlers.stats import stats_command
-
-        app.add_handler(CommandHandler("stats", stats_command))
+        dp.message.register(stats_command, Command("stats"))
 
         from handlers.admin import (
             grant_premium_command,
@@ -146,26 +123,45 @@ def start_bot_clean():
             force_upgrade_command,
         )
 
-        app.add_handler(CommandHandler("grant_premium", grant_premium_command))
-        app.add_handler(CommandHandler("revoke_premium", revoke_premium_command))
-        app.add_handler(CommandHandler("force_upgrade", force_upgrade_command))
+        dp.message.register(grant_premium_command, Command("grant_premium"))
+        dp.message.register(revoke_premium_command, Command("revoke_premium"))
+        dp.message.register(force_upgrade_command, Command("force_upgrade"))
     except ImportError as e:
         logger.warning(f"Some admin commands not available: {e}")
 
     # Register callback query handler
-    app.add_handler(CallbackQueryHandler(handlers["handle_callback_query"]))
+    dp.callback_query.register(handlers["handle_callback_query"])
 
-    # Register message handlers for file processing
-    app.add_handler(
-        MessageHandler(
-            filters.Document.ALL & ~filters.COMMAND, handlers["process_file"]
-        )
-    )
-    app.add_handler(
-        MessageHandler(filters.PHOTO & ~filters.COMMAND, handlers["process_file"])
-    )
+    # Register message handlers for file processing (documents and photos)
+    dp.message.register(handlers["process_file"])
 
     logger.info("✓ All handlers registered")
+    return handlers
+
+async def start_bot_clean():
+    """Start the bot with clean initialization."""
+    logger.info("🚀 Starting DocuLuna Bot...")
+
+    if not BOT_TOKEN:
+        logger.critical("BOT_TOKEN not found")
+        raise ValueError("BOT_TOKEN is required")
+    logger.info("✓ Bot token found")
+
+    # Register handlers and get handler functions
+    handlers = register_handlers()
+
+    # Initialize database
+    logger.info("Initializing database...")
+    handlers["init_db"]()
+    logger.info("✓ Database initialized")
+
+    # Create Bot instance
+    logger.info("Creating Telegram bot...")
+    bot = Bot(
+        token=BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
+    logger.info("✓ Bot created")
 
     # Start bot
     logger.info("Starting bot polling...")
@@ -183,25 +179,36 @@ def start_bot_clean():
         logger.info(f"🌐 Starting webhook mode on port {port}")
         print(f"🌐 Webhook mode: {webhook_url}")
         
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=port,
-            webhook_url=webhook_url,
-            allowed_updates=["message", "callback_query"],
-            drop_pending_updates=True
-        )
+        # For webhook mode in aiogram 3.22
+        from aiohttp import web
+        from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+        
+        app = web.Application()
+        SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+        setup_application(app, dp, bot=bot)
+        
+        web.run_app(app, host="0.0.0.0", port=port)
     else:
         logger.info("🔄 Starting polling mode (development)")
         print("🔄 Polling mode (development)")
-        app.run_polling(
-            allowed_updates=["message", "callback_query"], drop_pending_updates=True
-        )
+        
+        # Start polling in aiogram 3.22 style
+        await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
 
+async def main():
+    """Main entry point."""
+    try:
+        await start_bot_clean()
+    except KeyboardInterrupt:
+        logger.info("🛑 Stopped by user.")
+    except Exception as e:
+        logger.exception(f"❌ DocuLuna failed to start: {e}")
+        raise
 
 if __name__ == "__main__":
     try:
         logging.info("🚀 Starting DocuLuna...")
-        start_bot_clean()
+        asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("🛑 Stopped by user.")
         sys.exit(0)

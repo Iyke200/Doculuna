@@ -23,10 +23,10 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 # Import from other modules
-from db import get_user_data, create_user, update_user_data  # type: ignore
-from referrals import process_referral, REFERRAL_CONFIG  # type: ignore
-from premium import get_premium_data, PremiumStatus  # type: ignore
-from help import HelpCategory  # type: ignore
+from database.db import get_user_data, create_user, update_user_data  # type: ignore
+from handlers.referrals import process_referral, REFERRAL_CONFIG  # type: ignore
+from handlers.premium import get_premium_data, PremiumStatus  # type: ignore
+from handlers.help import HelpCategory  # type: ignore
 
 load_dotenv()
 
@@ -589,7 +589,7 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
         if text.startswith('/start ref_'):
             code = text[11:].strip().upper()
             if len(code) == REFERRAL_CONFIG['code_length']:
-                from db import get_user_role  # type: ignore
+                from database.db import get_user_role  # type: ignore
                 user_role = get_user_role(user_id) or 'new_user'
                 referral_result = await process_referral(user_id, code, user_role)
                 logger.info("Referral processed in start", extra={

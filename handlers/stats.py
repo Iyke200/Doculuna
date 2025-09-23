@@ -28,9 +28,9 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 # Import from other modules
-from db import get_user_data, get_all_users  # type: ignore
-from premium import get_premium_data, PremiumStatus  # type: ignore
-from start import get_user_preferences  # type: ignore
+from database.db import get_user_data, get_all_users  # type: ignore
+from handlers.premium import get_premium_data, PremiumStatus  # type: ignore
+from handlers.start import get_user_preferences  # type: ignore
 
 load_dotenv()
 

@@ -23,10 +23,10 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 # Import from db.py for user data
-from db import get_user_data, update_user_data  # type: ignore
+from database.db import get_user_data, update_user_data  # type: ignore
 
 # Import from payments for transaction handling
-from payments import PaymentStatus, payment_orchestrator, Transaction
+from handlers.payments import PaymentStatus, payment_orchestrator, Transaction
 
 load_dotenv()
 

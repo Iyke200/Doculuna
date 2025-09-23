@@ -15,11 +15,11 @@ from aiogram.utils.markdown import bold as hbold, code as hcode
 from dotenv import load_dotenv
 
 # Import from other modules
-from premium import PremiumPlan, PremiumStatus, activate_premium, get_premium_data, downgrade_premium  # type: ignore
-from payments import payment_orchestrator, Transaction, PaymentStatus  # type: ignore
-from referrals import process_premium_conversion_reward  # type: ignore
-from stats import stats_tracker, StatType  # type: ignore
-from db import get_user_data, update_user_data  # type: ignore
+from handlers.premium import PremiumPlan, PremiumStatus, activate_premium, get_premium_data, downgrade_premium  # type: ignore
+from handlers.payments import payment_orchestrator, Transaction, PaymentStatus  # type: ignore
+from handlers.referrals import process_premium_conversion_reward  # type: ignore
+from handlers.stats import stats_tracker, StatType  # type: ignore
+from database.db import get_user_data, update_user_data  # type: ignore
 
 load_dotenv()
 

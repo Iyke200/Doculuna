@@ -235,6 +235,70 @@ def get_users_by_premium_status(is_premium: bool | None = None):
         logger.error(f"Error getting users by premium status: {e}")
         return []
 
+# Compatibility wrapper functions for handlers
+def get_user_data(user_id: int):
+    """Wrapper for get_user_by_id for handler compatibility."""
+    return get_user_by_id(user_id)
+
+def create_user(user_data: dict):
+    """Wrapper for add_user with dict input for handler compatibility."""
+    user_id = user_data.get('user_id')
+    username = user_data.get('username', '')
+    if user_id:
+        return add_user(user_id, username)
+    return None
+
+def update_user_data(user_id: int, data: dict):
+    """Generic user data update function for handler compatibility."""
+    try:
+        with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            cursor = conn.cursor()
+            
+            # Handle premium updates
+            if 'is_premium' in data or 'premium_expiry' in data:
+                if data.get('is_premium'):
+                    days = 30  # default to 30 days if not specified
+                    update_user_premium_status(user_id, days)
+                    
+            # Handle other user data updates
+            update_fields = []
+            values = []
+            
+            for key, value in data.items():
+                if key in ['username', 'last_active', 'preferences', 'onboarding_complete', 
+                          'onboarding_date', 'language', 'timezone', 'total_interactions',
+                          'premium_status', 'referral_used']:
+                    update_fields.append(f"{key} = ?")
+                    values.append(str(value) if not isinstance(value, (int, float, bool)) else value)
+            
+            if update_fields:
+                values.append(user_id)
+                query = f"UPDATE users SET {', '.join(update_fields)} WHERE user_id = ?"
+                cursor.execute(query, values)
+                conn.commit()
+                
+    except Exception as e:
+        logger.error(f"Error updating user data for {user_id}: {e}")
+
+# Placeholder functions for missing admin/role functionality
+def get_user_role(user_id: int):
+    """Placeholder function for user roles."""
+    # For now, return 'user' for all users, 'superadmin' for admin IDs
+    from config import ADMIN_USER_IDS
+    if user_id in ADMIN_USER_IDS:
+        return 'superadmin'
+    return 'user'
+
+def ban_user(user_id: int):
+    """Placeholder function for banning users."""
+    logger.info(f"User {user_id} would be banned (not implemented)")
+    return True
+
+def unban_user(user_id: int):
+    """Placeholder function for unbanning users."""
+    logger.info(f"User {user_id} would be unbanned (not implemented)")
+    return True
+
 def check_premium_expiry_warnings():
     """Check for users whose premium expires in 3 days."""
     try:

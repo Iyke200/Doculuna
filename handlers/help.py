@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from enum import Enum
 
 from aiogram import Dispatcher, types
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
 from aiogram.utils.markdown import bold as hbold, code as hcode, link as hlink
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 
 # Assuming db.py for role-based help content
-from db import get_user_role  # type: ignore
+from database.db import get_user_role  # type: ignore
 
 load_dotenv()
 

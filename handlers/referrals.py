@@ -28,8 +28,8 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 # Import from premium for reward validation
-from premium import PremiumPlan, PremiumStatus, get_premium_data, activate_premium  # type: ignore
-from payments import Transaction, PaymentStatus  # type: ignore
+from handlers.premium import PremiumPlan, PremiumStatus, get_premium_data, activate_premium  # type: ignore
+from handlers.payments import Transaction, PaymentStatus  # type: ignore
 
 load_dotenv()
 
@@ -68,7 +68,7 @@ REFERRAL_CONFIG = {
     'min_user_level_for_referral': 'user'
 }
 
-def generate_unique_code(length: int = None) -> str:
+async def generate_unique_code(length: int = None) -> str:
     """Generate unique alphanumeric referral code."""
     length = length or REFERRAL_CONFIG['code_length']
     chars = string.ascii_uppercase + string.digits
@@ -940,7 +940,7 @@ async def refer_command_handler(message: types.Message, state: FSMContext) -> No
     
     try:
         # Get user role (from db.py)
-        from db import get_user_role  # type: ignore
+        from database.db import get_user_role  # type: ignore
         user_role = get_user_role(user_id)
         
         # Create or retrieve referral code
@@ -1027,7 +1027,7 @@ async def referral_start_handler(message: types.Message, state: FSMContext) -> N
         
         try:
             # Process referral
-            from db import get_user_role  # type: ignore
+            from database.db import get_user_role  # type: ignore
             user_role = get_user_role(user_id) or 'new_user'
             
             result = await process_referral(user_id, code, user_role)

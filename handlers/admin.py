@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 # Assuming a separate db.py module handles database interactions (e.g., using SQLite or similar).
 # For production, db.py would use thread-safe connections and proper error handling.
-from db import get_user_role, ban_user, unban_user, get_all_users  # type: ignore
+from database.db import get_user_role, ban_user, unban_user, get_all_users  # type: ignore
 
 load_dotenv()
 

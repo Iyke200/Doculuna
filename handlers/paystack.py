@@ -13,9 +13,9 @@ from cryptography.fernet import Fernet
 from aiogram import Dispatcher, types
 from dotenv import load_dotenv
 
-# Import from payments
-from payments import (
-    PaymentGateway, Transaction, PaymentStatus, payment_orchestrator
+# Import from handlers.payments
+from handlers.payments import (
+    PaymentGateway, Transaction, PaymentStatus, PaymentOrchestrator, payment_orchestrator
 )
 
 load_dotenv()
@@ -713,7 +713,7 @@ async def process_paystack_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {'status': 'processing_error', 'message': str(e)}
 
 # Auto-register with payments webhook handler
-from payments import webhook_handler
+from handlers.payments import webhook_handler
 original_webhook_handler = webhook_handler
 
 async def paystack_webhook_handler(request: Dict[str, Any]) -> Dict[str, Any]:

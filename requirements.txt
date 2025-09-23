@@ -12,3 +12,5 @@ aiofiles==23.2.1
 aiogram==3.13.1
 aiohttp==3.10.10
 python-dotenv==1.0.1
+cryptography
+cryptography

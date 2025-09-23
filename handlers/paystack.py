@@ -33,8 +33,8 @@ class PaystackConfig:
     """Secure Paystack configuration management."""
     
     def __init__(self):
-        self.secret_key = os.getenv('PAYSTACK_SECRET_KEY')
-        self.public_key = os.getenv('PAYSTACK_PUBLIC_KEY')
+        self.secret_key = os.getenv('sk_test_26c1432223e382de220841a073561860a09106c3')
+        self.public_key = os.getenv('pk_test_ea6291b35d20735e66a17c0c655308f64a2594c8')
         self.webhook_secret = os.getenv('PAYSTACK_WEBHOOK_SECRET')
         self.base_url = os.getenv('PAYSTACK_BASE_URL', 'https://api.paystack.co')
         self.encryption_key = os.getenv('PAYSTACK_ENCRYPTION_KEY')

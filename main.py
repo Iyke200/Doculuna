@@ -38,32 +38,33 @@ logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 dp = Dispatcher(storage=MemoryStorage())
 
 def import_handlers():
-    """Import handlers with error handling."""
+    """Import handler registration functions."""
     try:
-        from database.db import init_db, get_all_users, get_pending_payments
-        from handlers.start import start_command_handler
-        from handlers.referrals import referrals
-        from handlers.premium import premium_status
-        from handlers.upgrade import upgrade, handle_payment_submission
-        from handlers.help import help_command
-        from handlers.admin import admin_panel
-        from handlers.callbacks import handle_callback_query
-        from utils.error_handler import error_handler, log_error
-        from utils.usage_tracker import check_usage_limit, increment_usage
-        from utils.file_processor import process_file
+        from database.db import init_db
+        from handlers.start import register_start_handlers
+        from handlers.referrals import register_referral_handlers
+        from handlers.premium import register_premium_handlers
+        from handlers.upgrade import register_upgrade_handlers
+        from handlers.help import register_help_handlers
+        from handlers.admin import register_admin_handlers
+        from handlers.callbacks import register_callback_handlers
+        from handlers.stats import register_stats_handlers
+        from handlers.payments import register_payment_handlers
+        from handlers.paystack import register_paystack_handlers
         from config import ADMIN_USER_IDS
 
         return {
             "init_db": init_db,
-            "start": start_command_handler,
-            "referrals": referrals,
-            "premium_status": premium_status,
-            "upgrade": upgrade,
-            "handle_payment_submission": handle_payment_submission,
-            "help_command": help_command,
-            "admin_panel": admin_panel,
-            "handle_callback_query": handle_callback_query,
-            "process_file": process_file,
+            "register_start_handlers": register_start_handlers,
+            "register_referral_handlers": register_referral_handlers,
+            "register_premium_handlers": register_premium_handlers,
+            "register_upgrade_handlers": register_upgrade_handlers,
+            "register_help_handlers": register_help_handlers,
+            "register_admin_handlers": register_admin_handlers,
+            "register_callback_handlers": register_callback_handlers,
+            "register_stats_handlers": register_stats_handlers,
+            "register_payment_handlers": register_payment_handlers,
+            "register_paystack_handlers": register_paystack_handlers,
             "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
@@ -103,37 +104,17 @@ def register_handlers():
     # Import handlers
     handlers = import_handlers()
     
-    # Register command handlers
-    dp.message.register(handlers["start"], Command("start"))
-    dp.message.register(handlers["referrals"], Command("referral"))
-    dp.message.register(handlers["premium_status"], Command("premium"))
-    dp.message.register(handlers["upgrade"], Command("upgrade"))
-    dp.message.register(handlers["help_command"], Command("help"))
-    dp.message.register(handlers["admin_panel"], Command("admin"))
-    
-    # Import and register additional handlers with error handling
-    try:
-        from handlers.stats import stats_command
-        dp.message.register(stats_command, Command("stats"))
-
-        from handlers.admin import (
-            grant_premium_command,
-            revoke_premium_command,
-            broadcast_message,
-            force_upgrade_command,
-        )
-
-        dp.message.register(grant_premium_command, Command("grant_premium"))
-        dp.message.register(revoke_premium_command, Command("revoke_premium"))
-        dp.message.register(force_upgrade_command, Command("force_upgrade"))
-    except ImportError as e:
-        logger.warning(f"Some admin commands not available: {e}")
-
-    # Register callback query handler
-    dp.callback_query.register(handlers["handle_callback_query"])
-
-    # Register message handlers for file processing (documents and photos)
-    dp.message.register(handlers["process_file"])
+    # Register all handlers using their registration functions
+    handlers["register_start_handlers"](dp)
+    handlers["register_referral_handlers"](dp)
+    handlers["register_premium_handlers"](dp)
+    handlers["register_upgrade_handlers"](dp)
+    handlers["register_help_handlers"](dp)
+    handlers["register_admin_handlers"](dp)
+    handlers["register_callback_handlers"](dp)
+    handlers["register_stats_handlers"](dp)
+    handlers["register_payment_handlers"](dp)
+    handlers["register_paystack_handlers"](dp)
 
     logger.info("✓ All handlers registered")
     return handlers

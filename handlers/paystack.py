@@ -33,28 +33,40 @@ class PaystackConfig:
     """Secure Paystack configuration management."""
     
     def __init__(self):
-        self.secret_key = os.getenv('sk_test_26c1432223e382de220841a073561860a09106c3')
-        self.public_key = os.getenv('pk_test_ea6291b35d20735e66a17c0c655308f64a2594c8')
+        self.secret_key = os.getenv('PAYSTACK_SECRET_KEY')
+        self.public_key = os.getenv('PAYSTACK_PUBLIC_KEY')
         self.webhook_secret = os.getenv('PAYSTACK_WEBHOOK_SECRET')
         self.base_url = os.getenv('PAYSTACK_BASE_URL', 'https://api.paystack.co')
         self.encryption_key = os.getenv('PAYSTACK_ENCRYPTION_KEY')
         
-        # Validate required config
+        # Make payment integration optional for development
         if not self.secret_key:
-            raise ValueError("PAYSTACK_SECRET_KEY is required")
+            logger.warning("PAYSTACK_SECRET_KEY not provided - payment features will be disabled")
+            self.enabled = False
+            return
         if not self.public_key:
-            raise ValueError("PAYSTACK_PUBLIC_KEY is required")
+            logger.warning("PAYSTACK_PUBLIC_KEY not provided - payment features will be disabled")
+            self.enabled = False
+            return
         if not self.encryption_key:
-            raise ValueError("PAYSTACK_ENCRYPTION_KEY is required")
-        
-        # Initialize encryption
-        self.cipher_suite = Fernet(self.encryption_key.encode())
-        
-        # Decrypt API keys (stored encrypted in env for extra security)
-        self._secret_key_encrypted = self.secret_key
-        self._public_key_encrypted = self.public_key
-        self.secret_key = self.decrypt_key(self._secret_key_encrypted)
-        self.public_key = self.decrypt_key(self._public_key_encrypted)
+            logger.warning("PAYSTACK_ENCRYPTION_KEY not provided - using keys directly without encryption")
+            self.enabled = True
+            self.cipher_suite = None
+        else:
+            # Initialize encryption
+            try:
+                self.cipher_suite = Fernet(self.encryption_key.encode())
+                self.enabled = True
+                
+                # Decrypt API keys (stored encrypted in env for extra security)
+                self._secret_key_encrypted = self.secret_key
+                self._public_key_encrypted = self.public_key
+                self.secret_key = self.decrypt_key(self._secret_key_encrypted)
+                self.public_key = self.decrypt_key(self._public_key_encrypted)
+            except Exception as e:
+                logger.warning(f"Failed to initialize encryption: {e} - using keys directly")
+                self.enabled = True
+                self.cipher_suite = None
         
         logger.info("Paystack configuration loaded", extra={
             'base_url': self.base_url,
@@ -479,9 +491,16 @@ def initialize_paystack() -> PaystackGateway:
     global paystack_config, paystack_gateway
     
     if paystack_config is None:
-        paystack_config = PaystackConfig()
-        paystack_gateway = PaystackGateway(paystack_config)
-        payment_orchestrator.register_gateway('paystack', paystack_gateway)
+        try:
+            paystack_config = PaystackConfig()
+            if hasattr(paystack_config, 'enabled') and not paystack_config.enabled:
+                logger.info("Paystack payment features disabled - missing required configuration")
+                return None
+            paystack_gateway = PaystackGateway(paystack_config)
+            payment_orchestrator.register_gateway('paystack', paystack_gateway)
+        except Exception as e:
+            logger.warning(f"Failed to initialize Paystack: {e} - payment features disabled")
+            return None
     
     return paystack_gateway
 
@@ -644,7 +663,11 @@ async def paystack_status_handler(message: types.Message, state) -> None:
 def register_paystack_handlers(dp: Dispatcher) -> None:
     """Register Paystack-specific handlers."""
     # Initialize gateway on first registration
-    initialize_paystack()
+    gateway = initialize_paystack()
+    
+    if gateway is None:
+        logger.info("Skipping Paystack handlers registration - payment features disabled")
+        return
     
     # aiogram 3.x syntax
     dp.message.register(

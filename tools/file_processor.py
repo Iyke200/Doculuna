@@ -3,28 +3,27 @@ import logging
 import os
 import shutil
 import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from telegram.error import RetryAfter
+from aiogram import types
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InlineKeyboardBuilder
 from config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE_FREE, MAX_FILE_SIZE_PREMIUM
 from database.db import get_user_by_id, get_usage_count
 
 logger = logging.getLogger(__name__)
 
-async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def process_file(message: types.Message):
     """🚀 DocuLuna's Professional File Processing Engine - Beat Google's Tools!"""
     try:
         # Enterprise-grade storage check
         stat = shutil.disk_usage("data")
         if stat.free < 50 * 1024 * 1024:  # 50 MB threshold
             logger.error("Low storage, cannot process file")
-            await update.message.reply_text("⚠️ Server optimizing storage. Please retry in 30 seconds.")
+            await message.reply("⚠️ Server optimizing storage. Please retry in 30 seconds.")
             return
 
-        user_id = update.effective_user.id
+        user_id = message.from_user.id
         user = get_user_by_id(user_id)
         if not user:
-            await update.message.reply_text("🔐 Please register with /start to access DocuLuna's professional tools.")
+            await message.reply("🔐 Please register with /start to access DocuLuna's professional tools.")
             return
 
         is_premium = user[2] if len(user) > 2 else False

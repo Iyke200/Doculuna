@@ -119,8 +119,8 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PORT = int(os.getenv("PORT", 5000))
 
 # External services - PAYSTACK INTEGRATION
-PAYSTACK_SECRET_KEY = os.getenv("sk_test_26c1432223e382de220841a073561860a09106c3", "")
-PAYSTACK_PUBLIC_KEY = os.getenv("pk_test_ea6291b35d20735e66a17c0c655308f64a2594c8", "")
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
 PAYSTACK_VERIFY_URL = "https://api.paystack.co/transaction/verify/"
 PAYSTACK_INITIALIZE_URL = "https://api.paystack.co/transaction/initialize"
 

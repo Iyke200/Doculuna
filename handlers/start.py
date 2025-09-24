@@ -8,6 +8,7 @@ from enum import Enum
 from aiogram import Dispatcher, types
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import bold as hbold, code as hcode, link as hlink
 from dotenv import load_dotenv
 
@@ -247,7 +248,14 @@ async def get_user_preferences(user_id: int) -> Dict[str, Any]:
     """Get user preferences with defaults."""
     try:
         user_data = get_user_data(user_id)
-        preferences = user_data.get('preferences', {})
+        # Handle case where user_data is a tuple (from database)
+        if isinstance(user_data, tuple):
+            # Assume tuple format: (user_id, username, is_premium, ...)
+            preferences = {}
+        elif isinstance(user_data, dict):
+            preferences = user_data.get('preferences', {})
+        else:
+            preferences = {}
         
         # Merge with defaults
         final_prefs = DEFAULT_PREFERENCES.copy()
@@ -412,21 +420,36 @@ async def get_welcome_message(user_id: int, is_new: bool, preferences: Dict[str,
     
     return welcome_text
 
+async def create_back_button(callback_data: str = "main_menu") -> types.InlineKeyboardMarkup:
+    """Create a standardized back button for error messages."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🔙 Back to Main Menu", callback_data=callback_data)
+    return builder.as_markup()
+
+async def send_error_with_back_button(message: types.Message, error_text: str, back_callback: str = "main_menu"):
+    """Send an error message with a back button for better UX."""
+    back_button = await create_back_button(back_callback)
+    await message.reply(error_text, reply_markup=back_button)
+
 async def show_language_selection(message: types.Message, state: FSMContext) -> None:
     """Show language selection inline keyboard."""
     try:
-        keyboard = types.InlineKeyboardMarkup(row_width=2)
+        # Use InlineKeyboardBuilder for aiogram 3.x
+        builder = InlineKeyboardBuilder()
         
-        # Add language buttons
-        for lang_code, lang_info in SUPPORTED_LANGUAGES.items():
+        # Use existing SUPPORTED_LANGUAGES
+        languages = SUPPORTED_LANGUAGES
+        
+        # Add language buttons in rows of 2
+        for lang_code, lang_info in languages.items():
             btn_text = f"{lang_info['flag']} {lang_info['name']}"
-            callback_data = f"lang_{lang_code}"
-            button = types.InlineKeyboardButton(btn_text, callback_data=callback_data)
-            keyboard.add(button)
+            builder.button(text=btn_text, callback_data=f"lang_{lang_code}")
         
         # Skip button
-        skip_btn = types.InlineKeyboardButton("⏭ Skip", callback_data="lang_skip")
-        keyboard.add(skip_btn)
+        builder.button(text="⏭ Skip", callback_data="lang_skip")
+        
+        # Adjust layout (2 columns)
+        builder.adjust(2, 1)
         
         response = (
             f"🌐 *Choose Your Language*\n\n"
@@ -434,14 +457,20 @@ async def show_language_selection(message: types.Message, state: FSMContext) -> 
             f"💡 *Tip:* You can change this anytime in settings."
         )
         
-        await message.reply(response, parse_mode='Markdown', reply_markup=keyboard)
+        await message.reply(response, parse_mode='Markdown', reply_markup=builder.as_markup())
         
     except Exception as e:
         logger.error("Failed to show language selection", exc_info=True, extra={
             'user_id': message.from_user.id,
             'error': str(e)
         })
-        await message.reply("Language selection temporarily unavailable. Continuing in English.")
+        # Add back button to error message
+        back_button = await create_back_button()
+        await message.reply(
+            "⚠️ Language selection temporarily unavailable. Continuing in English.\n\n"
+            "Don't worry, all features work perfectly in English!",
+            reply_markup=back_button
+        )
 
 async def show_preferences_selection(message: types.Message, state: FSMContext, 
                                    language: str = 'en') -> None:
@@ -450,13 +479,12 @@ async def show_preferences_selection(message: types.Message, state: FSMContext,
         # Get current preferences
         preferences = await get_user_preferences(message.from_user.id)
         
-        keyboard = types.InlineKeyboardMarkup(row_width=2)
+        builder = InlineKeyboardBuilder()
         
         # Notification preference
         notif_text = "🔔 On" if preferences.get('notifications', True) else "🔕 Off"
         notif_callback = "pref_notifications_on" if not preferences.get('notifications', True) else "pref_notifications_off"
-        notif_btn = types.InlineKeyboardButton(f"Notifications: {notif_text}", callback_data=notif_callback)
-        keyboard.row(notif_btn)
+        builder.button(text=f"Notifications: {notif_text}", callback_data=notif_callback)
         
         # AI level preference
         ai_levels = {

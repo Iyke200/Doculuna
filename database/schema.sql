@@ -3,7 +3,18 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     username TEXT,
     is_premium INTEGER DEFAULT 0,
-    premium_expiry DATETIME
+    premium_expiry DATETIME,
+    last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    first_name TEXT,
+    last_name TEXT,
+    language_code TEXT DEFAULT 'en',
+    preferences TEXT,
+    onboarding_complete INTEGER DEFAULT 0,
+    onboarding_date DATETIME,
+    total_interactions INTEGER DEFAULT 0,
+    premium_status TEXT DEFAULT 'expired',
+    referral_used INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS usage_logs (

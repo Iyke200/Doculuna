@@ -795,8 +795,13 @@ async def handle_onboarding_callbacks(callback: types.CallbackQuery, state: FSMC
     try:
         current_state = await onboarding_manager.get_onboarding_state(user_id)
         if not current_state:
-            await callback.answer("Onboarding session expired. Use /start to begin again.")
-            return
+            # Instead of failing, reinitialize onboarding for better UX
+            logger.info(f"Onboarding state not found for user {user_id}, reinitializing")
+            await onboarding_manager.start_onboarding(user_id, 'en')
+            current_state = await onboarding_manager.get_onboarding_state(user_id)
+            if not current_state:
+                await callback.answer("Please use /start to begin.")
+                return
         
         if data.startswith('lang_'):
             # Language selection

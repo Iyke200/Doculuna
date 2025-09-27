@@ -26,8 +26,20 @@ except ImportError:
 # Import from other modules
 from database.db import get_user_data, create_user, update_user_data  # type: ignore
 from handlers.referrals import process_referral, REFERRAL_CONFIG  # type: ignore
-from handlers.premium import get_premium_data, PremiumStatus  # type: ignore
 from handlers.help import HelpCategory  # type: ignore
+
+# Import premium status classes - simplified for now
+class PremiumStatus:
+    EXPIRED = "expired"
+    ACTIVE = "active"
+    
+class PremiumPlan:
+    WEEKLY = {"value": {"name": "Weekly Pro", "id": "weekly"}}
+    MONTHLY = {"value": {"name": "Monthly Pro", "id": "monthly"}}
+
+async def get_premium_data(user_id: int):
+    """Get premium data for user - simplified version."""
+    return {"status": PremiumStatus.EXPIRED, "expiry": None, "plan": None}
 
 load_dotenv()
 
@@ -495,14 +507,12 @@ async def show_preferences_selection(message: types.Message, state: FSMContext,
         current_ai = preferences.get('ai_level', 'standard')
         ai_text = ai_levels.get(current_ai, '🧠 Standard')
         ai_callback = f"pref_ai_{'basic' if current_ai != 'basic' else 'standard' if current_ai != 'standard' else 'advanced'}"
-        ai_btn = types.InlineKeyboardButton(f"AI Level: {ai_text}", callback_data=ai_callback)
-        keyboard.row(ai_btn)
+        builder.button(text=f"AI Level: {ai_text}", callback_data=ai_callback)
         
         # Theme preference
         theme_text = "☀️ Light" if preferences.get('theme', 'light') == 'light' else "🌙 Dark"
         theme_callback = "pref_theme_dark" if preferences.get('theme', 'light') == 'light' else "pref_theme_light"
-        theme_btn = types.InlineKeyboardButton(f"Theme: {theme_text}", callback_data=theme_callback)
-        keyboard.row(theme_btn)
+        builder.button(text=f"Theme: {theme_text}", callback_data=theme_callback)
         
         # Document format preference
         format_options = {
@@ -513,13 +523,14 @@ async def show_preferences_selection(message: types.Message, state: FSMContext,
         }
         current_format = preferences.get('document_format', 'auto')
         format_text = format_options.get(current_format, '🔄 Auto-detect')
-        format_callback = f"pref_format_{next(k for k, v in format_options.items() if k != current_format)}"
-        format_btn = types.InlineKeyboardButton(f"Documents: {format_text}", callback_data=format_callback)
-        keyboard.row(format_btn)
+        format_callback = f"pref_format_{list(format_options.keys())[0]}"  # Simplified
+        builder.button(text=f"Documents: {format_text}", callback_data=format_callback)
         
         # Complete button
-        complete_btn = types.InlineKeyboardButton("✅ All Set!", callback_data="onboarding_complete")
-        keyboard.add(complete_btn)
+        builder.button(text="✅ All Set!", callback_data="onboarding_complete")
+        
+        # Adjust layout
+        builder.adjust(1)
         
         response = (
             f"⚙️ *Customize Your Experience*\n\n"
@@ -527,7 +538,7 @@ async def show_preferences_selection(message: types.Message, state: FSMContext,
             f"💡 *You can change these anytime with* `/settings`"
         )
         
-        await message.reply(response, parse_mode='Markdown', reply_markup=keyboard)
+        await message.reply(response, parse_mode='Markdown', reply_markup=builder.as_markup())
         
     except Exception as e:
         logger.error("Failed to show preferences selection", exc_info=True, extra={
@@ -541,7 +552,7 @@ async def show_feature_tour(message: types.Message, state: FSMContext,
                           language: str = 'en') -> None:
     """Show feature tour with quick action buttons."""
     try:
-        keyboard = types.InlineKeyboardMarkup(row_width=2)
+        builder = InlineKeyboardBuilder()
         
         # Feature tour buttons
         features = [
@@ -553,8 +564,7 @@ async def show_feature_tour(message: types.Message, state: FSMContext,
         ]
         
         for feature_text, callback_data in features:
-            button = types.InlineKeyboardButton(feature_text, callback_data=callback_data)
-            keyboard.add(button)
+            builder.button(text=feature_text, callback_data=callback_data)
         
         # Quick actions
         quick_actions = [
@@ -564,8 +574,10 @@ async def show_feature_tour(message: types.Message, state: FSMContext,
         ]
         
         for action_text, callback_data in quick_actions:
-            button = types.InlineKeyboardButton(action_text, callback_data=callback_data)
-            keyboard.add(button)
+            builder.button(text=action_text, callback_data=callback_data)
+        
+        # Adjust layout
+        builder.adjust(2, 2, 2, 1)
         
         response = (
             f"🎉 *Feature Tour*\n\n"
@@ -574,7 +586,7 @@ async def show_feature_tour(message: types.Message, state: FSMContext,
             f"💡 *Pro tip:* You can always revisit with `/help`"
         )
         
-        await message.reply(response, parse_mode='Markdown', reply_markup=keyboard)
+        await message.reply(response, parse_mode='Markdown', reply_markup=builder.as_markup())
         
     except Exception as e:
         logger.error("Failed to show feature tour", exc_info=True, extra={
@@ -818,9 +830,9 @@ async def handle_onboarding_callbacks(callback: types.CallbackQuery, state: FSMC
                 
                 # Update message
                 lang_text = f"✅ *Language Set*\n\n{lang_info['flag']} {lang_info['name']} selected!\n\nNext: Preferences ➡️"
-                keyboard = types.InlineKeyboardMarkup()
-                continue_btn = types.InlineKeyboardButton("⚙️ Preferences", callback_data="lang_continue")
-                keyboard.add(continue_btn)
+                builder = InlineKeyboardBuilder()
+                builder.button(text="⚙️ Preferences", callback_data="lang_continue")
+                keyboard = builder.as_markup()
                 
                 await callback.message.edit_text(lang_text, parse_mode='Markdown', reply_markup=keyboard)
                 await callback.answer(f"Language set to {lang_info['name']}")

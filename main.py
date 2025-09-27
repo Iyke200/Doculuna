@@ -105,16 +105,17 @@ def register_handlers():
     handlers = import_handlers()
     
     # Register all handlers using their registration functions
-    handlers["register_start_handlers"](dp)
+    # Order matters: specific handlers first, then general ones
+    handlers["register_start_handlers"](dp)  # Onboarding callbacks first
     handlers["register_referral_handlers"](dp)
     handlers["register_premium_handlers"](dp)
     handlers["register_upgrade_handlers"](dp)
     handlers["register_help_handlers"](dp)
     handlers["register_admin_handlers"](dp)
-    handlers["register_callback_handlers"](dp)
     handlers["register_stats_handlers"](dp)
     handlers["register_payment_handlers"](dp)
     handlers["register_paystack_handlers"](dp)
+    handlers["register_callback_handlers"](dp)  # General callback handler last
 
     logger.info("✓ All handlers registered")
     return handlers

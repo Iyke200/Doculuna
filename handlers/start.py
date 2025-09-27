@@ -1072,26 +1072,15 @@ def register_start_handlers(dp: Dispatcher) -> None:
     # Main start command - aiogram 3.x syntax
     dp.message.register(start_command_handler, Command("start"))
     
-    # Onboarding callbacks (extend existing callback handler)
-    from handlers.callbacks import process_callback_query
-    original_process = process_callback_query
-    
-    async def enhanced_callback_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
-        """Enhanced callback handler that includes onboarding."""
-        # Check if it's an onboarding callback
-        if (callback.data and 
-            (callback.data.startswith(('lang_', 'pref_', 'tour_', 'quick_', 'welcome_', 'start_')) or
-             callback.data in ['onboarding_complete', 'tour_complete', 'tour_skip'])):
-
-            await handle_onboarding_callbacks(callback, state)
-            return
-        
-        # Otherwise, pass to original handler
-        await original_process(callback, state)
-    
-    # Monkey patch the callback handler
-    import handlers.callbacks as callbacks
-    callbacks.process_callback_query = enhanced_callback_handler
+    # Register onboarding callback handlers BEFORE the main callback handler
+    # This ensures onboarding callbacks are handled correctly
+    dp.callback_query.register(
+        handle_onboarding_callbacks,
+        lambda c: c.data and (
+            c.data.startswith(('lang_', 'pref_', 'tour_', 'quick_', 'welcome_', 'start_')) or
+            c.data in ['onboarding_complete', 'tour_complete', 'tour_skip']
+        )
+    )
     
     logger.info("Start handlers registered with onboarding integration")
 

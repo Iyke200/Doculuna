@@ -12,13 +12,17 @@ from aiogram.types import CallbackQuery
 from dotenv import load_dotenv
 
 # Assuming Redis for production session storage (fallback to in-memory for testing)
+from collections import defaultdict
+
+# Initialize fallback storage
+session_store = defaultdict(dict)
+
 try:
     import redis
     redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
     REDIS_AVAILABLE = True
 except ImportError:
-    from collections import defaultdict
-    session_store = defaultdict(dict)
+    redis_client = None  # type: ignore
     REDIS_AVAILABLE = False
 
 load_dotenv()

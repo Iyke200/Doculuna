@@ -13,14 +13,18 @@ from aiogram.utils.markdown import bold as hbold, code as hcode, link as hlink
 from dotenv import load_dotenv
 
 # Assuming Redis for user session storage (fallback to in-memory)
+from collections import defaultdict
+
+# Initialize fallback storage
+user_preferences = defaultdict(dict)
+user_onboarding = defaultdict(dict)
+
 try:
     import redis
     redis_client = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
     REDIS_AVAILABLE = True
 except ImportError:
-    from collections import defaultdict
-    user_preferences = defaultdict(dict)
-    user_onboarding = defaultdict(dict)
+    redis_client = None  # type: ignore
     REDIS_AVAILABLE = False
 
 # Import from other modules

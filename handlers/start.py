@@ -1050,21 +1050,11 @@ async def handle_onboarding_callbacks(callback: types.CallbackQuery, state: FSMC
         await callback.answer("Something went wrong. Use /start to try again.")
 
 def register_start_handlers(dp: Dispatcher) -> None:
-    """Register all start-related handlers."""
-    # Main start command - aiogram 3.x syntax
+    """Register start handler - no onboarding callbacks."""
+    # Main start command - simple and direct
     dp.message.register(start_command_handler, Command("start"))
     
-    # Register onboarding callback handlers BEFORE the main callback handler
-    # This ensures onboarding callbacks are handled correctly
-    dp.callback_query.register(
-        handle_onboarding_callbacks,
-        lambda c: c.data and (
-            c.data.startswith(('lang_', 'pref_', 'tour_', 'quick_', 'welcome_', 'start_')) or
-            c.data in ['onboarding_complete', 'tour_complete', 'tour_skip']
-        )
-    )
-    
-    logger.info("Start handlers registered with onboarding integration")
+    logger.info("Start handler registered (onboarding disabled)")
 
 __all__ = [
     'start_command_handler', 'register_start_handlers',

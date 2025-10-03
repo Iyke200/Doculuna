@@ -12,6 +12,9 @@ DocuLuna is a production-grade Telegram bot for professional document processing
 - ⚠️ **REQUIRES BOT_TOKEN** - Bot needs Telegram BOT_TOKEN to run (add in Secrets tab)
 
 ## Recent Changes (October 3, 2025)
+- **Simplified UX/UI (Latest)** - Removed onboarding flow (language selection, preferences) for smooth direct experience
+- **Streamlined Welcome** - `/start` now shows simple welcome and immediately ready to work
+- **Concise Help** - `/help` simplified to essential commands and features only, no fluff
 - **Fresh GitHub Import** - Successfully imported and configured for Replit environment
 - **All Dependencies Installed** - Installed aiogram 3.13.1, PyMuPDF, python-docx, Pillow, reportlab, pdf2docx, PyPDF2, aiofiles, pikepdf, cryptography
 - **Updated .env.example** - Added comprehensive environment variable documentation including Paystack integration
@@ -19,6 +22,11 @@ DocuLuna is a production-grade Telegram bot for professional document processing
 - **Deployment Configured** - VM deployment ready for production use
 - **Updated .gitignore** - Added DocuLuna-specific ignores for temp files, logs, and generated documents
 - **Database Verified** - Tested database initialization successfully
+
+## User Preferences
+- **Direct UX** - No lengthy onboarding flows or website-like setup processes
+- **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
+- **Smooth Experience** - Users should get to work immediately without setup friction
 
 ## Setup Instructions
 
@@ -61,13 +69,13 @@ DocuLuna is a production-grade Telegram bot for professional document processing
   - `schema.sql` - Database schema
   - `doculuna.db` - SQLite database file
 - **handlers/** - Modular command handlers
-  - `start.py` - Welcome and onboarding
+  - `start.py` - Simple welcome (no onboarding flow)
+  - `help.py` - Concise help (essential commands only)
   - `admin.py` - Admin panel and management
   - `payments.py` - Payment processing
   - `paystack.py` - Paystack integration
   - `premium.py` - Premium features
   - `referrals.py` - Referral system
-  - `help.py` - Help and support
   - `stats.py` - Statistics and analytics
   - `callbacks.py` - Callback query handlers
 - **tools/** - Document processing utilities

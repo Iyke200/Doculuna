@@ -12,6 +12,7 @@ requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
 deploymentTarget = "vm"
+run = ["python", "main.py"]
 
 [workflows]
 runButton = "Project"

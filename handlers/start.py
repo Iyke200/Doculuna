@@ -645,9 +645,20 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
             await show_welcome_screen(message, state)
             
         elif not onboarding_complete and not welcome_shown:
-            # Incomplete onboarding
-            current_step = (await onboarding_manager.get_onboarding_state(user_id))['step'] if await onboarding_manager.get_onboarding_state(user_id) else OnboardingStep.WELCOME.value
-            await handle_onboarding_step(message, state, current_step)
+            # User in middle of onboarding - typing /start restarts the onboarding
+            logger.info("User restarted onboarding", extra={'user_id': user_id})
+            
+            # Clear existing onboarding state
+            onboarding_key = f"onboarding:{user_id}"
+            if REDIS_AVAILABLE:
+                redis_client.delete(onboarding_key)
+            else:
+                if onboarding_key in user_onboarding:
+                    del user_onboarding[onboarding_key]
+            
+            # Start fresh onboarding
+            await onboarding_manager.start_onboarding(user_id, language_code)
+            await show_welcome_screen(message, state)
             
         else:
             # Returning user: Show welcome

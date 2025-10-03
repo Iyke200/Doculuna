@@ -612,116 +612,54 @@ async def show_feature_tour(message: types.Message, state: FSMContext,
         await message.reply("Feature tour temporarily unavailable. Use `/help` to explore!")
 
 async def start_command_handler(message: types.Message, state: FSMContext) -> None:
-    """Main /start command handler with new/returning user detection."""
+    """Simple, direct /start command - no onboarding fluff."""
     user_id = message.from_user.id
     username = message.from_user.username
-    first_name = message.from_user.first_name
+    first_name = message.from_user.first_name or "there"
     last_name = message.from_user.last_name
     language_code = message.from_user.language_code or 'en'
-    is_new = False  # Initialize to prevent unbound variable
     
     try:
-        # Step 1: Check if user exists
+        # Check if user exists
         user_data = get_user_data(user_id)
         is_new = not user_data
         
-        # Step 2: Create user record if new
+        # Create user if new
         if is_new:
             await create_user_record(user_id, username, first_name, last_name, language_code)
-            logger.info("New user detected", extra={'user_id': user_id, 'username': username})
+            logger.info("New user created", extra={'user_id': user_id})
         else:
-            # Update last active
             update_user_data(user_id, {'last_active': datetime.utcnow().isoformat()})
-            logger.info("Returning user detected", extra={'user_id': user_id, 'days_since_last': 'calculated'})
         
-        # Step 3: Check onboarding status
-        preferences = await get_user_preferences(user_id)
-        onboarding_complete = preferences.get('onboarding_complete', False)
-        welcome_shown = preferences.get('welcome_shown', False)
-        
-        # Step 4: Handle referral from deep link
-        referral_result = None
+        # Handle referral code if present
         text = message.text or ""
         if text.startswith('/start ref_'):
             code = text[11:].strip().upper()
             if len(code) == REFERRAL_CONFIG['code_length']:
                 from database.db import get_user_role  # type: ignore
                 user_role = get_user_role(user_id) or 'new_user'
-                referral_result = await process_referral(user_id, code, user_role)
-                logger.info("Referral processed in start", extra={
-                    'user_id': user_id,
-                    'code': code,
-                    'success': referral_result.get('success', False)
-                })
+                await process_referral(user_id, code, user_role)
         
-        # Step 5: Determine flow
-        if is_new:
-            # New user: Start onboarding
-            await onboarding_manager.start_onboarding(user_id, language_code)
-            await show_welcome_screen(message, state)
-            
-        elif not onboarding_complete and not welcome_shown:
-            # User in middle of onboarding - typing /start restarts the onboarding
-            logger.info("User restarted onboarding", extra={'user_id': user_id})
-            
-            # Clear existing onboarding state
-            onboarding_key = f"onboarding:{user_id}"
-            if REDIS_AVAILABLE:
-                redis_client.delete(onboarding_key)
-            else:
-                if onboarding_key in user_onboarding:
-                    del user_onboarding[onboarding_key]
-            
-            # Start fresh onboarding
-            await onboarding_manager.start_onboarding(user_id, language_code)
-            await show_welcome_screen(message, state)
-            
-        else:
-            # Returning user: Show welcome
-            welcome_text = await get_welcome_message(user_id, False, preferences, referral_result or {})
-            
-            # Mark welcome as shown
-            if not welcome_shown:
-                preferences['welcome_shown'] = True
-                await store_user_preferences(user_id, preferences)
-            
-            # Add quick action buttons for returning users
-            keyboard = types.InlineKeyboardMarkup(row_width=2)
-            actions = [
-                ("📄 Upload Document", "quick_upload"),
-                ("💎 Upgrade Premium", "quick_upgrade"),
-                ("📊 My Stats", "quick_stats"),
-                ("👥 Refer Friends", "quick_refer")
-            ]
-            
-            for action_text, callback_data in actions:
-                button = types.InlineKeyboardButton(action_text, callback_data=callback_data)
-                keyboard.add(button)
-            
-            await message.reply(welcome_text, parse_mode='Markdown', reply_markup=keyboard)
-            
-            logger.info("Returning user welcome shown", extra={
-                'user_id': user_id,
-                'premium_active': preferences.get('premium_status') == PremiumStatus.ACTIVE
-            })
+        # Simple welcome message
+        welcome = (
+            f"Hi {first_name}! Send me a document to get started.\n\n"
+            f"*What I can do:*\n"
+            f"• PDF ↔ Word conversion\n"
+            f"• Image → PDF\n"
+            f"• Compress files\n"
+            f"• Split/merge PDFs\n\n"
+            f"Type /help for all commands or /premium to upgrade."
+        )
+        
+        await message.reply(welcome, parse_mode='Markdown')
+        logger.info("User welcomed", extra={'user_id': user_id, 'new': is_new})
         
     except Exception as e:
-        logger.error("Start command handler error", exc_info=True, extra={
-            'user_id': user_id,
-            'is_new': is_new,
-            'error': str(e)
-        })
-        # Fallback welcome
-        fallback_text = (
-            f"👋 *Hi there!*\n\n"
-            f"Welcome to DocuLuna - your AI document assistant.\n\n"
-            f"🚀 *Get started:*\n"
-            f"• `/help` - All commands\n"
-            f"• `/premium` - Upgrade\n"
-            f"• Upload a document to begin\n\n"
-            f"Something went wrong - try `/help` for assistance!"
+        logger.error("Start error", exc_info=True, extra={'user_id': user_id, 'error': str(e)})
+        await message.reply(
+            f"Hi {first_name}! Send me a document to convert.\n"
+            f"Type /help for commands."
         )
-        await message.reply(fallback_text, parse_mode='Markdown')
 
 async def show_welcome_screen(message: types.Message, state: FSMContext) -> None:
     """Show initial welcome screen for new users."""

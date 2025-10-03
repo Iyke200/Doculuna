@@ -213,99 +213,33 @@ def generate_category_help(categories: Dict[HelpCategory, List[CommandInfo]],
     return help_text
 
 async def help_command_handler(message: types.Message) -> None:
-    """Main /help command handler with search capability."""
+    """Simple, direct help command - no fluff."""
     user_id = message.from_user.id
-    user_role = get_user_role(user_id)
-    
-    # Input validation and parsing
-    text_parts = message.text.split(maxsplit=1)
-    search_query = text_parts[1].strip() if len(text_parts) > 1 else ""
     
     try:
-        if search_query and not validate_search_query(search_query):
-            await message.reply(
-                "❌ Invalid search query. Please use letters, numbers, and basic punctuation.",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            logger.warning("Invalid search query", extra={
-                'user_id': user_id, 
-                'action': 'help_search', 
-                'query': search_query
-            })
-            return
+        help_text = (
+            "*Commands:*\n\n"
+            "/premium - Upgrade to premium\n"
+            "/upgrade - Subscribe to plan\n"
+            "/refer - Get referral link\n"
+            "/stats - View your stats\n\n"
+            "*Features:*\n"
+            "• Send PDF → converts to Word\n"
+            "• Send Word doc → converts to PDF\n"
+            "• Send image → converts to PDF\n"
+            "• Type /compress → compress file\n"
+            "• Type /split → split PDF\n"
+            "• Type /merge → merge PDFs\n\n"
+            "*Limits:* 3 free conversions/day\n"
+            "*Premium:* Unlimited access"
+        )
         
-        # Generate appropriate help content
-        if search_query:
-            # Search mode
-            results = search_commands(search_query, user_role)
-            
-            if not results:
-                response = f"🔍 *No results found for* `{search_query}`\n\n"
-                response += "Try searching for:\n"
-                response += "• payment, premium, upgrade\n• refer, referral\n• ban, broadcast\n• settings"
-                logger.info("No search results", extra={
-                    'user_id': user_id, 
-                    'action': 'help_search', 
-                    'query': search_query
-                })
-            else:
-                response = f"🔍 *Search results for* `{search_query}`:\n\n"
-                for cmd in results[:5]:  # Limit to 5 results
-                    response += format_command_help(cmd, ParseMode.MARKDOWN)
-                    response += "─" * 30 + "\n\n"
-                
-                if len(results) > 5:
-                    response += f"*...and {len(results) - 5} more results*\n"
-                
-                logger.info("Search successful", extra={
-                    'user_id': user_id, 
-                    'action': 'help_search', 
-                    'query': search_query, 
-                    'results': len(results)
-                })
-                
-        else:
-            # Full help by category
-            authorized_commands = get_user_authorized_commands(user_role)
-            
-            # Group by category
-            categories = {}
-            for cmd in authorized_commands:
-                cat = cmd.category
-                if cat not in categories:
-                    categories[cat] = []
-                categories[cat].append(cmd)
-            
-            # Sort categories and commands
-            sorted_categories = sorted(categories.items(), key=lambda x: x[0].value)
-            response = generate_category_help(dict(sorted_categories), ParseMode.MARKDOWN)
-            
-            logger.info("Full help requested", extra={
-                'user_id': user_id, 
-                'action': 'help_full', 
-                'total_commands': len(authorized_commands)
-            })
-        
-        # Send response with character limit handling
-        if len(response) > 4096:  # Telegram limit
-            # Split into multiple messages
-            messages = [response[i:i+4096] for i in range(0, len(response), 4096)]
-            for i, msg in enumerate(messages):
-                await message.reply(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
-        else:
-            await message.reply(response, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+        await message.reply(help_text, parse_mode=ParseMode.MARKDOWN)
+        logger.info("Help shown", extra={'user_id': user_id, 'action': 'help'})
             
     except Exception as e:
-        # Error isolation
-        logger.error("Help command error", exc_info=True, extra={
-            'user_id': user_id, 
-            'action': 'help', 
-            'query': search_query
-        })
-        await message.reply(
-            "❌ An error occurred while generating help. Please try again.",
-            parse_mode=ParseMode.MARKDOWN
-        )
+        logger.error("Help error", exc_info=True, extra={'user_id': user_id, 'action': 'help'})
+        await message.reply("Type /start to restart or send a document to convert.")
 
 async def command_details_handler(message: types.Message) -> None:
     """Handle detailed command information requests."""

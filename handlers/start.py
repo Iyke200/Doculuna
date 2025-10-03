@@ -37,6 +37,10 @@ class PremiumStatus:
     EXPIRED = "expired"
     ACTIVE = "active"
     
+    @property
+    def value(self):
+        return self
+    
 class PremiumPlan:
     WEEKLY = {"value": {"name": "Weekly Pro", "id": "weekly"}}
     MONTHLY = {"value": {"name": "Monthly Pro", "id": "monthly"}}
@@ -290,8 +294,8 @@ async def get_user_preferences(user_id: int) -> Dict[str, Any]:
         })
         return DEFAULT_PREFERENCES.copy()
 
-async def create_user_record(user_id: int, username: str = None, first_name: str = None, 
-                           last_name: str = None, language_code: str = 'en') -> None:
+async def create_user_record(user_id: int, username: Optional[str] = None, first_name: Optional[str] = None, 
+                           last_name: Optional[str] = None, language_code: str = 'en') -> None:
     """Create initial user record."""
     try:
         user_data = {
@@ -305,7 +309,7 @@ async def create_user_record(user_id: int, username: str = None, first_name: str
             'preferences': DEFAULT_PREFERENCES.copy(),
             'onboarding_complete': False,
             'total_interactions': 0,
-            'premium_status': PremiumStatus.EXPIRED.value,
+            'premium_status': PremiumStatus.EXPIRED,
             'referral_used': False
         }
         
@@ -408,14 +412,21 @@ async def get_welcome_message(user_id: int, is_new: bool, preferences: Dict[str,
         
         # Check premium status
         premium_data = await get_premium_data(user_id)
-        premium_status = premium_data.get('status', PremiumStatus.EXPIRED.value)
+        premium_status = premium_data.get('status', PremiumStatus.EXPIRED)
         
         welcome_text = f"{greeting}\n\n"
         
         if premium_status == PremiumStatus.ACTIVE:
             expiry = datetime.fromisoformat(premium_data['expiry'])
             days_left = max(0, (expiry - datetime.utcnow()).days)
-            plan_name = next((p.value['name'] for p in PremiumPlan if p.value['id'] == premium_data.get('plan')), 'Premium')
+            # Get plan name from premium data
+            plan_id = premium_data.get('plan', 'weekly')
+            if plan_id == 'weekly':
+                plan_name = PremiumPlan.WEEKLY['value']['name']
+            elif plan_id == 'monthly':
+                plan_name = PremiumPlan.MONTHLY['value']['name']
+            else:
+                plan_name = 'Premium'
             
             welcome_text += f"🎖 *Premium Active* - {plan_name}\n"
             welcome_text += f"⏰ *Expires in:* {days_left} days\n\n"
@@ -607,6 +618,7 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
     language_code = message.from_user.language_code or 'en'
+    is_new = False  # Initialize to prevent unbound variable
     
     try:
         # Step 1: Check if user exists
@@ -666,7 +678,7 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
             
         else:
             # Returning user: Show welcome
-            welcome_text = await get_welcome_message(user_id, False, preferences, referral_result)
+            welcome_text = await get_welcome_message(user_id, False, preferences, referral_result or {})
             
             # Mark welcome as shown
             if not welcome_shown:
@@ -690,7 +702,7 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
             
             logger.info("Returning user welcome shown", extra={
                 'user_id': user_id,
-                'premium_active': preferences.get('premium_status') == PremiumStatus.ACTIVE.value
+                'premium_active': preferences.get('premium_status') == PremiumStatus.ACTIVE
             })
         
     except Exception as e:

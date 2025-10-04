@@ -8,14 +8,19 @@ Production-ready implementation with CLI and API support.
 import argparse
 import os
 import io
+import sys
 import tempfile
 import zipfile
 import zlib
 import logging
 from pathlib import Path
 from typing import Optional, Tuple
-from PIL import Image
-from pikepdf import Pdf, Name, PdfImage, PdfError
+try:
+    from PIL import Image
+    from pikepdf import Pdf, Name, PdfImage, PdfError
+except ImportError as e:
+    print(f"❌ Dependency error: {e}. Please install required packages (e.g., 'pip install Pillow pikepdf').")
+    sys.exit(1)
 
 # Configure logging
 logging.basicConfig(
@@ -50,12 +55,13 @@ class FileValidator:
     """File validation and sanitization."""
     
     @staticmethod
-    def validate_input_file(file_path: str) -> str:
+    def validate_input_file(file_path: str, max_size: int) -> str:
         """
         Validate input file exists, is not a directory, and sanitize path.
         
         Args:
             file_path: Input file path
+            max_size: Maximum allowed file size in bytes
             
         Returns:
             Normalized file path
@@ -63,7 +69,7 @@ class FileValidator:
         Raises:
             ValueError: If file is invalid
         """
-        if not file_path or not isinstance(file_path, str):
+        if not file_path or not isinstance(file_path, str) or not file_path.strip():
             raise ValueError("File path must be a non-empty string")
         
         # Normalize path to prevent traversal attacks
@@ -72,29 +78,35 @@ class FileValidator:
         if not os.path.isfile(normalized_path):
             raise ValueError(f"Input '{file_path}' is not a valid file")
         
-        # Check file size (prevent resource abuse)
+        # Check file size
         file_size = os.path.getsize(normalized_path)
-        if file_size > 2 * 1024 * 1024 * 1024:  # 2GB limit
-            raise ValueError("File size exceeds 2GB limit")
+        if file_size > max_size:
+            raise ValueError(f"File size exceeds {max_size/(1024**3):.1f}GB limit")
         
-        # Check for null bytes (potential security issue)
+        # Check for null bytes in chunks
         try:
             with open(normalized_path, 'rb') as f:
-                if b'\x00' in f.read(1024):
-                    raise ValueError("File contains null bytes - potential security issue")
-        except:
-            pass  # Continue if we can't read the first 1024 bytes
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
+                    if b'\x00' in chunk:
+                        raise ValueError("File contains null bytes - potential security issue")
+        except (PermissionError, OSError) as e:
+            logger.warning(f"Unable to read file for null byte check: {e}")
+            raise ValueError(f"Cannot validate file due to read error: {str(e)}")
         
-        logger.info(f"Validated input file: {normalized_path} ({file_size} bytes)")
+        logger.info(f"Validated input file: {normalized_path} ({file_size:,} bytes)")
         return normalized_path
     
     @staticmethod
-    def validate_output_path(output_path: str, overwrite: bool = False) -> str:
+    def validate_output_path(output_path: str, input_path: str, overwrite: bool = False) -> str:
         """
         Validate output path and check overwrite permissions.
         
         Args:
             output_path: Output file path
+            input_path: Input file path (to validate extension)
             overwrite: Whether to allow overwriting existing files
             
         Returns:
@@ -103,7 +115,15 @@ class FileValidator:
         Raises:
             ValueError: If output path is invalid or overwrite not permitted
         """
+        if not output_path or not isinstance(output_path, str) or not output_path.strip():
+            raise ValueError("Output path must be a non-empty string")
+        
         normalized_path = os.path.normpath(os.path.abspath(output_path))
+        input_ext = FileValidator.get_file_extension(input_path)
+        output_ext = FileValidator.get_file_extension(normalized_path)
+        
+        if input_ext != output_ext:
+            raise ValueError(f"Output file extension ({output_ext}) must match input ({input_ext})")
         
         if os.path.exists(normalized_path) and not overwrite:
             raise ValueError(f"Output file '{output_path}' already exists. Use --force to overwrite.")
@@ -169,12 +189,12 @@ class PDFCompressor:
                 pdf.save(
                     output_path,
                     **optimization_flags[level],
-                    fix_metadata=False,  # Preserve original metadata
+                    fix_metadata=False,
                     normalize_content=True
                 )
                 
             compressed_size = os.path.getsize(output_path)
-            compression_ratio = ((original_size - compressed_size) / original_size) * 100
+            compression_ratio = ((original_size - compressed_size) / original_size) * 100 if original_size > 0 else 0
             
             logger.info(f"PDF compression complete: {original_size:,} → {compressed_size:,} bytes "
                        f"({compression_ratio:.1f}% reduction)")
@@ -209,7 +229,7 @@ class PDFCompressor:
                     progressive=True
                 )
                 image_data = img_buffer.getvalue()
-                image_obj.write(image_data, filter=Name('/DCTDecode'))
+                image_obj.replace(image_data, filter=Name('/DCTDecode'))
             else:
                 # PNG or other format compression
                 compress_level = 9 if level == CompressionLevel.HIGH else 6
@@ -219,9 +239,7 @@ class PDFCompressor:
                     optimize=True,
                     compress_level=compress_level
                 )
-                # Apply additional zlib compression for non-JPEG
-                compressed_data = zlib.compress(img_buffer.getvalue(), level=9)
-                image_obj.write(compressed_data, filter=Name('/FlateDecode'))
+                image_obj.replace(img_buffer.getvalue(), filter=Name('/FlateDecode'))
                 
         except Exception as e:
             logger.warning(f"Skipping image compression due to error: {e}")
@@ -273,7 +291,7 @@ class DOCXCompressor:
                 DOCXCompressor._rearchive_docx(temp_dir, output_path, zip_compress_level)
             
             compressed_size = os.path.getsize(output_path)
-            compression_ratio = ((original_size - compressed_size) / original_size) * 100
+            compression_ratio = ((original_size - compressed_size) / original_size) * 100 if original_size > 0 else 0
             
             logger.info(f"DOCX compression complete: {original_size:,} → {compressed_size:,} bytes "
                        f"({compression_ratio:.1f}% reduction)")
@@ -299,13 +317,17 @@ class DOCXCompressor:
                 try:
                     with Image.open(img_path) as img:
                         img_buffer = io.BytesIO()
+                        original_format = img.format if img.format else 'PNG'
                         
-                        # Determine format and compression settings
+                        # Preserve original format where possible
                         if filename.lower().endswith(('.jpg', '.jpeg')):
                             img.save(img_buffer, format='JPEG', quality=quality, optimize=True)
                         else:
                             compress_level = 9 if level == CompressionLevel.HIGH else 6
-                            img.save(img_buffer, format='PNG', optimize=True, compress_level=compress_level)
+                            save_format = original_format if original_format in ('PNG', 'GIF') else 'PNG'
+                            img.save(img_buffer, format=save_format, optimize=True, compress_level=compress_level)
+                            if save_format != original_format:
+                                logger.warning(f"Converted {filename} from {original_format} to {save_format}")
                         
                         # Write optimized image back
                         img_buffer.seek(0)
@@ -322,7 +344,7 @@ class DOCXCompressor:
         """Re-archive DOCX with specified compression level."""
         with zipfile.ZipFile(output_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=compress_level) as zout:
             for root, dirs, files in os.walk(source_dir):
-                # Skip .DS_Store and other system files
+                # Skip system files
                 dirs[:] = [d for d in dirs if not d.startswith('.')]
                 
                 for file in files:
@@ -360,22 +382,25 @@ class TXTCompressor:
             with open(input_path, 'r', encoding='utf-8', errors='ignore') as fin:
                 content = fin.read()
             
+            original_ends_with_nl = content.endswith('\n')
+            
             # Apply compression based on level
             if level == CompressionLevel.LOW:
                 processed_content = content
             elif level == CompressionLevel.MEDIUM:
                 # Remove trailing whitespace, preserve line breaks
                 processed_content = '\n'.join(line.rstrip() for line in content.splitlines())
-                processed_content += '\n' if content.endswith('\n') else ''
+                processed_content += '\n' if original_ends_with_nl else ''
             elif level == CompressionLevel.HIGH:
                 # Aggressive whitespace normalization, remove empty lines
                 lines = []
                 for line in content.splitlines():
                     stripped = line.strip()
-                    if stripped:  # Skip empty lines
-                        normalized = ' '.join(stripped.split())  # Normalize multiple spaces
+                    if stripped:
+                        normalized = ' '.join(stripped.split())
                         lines.append(normalized)
-                processed_content = '\n'.join(lines) + '\n'
+                processed_content = '\n'.join(lines)
+                processed_content += '\n' if original_ends_with_nl else ''
             else:
                 raise ValueError(f"Invalid compression level: {level}")
             
@@ -408,7 +433,8 @@ class DocumentCompressor:
         input_path: str,
         output_path: str,
         level: str = CompressionLevel.MEDIUM,
-        force_overwrite: bool = False
+        force_overwrite: bool = False,
+        max_size: int = 2 * 1024 * 1024 * 1024
     ) -> dict:
         """
         Main function to compress document based on file type.
@@ -418,6 +444,7 @@ class DocumentCompressor:
             output_path: Output file path
             level: Compression level ('low', 'medium', 'high')
             force_overwrite: Allow overwriting existing output file
+            max_size: Maximum allowed input file size in bytes
             
         Returns:
             Dictionary with compression results
@@ -426,8 +453,8 @@ class DocumentCompressor:
             ValueError: For invalid inputs or unsupported formats
         """
         # Validate inputs
-        input_path = FileValidator.validate_input_file(input_path)
-        output_path = FileValidator.validate_output_path(output_path, force_overwrite)
+        input_path = FileValidator.validate_input_file(input_path, max_size)
+        output_path = FileValidator.validate_output_path(output_path, input_path, force_overwrite)
         
         # Validate compression level
         if level not in CompressionLevel.QUALITY_MAP:
@@ -478,9 +505,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python doculuna.py compress input.pdf output.pdf --level=high --force
+  python doculuna.py compress input.pdf output.pdf --level=high --force --max-size=4
   python doculuna.py compress document.docx compressed.docx --level=medium
-  python doculuna.py compress report.txt optimized.txt --level=low
+  python doculuna.py compress report.txt optimized.txt --level=low --verbose
         """
     )
     
@@ -499,6 +526,12 @@ Examples:
         help="Force overwrite of existing output file"
     )
     parser.add_argument(
+        '--max-size',
+        type=float,
+        default=2.0,
+        help="Maximum input file size in GB (default: 2.0)"
+    )
+    parser.add_argument(
         '--verbose',
         '-v',
         action='store_true',
@@ -511,13 +544,17 @@ Examples:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
+    # Convert max_size from GB to bytes
+    max_size_bytes = int(args.max_size * 1024 * 1024 * 1024)
+    
     if args.command == 'compress':
         try:
             results = DocumentCompressor.compress_document(
                 input_path=args.input,
                 output_path=args.output,
                 level=args.level,
-                force_overwrite=args.force
+                force_overwrite=args.force,
+                max_size=max_size_bytes
             )
             
             # Print summary

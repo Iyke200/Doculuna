@@ -1,11 +1,20 @@
 # file_handler.py - File handling with new UX
 import logging
 import os
+import tempfile
+import asyncio
 from aiogram import Dispatcher, types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from utils.usage_tracker import check_usage_limit, increment_usage
+from tools.pdf_to_word import PDFToWordConverter
+from tools.word_to_pdf import WordToPDFConverter
+from tools.compress import PDFCompressor, DOCXCompressor, CompressionLevel
+from tools.image_to_pdf import handle_image_to_pdf
+from PIL import Image
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -136,19 +145,113 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         )
 
 async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
-    """Placeholder for file conversion logic."""
-    import tempfile
-    return tempfile.mktemp(suffix=".pdf")
+    """Convert PDF to Word or Word to PDF based on file type."""
+    try:
+        file = await bot.get_file(file_id)
+        input_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
+        await file.download_to_drive(input_path)
+        
+        if file_name.lower().endswith('.pdf'):
+            output_path = tempfile.mktemp(suffix=".docx")
+            result = PDFToWordConverter.convert_pdf_to_docx(
+                input_path, 
+                output_path, 
+                preserve_layout=True, 
+                extract_images=True
+            )
+            logger.info(f"PDF to Word conversion: {result['success']}")
+        elif file_name.lower().endswith(('.docx', '.doc')):
+            output_path = tempfile.mktemp(suffix=".pdf")
+            result = WordToPDFConverter.convert_docx_to_pdf(
+                input_path, 
+                output_path, 
+                preserve_formatting=True, 
+                high_quality=True
+            )
+            logger.info(f"Word to PDF conversion: {result['success']}")
+        else:
+            raise ValueError("Unsupported file type for conversion")
+        
+        try:
+            os.remove(input_path)
+        except:
+            pass
+            
+        return output_path
+    except Exception as e:
+        logger.error(f"Conversion error: {e}", exc_info=True)
+        raise
 
 async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
-    """Placeholder for file compression logic."""
-    import tempfile
-    return tempfile.mktemp(suffix=".pdf")
+    """Compress PDF or DOCX file."""
+    try:
+        file = await bot.get_file(file_id)
+        input_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
+        await file.download_to_drive(input_path)
+        
+        output_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
+        
+        if file_name.lower().endswith('.pdf'):
+            original_size, compressed_size = PDFCompressor.compress_pdf(
+                input_path, 
+                output_path, 
+                CompressionLevel.MEDIUM
+            )
+            logger.info(f"PDF compressed: {original_size} → {compressed_size} bytes")
+        elif file_name.lower().endswith('.docx'):
+            original_size, compressed_size = DOCXCompressor.compress_docx(
+                input_path, 
+                output_path, 
+                CompressionLevel.MEDIUM
+            )
+            logger.info(f"DOCX compressed: {original_size} → {compressed_size} bytes")
+        else:
+            raise ValueError("Unsupported file type for compression")
+        
+        try:
+            os.remove(input_path)
+        except:
+            pass
+            
+        return output_path
+    except Exception as e:
+        logger.error(f"Compression error: {e}", exc_info=True)
+        raise
 
 async def image_to_pdf(bot: Bot, file_id: str, file_name: str) -> str:
-    """Placeholder for image to PDF logic."""
-    import tempfile
-    return tempfile.mktemp(suffix=".pdf")
+    """Convert image to PDF."""
+    try:
+        file = await bot.get_file(file_id)
+        input_path = tempfile.mktemp(suffix=".jpg")
+        await file.download_to_drive(input_path)
+        
+        output_path = tempfile.mktemp(suffix=".pdf")
+        
+        image = Image.open(input_path)
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        img_width, img_height = image.size
+        c = canvas.Canvas(output_path, pagesize=A4)
+        page_width, page_height = A4
+        
+        scale = min(page_width / img_width, page_height / img_height) * 0.9
+        x = (page_width - img_width * scale) / 2
+        y = (page_height - img_height * scale) / 2
+        
+        c.drawImage(input_path, x, y, img_width * scale, img_height * scale)
+        c.save()
+        
+        try:
+            os.remove(input_path)
+        except:
+            pass
+            
+        logger.info(f"Image to PDF conversion complete: {output_path}")
+        return output_path
+    except Exception as e:
+        logger.error(f"Image to PDF error: {e}", exc_info=True)
+        raise
 
 def register_file_handlers(dp: Dispatcher):
     """Register file handlers."""

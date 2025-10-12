@@ -51,6 +51,7 @@ def import_handlers():
         from handlers.stats import register_stats_handlers
         from handlers.payments import register_payment_handlers
         from handlers.paystack import register_paystack_handlers
+        from handlers.file_handler import register_file_handlers
         from config import ADMIN_USER_IDS
 
         return {
@@ -65,6 +66,7 @@ def import_handlers():
             "register_stats_handlers": register_stats_handlers,
             "register_payment_handlers": register_payment_handlers,
             "register_paystack_handlers": register_paystack_handlers,
+            "register_file_handlers": register_file_handlers,
             "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
@@ -115,6 +117,7 @@ def register_handlers():
     handlers["register_stats_handlers"](dp)
     handlers["register_payment_handlers"](dp)
     handlers["register_paystack_handlers"](dp)
+    handlers["register_file_handlers"](dp)  # File handlers
     handlers["register_callback_handlers"](dp)  # General callback handler last
 
     logger.info("✓ All handlers registered")

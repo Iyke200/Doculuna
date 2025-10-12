@@ -1,4 +1,4 @@
-# admin.py
+# admin.py - Updated with new UX flow
 import logging
 import time
 import os
@@ -6,10 +6,11 @@ from typing import Callable, Awaitable
 
 from aiogram import Dispatcher, types
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
-# Assuming a separate db.py module handles database interactions (e.g., using SQLite or similar).
-# For production, db.py would use thread-safe connections and proper error handling.
+from config import ADMIN_USER_IDS
 from database.db import get_user_role, ban_user, unban_user, get_all_users  # type: ignore
 
 load_dotenv()
@@ -112,6 +113,37 @@ async def unban_handler(message: types.Message) -> None:
     logger.info("Admin unbanned user", extra={'user_id': message.from_user.id, 'action': 'unban', 'target_user': user_id_to_unban})
     await message.reply(f"User {user_id_to_unban} has been unbanned.")
 
+async def admin_command_handler(message: types.Message, state: FSMContext) -> None:
+    """Handle /admin command with new UX."""
+    user_id = message.from_user.id
+    
+    if user_id not in ADMIN_USER_IDS:
+        await message.reply("❌ Unauthorized")
+        return
+    
+    try:
+        admin_text = (
+            "👑 Admin Panel Access\n\n"
+            "Choose an action below:\n"
+            "📈 View Analytics\n"
+            "💰 View Payments\n"
+            "👥 Manage Users\n"
+            "📢 Broadcast Message"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.button(text="📈 View Analytics", callback_data="admin_analytics")
+        builder.button(text="💰 View Payments", callback_data="admin_payments")
+        builder.button(text="👥 Manage Users", callback_data="admin_users")
+        builder.button(text="📢 Broadcast", callback_data="admin_broadcast")
+        builder.adjust(2, 2)
+        
+        await message.reply(admin_text, reply_markup=builder.as_markup())
+        
+    except Exception as e:
+        logger.error(f"Error in admin command: {e}", exc_info=True)
+        await message.reply("Error loading admin panel")
+
 @admin_only(min_role='superadmin')
 async def broadcast_handler(message: types.Message) -> None:
     text = message.text.replace("/broadcast", "").strip()
@@ -137,6 +169,7 @@ def register_admin_handlers(dp: Dispatcher) -> None:
     Register all admin handlers with the dispatcher.
     """
     # aiogram 3.x syntax
+    dp.message.register(admin_command_handler, Command("admin"))
     dp.message.register(ban_handler, Command("ban"))
     dp.message.register(unban_handler, Command("unban"))
     dp.message.register(broadcast_handler, Command("broadcast"))

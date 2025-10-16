@@ -1350,24 +1350,11 @@ def register_upgrade_handlers(dp: Dispatcher) -> None:
     dp.message.register(activate_upgrade_handler, Command("activate"))
     dp.message.register(downgrade_command_handler, Command("downgrade"))
     
-    # Callback handlers
-    from handlers.callbacks import process_callback_query
-    original_process = process_callback_query
-    
-    async def enhanced_upgrade_callback(callback: types.CallbackQuery, state: FSMContext):
-        """Enhanced callback handler for upgrades."""
-        if callback.data and callback.data.startswith('upgrade_'):
-            await handle_upgrade_callbacks(callback, state)
-            return
-        
-        # Original processing
-        await original_process(callback, state)
-    
-    # Monkey patch
-    import handlers.callbacks as callbacks
-    if not hasattr(callbacks, 'original_callback_process'):
-        callbacks.original_callback_process = original_process
-    callbacks.process_callback_query = enhanced_upgrade_callback
+    # Register upgrade callbacks
+    dp.callback_query.register(
+        handle_upgrade_callbacks,
+        lambda c: c.data and c.data.startswith('upgrade_')
+    )
     
     logger.info("Upgrade handlers registered with rollback protection")
 

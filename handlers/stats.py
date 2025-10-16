@@ -916,26 +916,11 @@ def register_stats_handlers(dp: Dispatcher) -> None:
         Command("stats")
     )
     
-    # Register callback handlers
-    from handlers.callbacks import process_callback_query
-    original_process = process_callback_query
-    
-    async def enhanced_stats_callback(callback: types.CallbackQuery, state: FSMContext):
-        """Enhanced callback handler for stats."""
-        if callback.data and callback.data.startswith('stats_'):
-            await handle_stats_callbacks(callback, state)
-            return
-        
-        # Original callback processing
-        await original_process(callback, state)
-    
-    # Monkey patch
-    import handlers.callbacks as callbacks
-    if hasattr(callbacks, 'original_callback_process'):
-        callbacks.process_callback_query = enhanced_stats_callback
-    else:
-        callbacks.original_callback_process = original_process
-        callbacks.process_callback_query = enhanced_stats_callback
+    # Register stats callbacks
+    dp.callback_query.register(
+        handle_stats_callbacks,
+        lambda c: c.data and c.data.startswith('stats_')
+    )
     
     logger.info("Stats handlers registered with admin dashboard")
 

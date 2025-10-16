@@ -77,7 +77,7 @@ LEGACY_PLANS = {
 }
 
 # Admin configuration
-ADMIN_USER_IDS = [6857550239]  # Admin user IDs
+ADMIN_USER_IDS = [int(id.strip()) for id in os.getenv("ADMIN_USER_IDS", "").split(",") if id.strip()]  # Admin user IDs from environment
 ADMIN_IDS = ADMIN_USER_IDS  # Alias for compatibility
 
 # Production settings

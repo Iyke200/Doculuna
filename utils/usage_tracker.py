@@ -34,9 +34,9 @@ from dataclasses import dataclass, asdict
 import asyncio
 from collections import defaultdict, Counter
 
-from ..error_handler import ErrorHandler, ErrorContext  # type: ignore
-from ..premium import PremiumStatus, get_premium_data  # type: ignore
-from ..db import update_user_data  # type: ignore
+from utils.error_handler import ErrorHandler, ErrorContext  # type: ignore
+from handlers.premium import PremiumStatus, get_premium_data  # type: ignore
+from database.db import update_user_data  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -59,6 +59,7 @@ class ActivityRecord:
         if self.metadata is None:
             self.metadata = {}
 
+@dataclass
 class RateLimitConfig:
     """Rate limiting configuration."""
     limit: int
@@ -66,6 +67,7 @@ class RateLimitConfig:
     block_duration: Optional[int] = None  # Seconds to block on violation
     warning_threshold: float = 0.8  # Warn at 80% usage
 
+@dataclass
 class QuotaConfig:
     """Quota configuration."""
     limit: int
@@ -480,3 +482,35 @@ def initialize_usage_tracker(
 def format_currency(amount: float) -> str:
     """Format Naira currency."""
     return f"₦{amount:,.0f}"
+
+async def check_usage_limit(user_id: int) -> bool:
+    """Check if user has exceeded their usage limit."""
+    try:
+        from database.db import get_user_data
+        user_data = get_user_data(user_id)
+        if not user_data:
+            return True
+        
+        usage_today = user_data.get('usage_today', 0)
+        is_premium = user_data.get('is_premium', False)
+        
+        if is_premium:
+            return True
+        
+        from config import FREE_USAGE_LIMIT
+        return usage_today < FREE_USAGE_LIMIT
+    except Exception as e:
+        logger.error(f"Error checking usage limit: {e}")
+        return True
+
+async def increment_usage(user_id: int):
+    """Increment user's usage counter."""
+    try:
+        from database.db import get_user_data, update_user_data
+        user_data = get_user_data(user_id)
+        if user_data:
+            current_usage = user_data.get('usage_today', 0)
+            update_user_data(user_id, {'usage_today': current_usage + 1})
+            logger.info(f"Usage incremented for user {user_id}: {current_usage + 1}")
+    except Exception as e:
+        logger.error(f"Error incrementing usage: {e}")

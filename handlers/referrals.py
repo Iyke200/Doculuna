@@ -49,6 +49,18 @@ async def record_referral_use(referrer_id: int, new_user_id: int):
     except Exception as e:
         logger.error(f"Error recording referral: {e}")
 
+async def process_premium_conversion_reward(referrer_id: int, plan_type: str):
+    """Process reward for premium conversion via referral."""
+    try:
+        reward_amount = 500 if plan_type == "monthly" else 150
+        user_data = get_user_data(referrer_id)
+        if user_data:
+            current_earnings = user_data.get('referral_earnings', 0)
+            update_user_data(referrer_id, {'referral_earnings': current_earnings + reward_amount})
+            logger.info(f"Referral reward processed: referrer={referrer_id}, plan={plan_type}, reward={reward_amount}")
+    except Exception as e:
+        logger.error(f"Error processing referral reward: {e}")
+
 def register_referral_handlers(dp: Dispatcher) -> None:
     """Register referral handlers."""
     dp.message.register(refer_command_handler, Command("refer"))

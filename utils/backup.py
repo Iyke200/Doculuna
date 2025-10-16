@@ -32,9 +32,9 @@ from enum import Enum
 import aiofiles
 
 # Local imports (assuming these exist)
-from ..db import get_user_data, get_all_user_data  # type: ignore
-from ..premium import get_premium_data  # type: ignore
-from ..stats import stats_tracker, StatType  # type: ignore
+from database.db import get_user_data, get_all_user_data  # type: ignore
+from handlers.premium import get_premium_data  # type: ignore
+from handlers.stats import stats_tracker, StatType  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)

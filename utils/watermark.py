@@ -38,8 +38,8 @@ import base64
 from io import BytesIO
 
 # Local imports
-from ..error_handler import ErrorHandler, ErrorContext  # type: ignore
-from ..stats import stats_tracker  # type: ignore
+from utils.error_handler import ErrorHandler, ErrorContext  # type: ignore
+from handlers.stats import stats_tracker  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)

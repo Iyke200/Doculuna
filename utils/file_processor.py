@@ -49,8 +49,8 @@ from bleach import clean  # HTML sanitization
 import exiftool  # Metadata stripping
 
 # Local imports
-from ..error_handler import ErrorHandler, ErrorContext, ErrorSeverity  # type: ignore
-from ..stats import stats_tracker  # type: ignore
+from utils.error_handler import ErrorHandler, ErrorContext, ErrorSeverity  # type: ignore
+from handlers.stats import stats_tracker  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)

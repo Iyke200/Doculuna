@@ -4,20 +4,19 @@ import os
 import shutil
 import asyncio
 import uuid
-from telegram import Update
-from telegram.ext import ContextTypes
-from telegram.error import RetryAfter
+from aiogram import types
+from aiogram.fsm.context import FSMContext
 from PIL import Image
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.pdfgen import canvas
 from config import MAX_FILE_SIZE_FREE, MAX_FILE_SIZE_PREMIUM
-from database.db import get_user_by_id, add_usage_log
-from utils.watermark import add_pdf_watermark
+from database.db import get_user_data, update_user_data
+# from utils.watermark import add_pdf_watermark  # Temporarily disabled
 from utils.usage_tracker import increment_usage
 
 logger = logging.getLogger(__name__)
 
-async def handle_image_to_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_image_to_pdf(message: types.Message, state: FSMContext = None):
     """Convert image to PDF document."""
     try:
         # Check disk space

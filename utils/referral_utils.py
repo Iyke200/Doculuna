@@ -42,11 +42,11 @@ import asyncio
 import ipaddress
 from functools import wraps
 
-from ..premium import PremiumPlan, PremiumStatus, get_premium_data  # type: ignore
-from ..payments import Transaction, PaymentStatus  # type: ignore
-from ..stats import stats_tracker, StatType  # type: ignore
-from ..error_handler import ErrorHandler, ErrorContext  # type: ignore
-from ..db import get_user_data, update_user_data  # type: ignore
+from handlers.premium import PremiumPlan, PremiumStatus, get_premium_data  # type: ignore
+from handlers.payments import Transaction, PaymentStatus  # type: ignore
+from handlers.stats import stats_tracker, StatType  # type: ignore
+from utils.error_handler import ErrorHandler, ErrorContext  # type: ignore
+from database.db import get_user_data, update_user_data  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)

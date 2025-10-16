@@ -22,14 +22,27 @@ from typing import Dict, Any, Optional, Callable, Awaitable, Union
 from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass, asdict
-import sentry_sdk
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
-from sentry_sdk.integrations.logging import LoggingIntegration
 import aiohttp
 from functools import wraps
 
+# Optional sentry import
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.aiohttp import AioHttpIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    HAS_SENTRY = True
+except ImportError:
+    HAS_SENTRY = False
+    sentry_sdk = None
+    AioHttpIntegration = None
+    LoggingIntegration = None
+
 from aiogram import Bot
-from aiogram.utils.exceptions import AiogramException, TelegramAPIError
+try:
+    from aiogram.utils.exceptions import AiogramException, TelegramAPIError
+except ImportError:
+    from aiogram.exceptions import TelegramAPIError
+    AiogramException = TelegramAPIError
 
 # Configure logging
 logger = logging.getLogger(__name__)

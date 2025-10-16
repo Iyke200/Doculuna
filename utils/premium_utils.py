@@ -39,11 +39,11 @@ from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
 
 # Local imports
-from ..premium import PremiumPlan, PremiumStatus, get_premium_data  # type: ignore
-from ..payments import payment_orchestrator  # type: ignore
-from ..stats import stats_tracker, StatType  # type: ignore
-from ..error_handler import ErrorHandler, ErrorContext, ErrorSeverity  # type: ignore
-from ..db import get_user_data, update_user_data  # type: ignore
+from handlers.premium import PremiumPlan, PremiumStatus, get_premium_data  # type: ignore
+from handlers.payments import payment_orchestrator  # type: ignore
+from handlers.stats import stats_tracker, StatType  # type: ignore
+from utils.error_handler import ErrorHandler, ErrorContext, ErrorSeverity  # type: ignore
+from database.db import get_user_data, update_user_data  # type: ignore
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -597,7 +597,7 @@ class PremiumManager:
         try:
             # This should be called from premium.py periodically
             # Implementation delegates to premium module
-            from ..premium import check_premium_expiry
+            from handlers.premium import check_premium_expiry
             await check_premium_expiry(user_id)
             
             logger.debug("Premium expiry enforced", extra={'user_id': user_id})
@@ -1155,7 +1155,7 @@ class PremiumManager:
             Comprehensive premium statistics
         """
         try:
-            from ..stats import get_premium_vs_free_usage  # type: ignore
+            from handlers.stats import get_premium_vs_free_usage  # type: ignore
             
             # Get usage statistics
             usage_stats = await get_premium_vs_free_usage(days)
@@ -1214,7 +1214,7 @@ class PremiumManager:
     async def _get_top_premium_features(self, days: int = 30) -> List[Dict[str, Any]]:
         """Get most used premium features."""
         try:
-            from ..stats import get_user_premium_usage  # type: ignore
+            from handlers.stats import get_user_premium_usage  # type: ignore
             
             # Get active premium users
             active_premium_users = []
@@ -1302,7 +1302,7 @@ def initialize_premium_manager(
     global premium_manager
     
     if premium_manager is None:
-        from ..error_handler import initialize_error_handler  # type: ignore
+        from utils.error_handler import initialize_error_handler  # type: ignore
         error_handler = initialize_error_handler(bot, config)
         
         premium_manager = PremiumManager(

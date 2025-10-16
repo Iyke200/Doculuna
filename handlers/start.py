@@ -99,6 +99,21 @@ async def process_referral(start_param: str, user_id: int):
         except Exception as e:
             logger.error(f"Referral processing error: {e}")
 
+def get_user_preferences(user_id: int) -> dict:
+    """Get user preferences and settings."""
+    try:
+        user_data = get_user_data(user_id)
+        if user_data:
+            return {
+                'language': user_data.get('language', 'en'),
+                'notifications': user_data.get('notifications', True),
+                'theme': user_data.get('theme', 'default')
+            }
+        return {'language': 'en', 'notifications': True, 'theme': 'default'}
+    except Exception as e:
+        logger.error(f"Error getting user preferences: {e}")
+        return {'language': 'en', 'notifications': True, 'theme': 'default'}
+
 def register_start_handlers(dp: Dispatcher) -> None:
     """Register start command handlers."""
     dp.message.register(start_command_handler, Command("start"))

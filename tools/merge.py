@@ -271,4 +271,4 @@ class PDFMerger:
             }
             
             logger.info(f"Merge complete: {total_input_size:,} → {output_size:,} bytes "
-                       f"({size_efficiency:.
+                       f"({size_efficiency:.1f}% efficiency)")

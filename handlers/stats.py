@@ -34,6 +34,10 @@ from handlers.start import get_user_preferences  # type: ignore
 
 load_dotenv()
 
+def format_currency(amount: float) -> str:
+    """Format Naira currency."""
+    return f"₦{amount:,.0f}"
+
 # Structured logging setup
 logging.basicConfig(
     level=logging.INFO,

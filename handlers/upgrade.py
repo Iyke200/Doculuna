@@ -2,6 +2,8 @@
 import logging
 import time
 import uuid
+import json
+import asyncio
 from typing import Dict, Any, Optional, Callable, Awaitable
 from datetime import datetime, timedelta
 from enum import Enum
@@ -13,6 +15,16 @@ from aiogram.filters import Command
 from aiogram.exceptions import TelegramRetryAfter as RetryAfter
 from aiogram.utils.markdown import bold as hbold, code as hcode
 from dotenv import load_dotenv
+
+# Redis fallback for upgrade state storage
+try:
+    import redis
+    redis_client = redis.Redis(host='localhost', port=6379, db=6, decode_responses=True)
+    REDIS_AVAILABLE = True
+except ImportError:
+    from collections import defaultdict
+    upgrade_states = defaultdict(dict)
+    REDIS_AVAILABLE = False
 
 # Import from other modules
 from handlers.premium import PremiumPlan, PremiumStatus, activate_premium, get_premium_data, downgrade_premium  # type: ignore

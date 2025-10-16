@@ -14,35 +14,43 @@ class PDFSplitter:
     @staticmethod
     def split_pdf(input_path: str, output_dir: str, pages_per_file: int = 1, prefix: str = "split") -> Dict:
         """Split PDF into multiple files."""
+        # Validate pages_per_file first (before any operations)
+        if not isinstance(pages_per_file, int) or pages_per_file < 1:
+            raise ValueError(f"pages_per_file must be a positive integer, got: {pages_per_file}")
+        
         if not os.path.isfile(input_path):
             raise ValueError(f"Input file not found: {input_path}")
         
         os.makedirs(output_dir, exist_ok=True)
         output_files = []
         
-        with Pdf.open(input_path) as pdf:
-            total_pages = len(pdf.pages)
-            num_files = (total_pages + pages_per_file - 1) // pages_per_file
+        try:
+            with Pdf.open(input_path) as pdf:
+                total_pages = len(pdf.pages)
+                num_files = (total_pages + pages_per_file - 1) // pages_per_file
+                
+                for file_num in range(num_files):
+                    output_pdf = Pdf.new()
+                    start_page = file_num * pages_per_file
+                    end_page = min(start_page + pages_per_file, total_pages)
+                    
+                    for page_num in range(start_page, end_page):
+                        output_pdf.pages.append(pdf.pages[page_num])
+                    
+                    output_filename = f"{prefix}_{file_num + 1:03d}.pdf"
+                    output_path = os.path.join(output_dir, output_filename)
+                    output_pdf.save(output_path)
+                    output_files.append(output_path)
             
-            for file_num in range(num_files):
-                output_pdf = Pdf.new()
-                start_page = file_num * pages_per_file
-                end_page = min(start_page + pages_per_file, total_pages)
-                
-                for page_num in range(start_page, end_page):
-                    output_pdf.pages.append(pdf.pages[page_num])
-                
-                output_filename = f"{prefix}_{file_num + 1:03d}.pdf"
-                output_path = os.path.join(output_dir, output_filename)
-                output_pdf.save(output_path)
-                output_files.append(output_path)
-        
-        return {
-            'success': True,
-            'total_pages': total_pages,
-            'output_files': output_files,
-            'num_files': len(output_files)
-        }
+            return {
+                'success': True,
+                'total_pages': total_pages,
+                'output_files': output_files,
+                'num_files': len(output_files)
+            }
+        except PdfError as e:
+            logger.error(f"PDF error: {e}")
+            raise ValueError(f"Invalid PDF file: {str(e)}")
 
 def main():
     parser = argparse.ArgumentParser(description='DocuLuna PDF Splitter')

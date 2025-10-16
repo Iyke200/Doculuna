@@ -272,3 +272,9 @@ class PDFMerger:
             
             logger.info(f"Merge complete: {total_input_size:,} → {output_size:,} bytes "
                        f"({size_efficiency:.1f}% efficiency)")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"PDF merge failed: {str(e)}", exc_info=True)
+            raise ValueError(f"Merge operation failed: {str(e)}")

@@ -4,7 +4,7 @@ import os
 import shutil
 import asyncio
 from aiogram import types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE_FREE, MAX_FILE_SIZE_PREMIUM
 from database.db import get_user_by_id, get_usage_count
 

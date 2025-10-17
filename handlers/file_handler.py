@@ -6,6 +6,7 @@ import asyncio
 from aiogram import Dispatcher, types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import FSInputFile
 
 from utils.usage_tracker import check_usage_limit, increment_usage
 from tools.pdf_to_word import PDFToWordConverter
@@ -104,8 +105,10 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         
         if operation == "convert_file":
             result_file_path = await convert_file(callback.bot, file_id, file_name)
-        elif operation == "compress_file" or operation == "compress_image":
+        elif operation == "compress_file":
             result_file_path = await compress_file(callback.bot, file_id, file_name)
+        elif operation == "compress_image":
+            result_file_path = await compress_image(callback.bot, file_id, file_name)
         elif operation == "image_to_pdf":
             result_file_path = await image_to_pdf(callback.bot, file_id, file_name)
         else:
@@ -115,18 +118,12 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         if result_file_path:
             success_text = (
                 "✅ Done! Your document is ready 🎉\n"
-                "Click below to download your file 👇"
+                "Download your file below 👇"
             )
             
-            with open(result_file_path, 'rb') as doc:
-                doc_message = await callback.message.answer_document(doc)
-            
-            builder = InlineKeyboardBuilder()
-            builder.button(text="⬇️ Download File", callback_data=f"download_{doc_message.message_id}")
-            builder.button(text="💎 Upgrade for Unlimited Access", callback_data="go_premium")
-            builder.adjust(2)
-            
-            await callback.message.edit_text(success_text, reply_markup=builder.as_markup())
+            document = FSInputFile(result_file_path)
+            await callback.message.answer_document(document)
+            await callback.message.edit_text(success_text)
             
             await increment_usage(user_id)
             
@@ -227,6 +224,38 @@ async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
         return output_path
     except Exception as e:
         logger.error(f"Compression error: {e}", exc_info=True)
+        raise
+
+async def compress_image(bot: Bot, file_id: str, file_name: str) -> str:
+    """Compress image file."""
+    try:
+        file = await bot.get_file(file_id)
+        input_path = tempfile.mktemp(suffix=".jpg")
+        await bot.download_file(file.file_path, input_path)
+        
+        output_path = tempfile.mktemp(suffix=".jpg")
+        
+        # Open and compress image
+        with Image.open(input_path) as img:
+            # Convert to RGB if needed
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Save with compression
+            img.save(output_path, 'JPEG', quality=85, optimize=True)
+        
+        original_size = os.path.getsize(input_path)
+        compressed_size = os.path.getsize(output_path)
+        logger.info(f"Image compressed: {original_size} → {compressed_size} bytes")
+        
+        try:
+            os.remove(input_path)
+        except:
+            pass
+            
+        return output_path
+    except Exception as e:
+        logger.error(f"Image compression error: {e}", exc_info=True)
         raise
 
 async def image_to_pdf(bot: Bot, file_id: str, file_name: str) -> str:

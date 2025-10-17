@@ -23,7 +23,7 @@ async def handle_document(message: types.Message, state: FSMContext):
     """Handle file received."""
     user_id = message.from_user.id
     
-    can_process = await check_usage_limit(user_id, message)
+    can_process = await check_usage_limit(user_id)
     if not can_process:
         return
     
@@ -56,7 +56,7 @@ async def handle_photo(message: types.Message, state: FSMContext):
     """Handle image received."""
     user_id = message.from_user.id
     
-    can_process = await check_usage_limit(user_id, message)
+    can_process = await check_usage_limit(user_id)
     if not can_process:
         return
     

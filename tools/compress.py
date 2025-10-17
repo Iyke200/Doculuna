@@ -83,18 +83,8 @@ class FileValidator:
         if file_size > max_size:
             raise ValueError(f"File size exceeds {max_size/(1024**3):.1f}GB limit")
         
-        # Check for null bytes in chunks
-        try:
-            with open(normalized_path, 'rb') as f:
-                while True:
-                    chunk = f.read(8192)
-                    if not chunk:
-                        break
-                    if b'\x00' in chunk:
-                        raise ValueError("File contains null bytes - potential security issue")
-        except (PermissionError, OSError) as e:
-            logger.warning(f"Unable to read file for null byte check: {e}")
-            raise ValueError(f"Cannot validate file due to read error: {str(e)}")
+        # Note: Null byte check removed - binary files (PDF, DOCX) naturally contain null bytes
+        # Security validation is handled at the application level through file type validation
         
         logger.info(f"Validated input file: {normalized_path} ({file_size:,} bytes)")
         return normalized_path

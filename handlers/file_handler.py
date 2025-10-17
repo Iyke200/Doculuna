@@ -138,11 +138,22 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             raise Exception("Processing failed")
         
     except Exception as e:
-        logger.error(f"Error in file operation: {e}", exc_info=True)
-        await callback.message.edit_text(
-            "⚠️ Oops! Something went wrong while processing your file.\n"
-            "Please try again later or contact @DocuLunaSupport"
-        )
+        logger.error(f"Error in file operation {operation}: {e}", exc_info=True)
+        
+        error_message = "⚠️ Processing failed.\n\n"
+        
+        if "size" in str(e).lower():
+            error_message += "File is too large. Please use a smaller file."
+        elif "format" in str(e).lower() or "unsupported" in str(e).lower():
+            error_message += "Unsupported file format. Please check file type."
+        elif "corrupt" in str(e).lower() or "invalid" in str(e).lower():
+            error_message += "File appears to be corrupted or invalid."
+        else:
+            error_message += "An error occurred while processing your file."
+        
+        error_message += "\n\nIf the problem persists, contact @DocuLunaSupport"
+        
+        await callback.message.edit_text(error_message)
 
 async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
     """Convert PDF to Word or Word to PDF based on file type."""

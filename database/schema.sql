@@ -14,7 +14,11 @@ CREATE TABLE IF NOT EXISTS users (
     onboarding_date DATETIME,
     total_interactions INTEGER DEFAULT 0,
     premium_status TEXT DEFAULT 'expired',
-    referral_used INTEGER DEFAULT 0
+    referral_used INTEGER DEFAULT 0,
+    usage_today INTEGER DEFAULT 0,
+    usage_reset_date DATE DEFAULT (date('now')),
+    referral_count INTEGER DEFAULT 0,
+    referral_earnings INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS usage_logs (

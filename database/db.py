@@ -18,6 +18,32 @@ def init_db():
             with open("database/schema.sql", "r") as f:
                 conn.executescript(f.read())
             conn.commit()
+            
+            # Run migrations for existing databases
+            cursor = conn.cursor()
+            
+            # Check if new columns exist, if not add them
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'usage_today' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN usage_today INTEGER DEFAULT 0")
+                logger.info("Added usage_today column")
+            
+            if 'usage_reset_date' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN usage_reset_date DATE")
+                cursor.execute("UPDATE users SET usage_reset_date = date('now') WHERE usage_reset_date IS NULL")
+                logger.info("Added usage_reset_date column")
+            
+            if 'referral_count' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0")
+                logger.info("Added referral_count column")
+            
+            if 'referral_earnings' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN referral_earnings INTEGER DEFAULT 0")
+                logger.info("Added referral_earnings column")
+            
+            conn.commit()
             logger.info("Database initialized")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
@@ -38,9 +64,13 @@ def add_user(user_id: int, username: str):
 def get_user_by_id(user_id: int):
     try:
         with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-            return cursor.fetchone()
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
     except Exception as e:
         logger.error(f"Error fetching user {user_id}: {e}")
         return None

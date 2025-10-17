@@ -18,7 +18,15 @@ DocuLuna is a production-grade Telegram bot for professional document processing
 - ⚠️ **REQUIRES ADMIN_USER_IDS** - Set admin user IDs in Secrets for admin access
 
 ## Recent Changes (October 17, 2025)
-- **All File Processing Tools Working (Latest)** - Complete fix for all file operations:
+- **Referral & Usage System Fixed (Latest)** - Resolved database and tracking issues:
+  - Fixed "tuple has no attribute 'get'" error by making `get_user_by_id()` return dictionaries
+  - Added missing database columns: `usage_today`, `usage_reset_date`, `referral_count`, `referral_earnings`
+  - Implemented automatic database migrations to add columns to existing databases
+  - Fixed SQLite ALTER TABLE constraints (non-constant defaults not allowed)
+  - Usage tracking now works correctly - users can track daily limits
+  - Referral system now works correctly - tracking counts and earnings
+  - All database queries now return proper dictionary objects
+- **All File Processing Tools Working** - Complete fix for all file operations:
   - Fixed file download: Using `bot.download_file(file.file_path, destination)` for aiogram 3.x compatibility
   - Fixed document sending: Using `FSInputFile` instead of plain file handles for aiogram 3.x
   - Added separate `compress_image()` function for image compression (JPEG quality optimization)
@@ -26,7 +34,6 @@ DocuLuna is a production-grade Telegram bot for professional document processing
   - Removed null byte validation that incorrectly blocked binary files (PDF/DOCX)
   - Improved error messages with specific feedback for different error types
   - All tools verified working: compress (PDF/DOCX/images), convert (PDF↔Word), image to PDF
-  - Successfully tested: upload → process → download workflow complete
 
 ## Previous Changes (October 16, 2025)
 - **All Tools Fixed and Validated (Latest)** - Comprehensive tool fixes completed:

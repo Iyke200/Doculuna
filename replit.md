@@ -18,13 +18,14 @@ DocuLuna is a production-grade Telegram bot for professional document processing
 - ⚠️ **REQUIRES ADMIN_USER_IDS** - Set admin user IDs in Secrets for admin access
 
 ## Recent Changes (October 17, 2025)
-- **File Processing Bug Fixed (Latest)** - Resolved critical compression issue:
+- **File Processing Fully Fixed (Latest)** - Resolved all file processing issues:
+  - Fixed file download method for aiogram 3.x compatibility (`bot.download_file()` instead of `download_to_drive()`)
   - Removed incorrect null byte validation that was blocking PDF/DOCX compression
   - Binary files (PDF, DOCX) naturally contain null bytes - the security check was too broad
   - File validation now properly allows legitimate binary files through
   - Improved error messages to give users specific feedback instead of generic errors
   - All file processing tools (compress, convert, image to PDF) now working correctly
-  - Architect review confirmed the fix is secure and doesn't introduce vulnerabilities
+  - Tested and verified: files can be uploaded, processed, and downloaded successfully
 
 ## Previous Changes (October 16, 2025)
 - **All Tools Fixed and Validated (Latest)** - Comprehensive tool fixes completed:

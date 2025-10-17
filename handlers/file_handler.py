@@ -160,7 +160,7 @@ async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
     try:
         file = await bot.get_file(file_id)
         input_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
-        await file.download_to_drive(input_path)
+        await bot.download_file(file.file_path, input_path)
         
         if file_name.lower().endswith('.pdf'):
             output_path = tempfile.mktemp(suffix=".docx")
@@ -198,7 +198,7 @@ async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
     try:
         file = await bot.get_file(file_id)
         input_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
-        await file.download_to_drive(input_path)
+        await bot.download_file(file.file_path, input_path)
         
         output_path = tempfile.mktemp(suffix=os.path.splitext(file_name)[1])
         
@@ -234,7 +234,7 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str) -> str:
     try:
         file = await bot.get_file(file_id)
         input_path = tempfile.mktemp(suffix=".jpg")
-        await file.download_to_drive(input_path)
+        await bot.download_file(file.file_path, input_path)
         
         output_path = tempfile.mktemp(suffix=".pdf")
         

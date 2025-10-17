@@ -498,6 +498,30 @@ class DocumentCompressor:
             logger.error(f"Compression failed: {e}")
             raise ValueError(f"Document compression failed: {str(e)}")
 
+async def handle_compress_pdf_callback(callback, state=None):
+    """Handle Compress PDF callback from menu."""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    try:
+        text = (
+            "🗜️ PDF Compressor\n\n"
+            "Please send me a PDF or DOCX file and I'll compress it to reduce file size.\n\n"
+            "✅ Smart compression\n"
+            "✅ Quality preservation\n"
+            "✅ Optimized output\n\n"
+            "Just upload your file now 👇"
+        )
+        builder = InlineKeyboardBuilder()
+        builder.button(text="⬅️ Back to Tools", callback_data="process_document")
+        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Error in Compress PDF callback: {e}")
+        await callback.answer("Error", show_alert=True)
+
+def register_compress_pdf(dp):
+    """Register Compress PDF handler."""
+    dp.callback_query.register(handle_compress_pdf_callback, lambda c: c.data == "compress_pdf")
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(

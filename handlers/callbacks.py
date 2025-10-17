@@ -7,6 +7,11 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.db import get_user_data, update_user_data
+from tools.pdf_to_word import register_pdf_to_word
+from tools.word_to_pdf import register_word_to_pdf
+from tools.merge import register_merge_pdf
+from tools.split import register_split_pdf
+from tools.compress import register_compress_pdf
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -141,23 +146,29 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
     """Handle 'Process Document' button."""
     try:
         process_text = (
-            "📄 Send me your document to get started!\n\n"
-            "I can process:\n"
-            "• PDF files\n"
-            "• Word documents (.docx, .doc)\n"
-            "• Images (JPG, PNG, GIF)\n\n"
-            "Just upload your file and I'll show you what I can do with it! 📂"
+            "🧰 Choose what you want to do with your document:\n\n"
+            "1️⃣ Convert PDF ↔️ Word\n"
+            "2️⃣ Merge multiple PDFs\n"
+            "3️⃣ Split pages from a PDF\n"
+            "4️⃣ Compress PDF file size\n\n"
+            "Select an option below 👇"
         )
-        
+
         builder = InlineKeyboardBuilder()
+        builder.button(text="📄 PDF ➡️ Word", callback_data="pdf_to_word")
+        builder.button(text="📝 Word ➡️ PDF", callback_data="word_to_pdf")
+        builder.button(text="🧩 Merge PDFs", callback_data="merge_pdf")
+        builder.button(text="✂️ Split PDF", callback_data="split_pdf")
+        builder.button(text="🗜️ Compress PDF", callback_data="compress_pdf")
         builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
-        
+        builder.adjust(2, 2, 1, 1)
+
         await callback.message.edit_text(process_text, reply_markup=builder.as_markup())
         await callback.answer()
-        
+
     except Exception as e:
         logger.error(f"Error in process_document: {e}", exc_info=True)
-        await callback.answer("Error", show_alert=True)
+        await callback.answer("Error loading tools", show_alert=True)
 
 async def handle_refer_and_earn(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle 'Refer & Earn' button."""
@@ -209,3 +220,8 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
 def register_callback_handlers(dp: Dispatcher) -> None:
     """Register all callback handlers."""
     dp.callback_query.register(callback_query_router)
+    register_pdf_to_word(dp)
+    register_word_to_pdf(dp)
+    register_merge_pdf(dp)
+    register_split_pdf(dp)
+    register_compress_pdf(dp)

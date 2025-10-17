@@ -52,6 +52,30 @@ class PDFSplitter:
             logger.error(f"PDF error: {e}")
             raise ValueError(f"Invalid PDF file: {str(e)}")
 
+async def handle_split_pdf_callback(callback, state=None):
+    """Handle Split PDF callback from menu."""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    try:
+        text = (
+            "✂️ PDF Splitter\n\n"
+            "Please send me a PDF file and I'll help you split it into separate pages or sections.\n\n"
+            "✅ Split by pages\n"
+            "✅ Custom page ranges\n"
+            "✅ Multiple output files\n\n"
+            "Just upload your PDF file now 👇"
+        )
+        builder = InlineKeyboardBuilder()
+        builder.button(text="⬅️ Back to Tools", callback_data="process_document")
+        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Error in Split PDF callback: {e}")
+        await callback.answer("Error", show_alert=True)
+
+def register_split_pdf(dp):
+    """Register Split PDF handler."""
+    dp.callback_query.register(handle_split_pdf_callback, lambda c: c.data == "split_pdf")
+
 def main():
     parser = argparse.ArgumentParser(description='DocuLuna PDF Splitter')
     parser.add_argument('input', help='Input PDF file')

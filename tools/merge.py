@@ -278,3 +278,27 @@ class PDFMerger:
         except Exception as e:
             logger.error(f"PDF merge failed: {str(e)}", exc_info=True)
             raise ValueError(f"Merge operation failed: {str(e)}")
+
+async def handle_merge_pdf_callback(callback, state=None):
+    """Handle Merge PDF callback from menu."""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    try:
+        text = (
+            "🧩 PDF Merger\n\n"
+            "Please send me multiple PDF files (one by one) and I'll merge them into a single document.\n\n"
+            "✅ Preserve bookmarks\n"
+            "✅ Maintain formatting\n"
+            "✅ Optimized output\n\n"
+            "Upload your first PDF file now 👇"
+        )
+        builder = InlineKeyboardBuilder()
+        builder.button(text="⬅️ Back to Tools", callback_data="process_document")
+        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Error in Merge PDF callback: {e}")
+        await callback.answer("Error", show_alert=True)
+
+def register_merge_pdf(dp):
+    """Register Merge PDF handler."""
+    dp.callback_query.register(handle_merge_pdf_callback, lambda c: c.data == "merge_pdf")

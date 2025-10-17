@@ -484,6 +484,30 @@ class DocumentConverter:
             logger.error(f"Conversion failed: {e}")
             raise ValueError(f"Document conversion failed: {str(e)}")
 
+async def handle_pdf_to_word_callback(callback, state=None):
+    """Handle PDF to Word callback from menu."""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    try:
+        text = (
+            "📄 PDF to Word Converter\n\n"
+            "Please send me a PDF file and I'll convert it to Word format (DOCX) for you.\n\n"
+            "✅ Layout preservation\n"
+            "✅ Image extraction\n"
+            "✅ Table formatting\n\n"
+            "Just upload your PDF file now 👇"
+        )
+        builder = InlineKeyboardBuilder()
+        builder.button(text="⬅️ Back to Tools", callback_data="process_document")
+        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Error in PDF to Word callback: {e}")
+        await callback.answer("Error", show_alert=True)
+
+def register_pdf_to_word(dp):
+    """Register PDF to Word handler."""
+    dp.callback_query.register(handle_pdf_to_word_callback, lambda c: c.data == "pdf_to_word")
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(

@@ -7,11 +7,11 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.db import get_user_data, update_user_data
-from tools.pdf_to_word import register_pdf_to_word
-from tools.word_to_pdf import register_word_to_pdf
-from tools.merge import register_merge_pdf
-from tools.split import register_split_pdf
-from tools.compress import register_compress_pdf
+from tools.pdf_to_word import register_pdf_to_word, handle_pdf_to_word_callback
+from tools.word_to_pdf import register_word_to_pdf, handle_word_to_pdf_callback
+from tools.merge import register_merge_pdf, handle_merge_pdf_callback
+from tools.split import register_split_pdf, handle_split_pdf_callback
+from tools.compress import register_compress_pdf, handle_compress_pdf_callback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -209,6 +209,11 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
         "back_to_menu": handle_back_to_menu,
         "process_document": handle_process_document,
         "refer_and_earn": handle_refer_and_earn,
+        "pdf_to_word": handle_pdf_to_word_callback,
+        "word_to_pdf": handle_word_to_pdf_callback,
+        "merge_pdf": handle_merge_pdf_callback,
+        "split_pdf": handle_split_pdf_callback,
+        "compress_pdf": handle_compress_pdf_callback,
     }
     
     handler = handlers.get(callback_data)
@@ -220,8 +225,3 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
 def register_callback_handlers(dp: Dispatcher) -> None:
     """Register all callback handlers."""
     dp.callback_query.register(callback_query_router)
-    register_pdf_to_word(dp)
-    register_word_to_pdf(dp)
-    register_merge_pdf(dp)
-    register_split_pdf(dp)
-    register_compress_pdf(dp)

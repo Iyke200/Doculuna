@@ -3,7 +3,7 @@
 ## Overview
 DocuLuna is a production-grade Telegram bot for professional document processing, including PDF/Word conversion, image processing, file compression, and premium subscription management.
 
-## Current State (October 17, 2025)
+## Current State (October 19, 2025)
 - ✅ **Project Migration Complete** - Successfully migrated to Replit environment
 - ✅ **All Dependencies Installed** - All Python packages installed and verified (aiogram 3.13.1, PyMuPDF, python-docx, etc.)
 - ✅ **Database Ready** - SQLite database initialized with user management, usage tracking, payments, and referrals
@@ -14,10 +14,21 @@ DocuLuna is a production-grade Telegram bot for professional document processing
 - ✅ **Security Enhanced** - Admin IDs moved to environment variables for security
 - ✅ **Document Processing Ready** - All conversion tools fully integrated and tested
 - ✅ **UX Flows Complete** - All 13 UX flows implemented with exact specifications
+- ✅ **Rate Limiting with Reminders** - Users see remaining uses after each operation with upgrade prompts
 - ⚠️ **REQUIRES BOT_TOKEN** - Bot needs Telegram BOT_TOKEN to run (add in Secrets tab)
 - ⚠️ **REQUIRES ADMIN_USER_IDS** - Set admin user IDs in Secrets for admin access
 
-## Recent Changes (October 17, 2025)
+## Recent Changes (October 19, 2025)
+- **Rate Limiting Enhanced (Latest)** - Improved user experience for rate limiting:
+  - Added remaining uses counter after each successful document processing
+  - Shows "X/3 remaining" for free users after each operation
+  - Displays upgrade prompt when users reach their last free use
+  - Clear limit-exceeded message when daily quota is exhausted
+  - Premium users bypass all reminders (unlimited processing)
+  - Updated database handler to support usage tracking fields
+  - Integrated with existing usage_tracker.py system
+
+## Previous Changes (October 17, 2025)
 - **Referral & Usage System Fixed (Latest)** - Resolved database and tracking issues:
   - Fixed "tuple has no attribute 'get'" error by making `get_user_by_id()` return dictionaries
   - Added missing database columns: `usage_today`, `usage_reset_date`, `referral_count`, `referral_earnings`

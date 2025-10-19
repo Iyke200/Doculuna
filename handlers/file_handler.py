@@ -26,6 +26,14 @@ async def handle_document(message: types.Message, state: FSMContext):
     
     can_process = await check_usage_limit(user_id)
     if not can_process:
+        from config import FREE_USAGE_LIMIT
+        limit_message = (
+            "⚠️ Daily limit reached!\n\n"
+            f"You've used all {FREE_USAGE_LIMIT} free document processing actions for today.\n\n"
+            "💎 Upgrade to Premium for unlimited processing!\n"
+            "Click /premium to see plans."
+        )
+        await message.reply(limit_message)
         return
     
     try:
@@ -59,6 +67,14 @@ async def handle_photo(message: types.Message, state: FSMContext):
     
     can_process = await check_usage_limit(user_id)
     if not can_process:
+        from config import FREE_USAGE_LIMIT
+        limit_message = (
+            "⚠️ Daily limit reached!\n\n"
+            f"You've used all {FREE_USAGE_LIMIT} free document processing actions for today.\n\n"
+            "💎 Upgrade to Premium for unlimited processing!\n"
+            "Click /premium to see plans."
+        )
+        await message.reply(limit_message)
         return
     
     try:
@@ -116,16 +132,31 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             return
         
         if result_file_path:
-            success_text = (
-                "✅ Done! Your document is ready 🎉\n"
-                "Download your file below 👇"
-            )
+            await increment_usage(user_id)
+            
+            from database.db import get_user_data
+            from config import FREE_USAGE_LIMIT
+            
+            user_data = get_user_data(user_id)
+            usage_today = user_data.get('usage_today', 0) if user_data else 0
+            is_premium = user_data.get('is_premium', False) if user_data else False
+            
+            success_text = "✅ Done! Your document is ready 🎉\n"
+            
+            if not is_premium:
+                remaining = max(0, FREE_USAGE_LIMIT - usage_today)
+                success_text += f"\n📊 Daily uses remaining: {remaining}/{FREE_USAGE_LIMIT}"
+                
+                if remaining == 0:
+                    success_text += "\n\n💎 Upgrade to Premium for unlimited processing!"
+                elif remaining == 1:
+                    success_text += "\n\n⚠️ Last free use for today!"
+            
+            success_text += "\n\nDownload your file below 👇"
             
             document = FSInputFile(result_file_path)
             await callback.message.answer_document(document)
             await callback.message.edit_text(success_text)
-            
-            await increment_usage(user_id)
             
             try:
                 os.remove(result_file_path)

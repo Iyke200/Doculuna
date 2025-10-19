@@ -297,7 +297,7 @@ def update_user_data(user_id: int, data: dict):
             for key, value in data.items():
                 if key in ['username', 'last_active', 'preferences', 'onboarding_complete', 
                           'onboarding_date', 'language', 'timezone', 'total_interactions',
-                          'premium_status', 'referral_used']:
+                          'premium_status', 'referral_used', 'usage_today', 'usage_reset_date']:
                     update_fields.append(f"{key} = ?")
                     values.append(str(value) if not isinstance(value, (int, float, bool)) else value)
             

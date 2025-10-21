@@ -1,249 +1,54 @@
 # DocuLuna Bot - Professional Document Processing Telegram Bot
 
 ## Overview
-DocuLuna is a production-grade Telegram bot for professional document processing, including PDF/Word conversion, image processing, file compression, and premium subscription management.
-
-## Current State (October 19, 2025)
-- ✅ **Project Migration Complete** - Successfully migrated to Replit environment
-- ✅ **All Dependencies Installed** - All Python packages installed and verified (aiogram 3.13.1, PyMuPDF, python-docx, etc.)
-- ✅ **Database Ready** - SQLite database initialized with user management, usage tracking, payments, and referrals
-- ✅ **Workflow Running** - Bot is actively running in development mode (polling)
-- ✅ **All Handlers Registered** - Start, premium, file processing, admin, stats, payments, referrals handlers working
-- ✅ **File Processing Fixed** - Compression now works correctly for PDF and DOCX files
-- ✅ **Error Handling Improved** - Users now get specific error messages instead of generic ones
-- ✅ **Security Enhanced** - Admin IDs moved to environment variables for security
-- ✅ **Document Processing Ready** - All conversion tools fully integrated and tested
-- ✅ **UX Flows Complete** - All 13 UX flows implemented with exact specifications
-- ✅ **Rate Limiting with Reminders** - Users see remaining uses after each operation with upgrade prompts
-- ⚠️ **REQUIRES BOT_TOKEN** - Bot needs Telegram BOT_TOKEN to run (add in Secrets tab)
-- ⚠️ **REQUIRES ADMIN_USER_IDS** - Set admin user IDs in Secrets for admin access
-
-## Recent Changes (October 19, 2025)
-- **Rate Limiting Enhanced (Latest)** - Improved user experience for rate limiting:
-  - Added remaining uses counter after each successful document processing
-  - Shows "X/3 remaining" for free users after each operation
-  - Displays upgrade prompt when users reach their last free use
-  - Clear limit-exceeded message when daily quota is exhausted
-  - Premium users bypass all reminders (unlimited processing)
-  - Updated database handler to support usage tracking fields
-  - Integrated with existing usage_tracker.py system
-
-## Previous Changes (October 17, 2025)
-- **Referral & Usage System Fixed (Latest)** - Resolved database and tracking issues:
-  - Fixed "tuple has no attribute 'get'" error by making `get_user_by_id()` return dictionaries
-  - Added missing database columns: `usage_today`, `usage_reset_date`, `referral_count`, `referral_earnings`
-  - Implemented automatic database migrations to add columns to existing databases
-  - Fixed SQLite ALTER TABLE constraints (non-constant defaults not allowed)
-  - Usage tracking now works correctly - users can track daily limits
-  - Referral system now works correctly - tracking counts and earnings
-  - All database queries now return proper dictionary objects
-- **All File Processing Tools Working** - Complete fix for all file operations:
-  - Fixed file download: Using `bot.download_file(file.file_path, destination)` for aiogram 3.x compatibility
-  - Fixed document sending: Using `FSInputFile` instead of plain file handles for aiogram 3.x
-  - Added separate `compress_image()` function for image compression (JPEG quality optimization)
-  - Fixed routing: `compress_image` callback now properly routes to image compression function
-  - Removed null byte validation that incorrectly blocked binary files (PDF/DOCX)
-  - Improved error messages with specific feedback for different error types
-  - All tools verified working: compress (PDF/DOCX/images), convert (PDF↔Word), image to PDF
-
-## Previous Changes (October 16, 2025)
-- **All Tools Fixed and Validated (Latest)** - Comprehensive tool fixes completed:
-  - Fixed syntax error in merge.py (incomplete f-string, added missing except block)
-  - Fixed import error in file_processor.py (InlineKeyboardBuilder import location)
-  - Fixed variable naming in image_to_pdf.py (aiogram 3.x compatibility)
-  - Implemented complete split.py with defensive validation for pages_per_file
-  - Added input validation to prevent ZeroDivisionError in split operations
-  - All 7 tools (pdf_to_word, word_to_pdf, image_to_pdf, compress, split, merge, file_processor) now import and run without errors
-  - Bot verified running successfully with all handlers registered
-- **Import Migration Complete** - Successfully migrated project to Replit:
-  - Fixed all import errors and circular dependencies
-  - Added missing Redis fallback code for upgrade state storage
-  - Resolved format_currency circular import issue
-  - Enhanced security by moving admin IDs to environment variables
-
-## Previous Changes (October 12, 2025)
-- **Document Processing Implemented (Latest)** - Integrated production-ready conversion tools:
-  - PDF ↔ Word conversion with layout preservation
-  - Image → PDF conversion with A4 sizing
-  - File compression for PDF and DOCX (medium quality)
-  - All tools validated and error-handled
-- **Complete UX Implementation** - All 13 user flows implemented:
-  - Welcome message with inline buttons (📂 Process, 💎 Premium, 👤 Account, ❓ Help)
-  - Premium plans display (₦1000 weekly, ₦3500 monthly)
-  - Account overview with premium status
-  - Help section with essential commands
-  - Usage limit messages (3 free daily actions)
-  - File processing with conversion options
-  - Success/error handling with proper messages
-  - Referral system with ₦500 rewards
-  - Admin panel access
-- **File Handler Created** - New file_handler.py with document/image processing
-- **Usage Tracking** - Implemented daily limit checks and premium bypass
-- **Simplified UX/UI** - Removed onboarding flow for smooth direct experience
-- **Fresh GitHub Import** - Successfully imported and configured for Replit environment
-- **All Dependencies Installed** - aiogram 3.13.1, PyMuPDF, python-docx, Pillow, reportlab, pdf2docx, PyPDF2, aiofiles, pikepdf
-- **Workflow Configured** - "DocuLuna Bot" workflow with console output
-- **Deployment Configured** - VM deployment ready for production use
-- **Database Verified** - Tested database initialization successfully
+DocuLuna is a production-grade Telegram bot designed for professional document processing. Its core purpose is to provide a comprehensive suite of tools for PDF/Word conversion, image processing, and file compression within the Telegram messaging platform. The project aims to offer a seamless and efficient user experience for handling various document-related tasks, supported by a freemium model with premium subscriptions and a referral system.
 
 ## User Preferences
 - **Direct UX** - No lengthy onboarding flows or website-like setup processes
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Setup Instructions
+## System Architecture
 
-### 1. Get a Telegram Bot Token
-1. Open Telegram and search for **@BotFather**
-2. Send `/newbot` and follow the instructions
-3. Copy the bot token you receive
+### Core Design Principles
+The bot is built with a focus on modularity, scalability, and ease of use. It employs an asynchronous programming model using `aiogram` for efficient handling of Telegram API interactions. A key design decision was to integrate all document processing capabilities directly within Telegram, avoiding external websites or complex setups. The architecture supports both polling (development) and webhook (production) modes for deployment flexibility.
 
-### 2. Configure Environment Variables
-1. Click the **Secrets** tab (🔒 icon) in Replit
-2. Add required secrets:
-   - Key: `BOT_TOKEN`
-   - Value: Your Telegram bot token from BotFather
-   
-   - Key: `ADMIN_USER_IDS`
-   - Value: Your Telegram user ID (comma-separated for multiple admins, e.g., "123456789,987654321")
-   
-3. Optional: Add Paystack integration secrets for payment processing:
-   - `PAYSTACK_SECRET_KEY`
-   - `PAYSTACK_PUBLIC_KEY`
+### UI/UX Decisions
+The user interface is designed to be direct and functional. Key UX flows include:
+- A clear welcome message with inline buttons for core functionalities (Process, Premium, Account, Help).
+- Concise premium plan displays and account overviews.
+- Direct file processing with clear conversion options.
+- User-friendly rate limiting with reminders and upgrade prompts.
+- Specific error messages for better user guidance.
 
-### 3. Run the Bot
-1. Click the **Run** button at the top
-2. The bot will start in development mode (polling)
-3. Check the console for "✅ DocuLuna started successfully"
-4. Test by sending `/start` to your bot on Telegram
+### Technical Implementation & Feature Specifications
+- **Document Processing:** Full support for PDF ↔ Word conversion (preserving layout), Image → PDF conversion (A4 sizing), and file compression for PDF/DOCX (medium quality). All tools include robust error handling and validation.
+- **Freemium Model:** Users receive 3 free daily uses, with unlimited access provided to premium subscribers.
+- **Premium Subscriptions:** Offers weekly (₦1,000) and monthly (₦3,500) plans, integrated with payment gateways.
+- **Referral System:** Rewards users for successful referrals (₦500 for monthly, ₦150 for weekly).
+- **Admin Panel:** Provides user management, analytics, broadcasting capabilities, and statistics for administrators.
+- **Database:** Uses SQLite for persistent storage of user profiles, usage logs, referral data, payment history, and feedback.
+- **Security:** Incorporates environment variables for sensitive data (BOT_TOKEN, ADMIN_USER_IDS), sanitized logging, rate limiting, and file size restrictions to prevent abuse.
 
-### 4. Deploy to Production (Optional)
-1. Set up a webhook URL in the Secrets tab:
-   - Key: `WEBHOOK_URL`
-   - Value: Your webhook URL (e.g., https://yourdomain.com/webhook)
-2. Set environment to production:
-   - Key: `ENVIRONMENT`
-   - Value: `production`
-3. Click **Deploy** to publish your bot
+### System Design Choices
+- **Modular Handlers:** Command and callback handlers are organized into separate files (`start.py`, `file_handler.py`, `admin.py`, etc.) for maintainability.
+- **Dedicated Tool Utilities:** Document processing logic is encapsulated in a `tools/` directory (e.g., `pdf_to_word.py`, `compress.py`), promoting reusability and clear separation of concerns.
+- **Configuration Management:** `config.py` centralizes premium plans and payment settings.
+- **Asynchronous Operations:** Leverages `aiogram` and `aiofiles` for non-blocking I/O, improving bot responsiveness.
+- **Automatic Migrations:** Database schema updates are handled automatically to accommodate new features like usage tracking and referral systems.
 
-## Project Architecture
+## External Dependencies
 
-### Core Components
-- **main.py** - Bot entry point with production/development mode switching
-- **config.py** - Configuration management with premium plans and payment settings  
-- **database/** - SQLite database with schema management and user data
-  - `db.py` - Database operations
-  - `schema.sql` - Database schema
-  - `doculuna.db` - SQLite database file
-- **handlers/** - Modular command handlers
-  - `start.py` - Simple welcome (no onboarding flow)
-  - `help.py` - Concise help (essential commands only)
-  - `file_handler.py` - Document/image processing with usage limits (NEW)
-  - `admin.py` - Admin panel and management
-  - `payments.py` - Payment processing
-  - `paystack.py` - Paystack integration
-  - `premium.py` - Premium features
-  - `referrals.py` - Referral system
-  - `stats.py` - Statistics and analytics
-  - `callbacks.py` - Callback query handlers
-- **tools/** - Document processing utilities (production-ready)
-  - `pdf_to_word.py` - PDF to Word conversion with layout preservation
-  - `word_to_pdf.py` - Word to PDF conversion with formatting preservation
-  - `image_to_pdf.py` - Image to PDF conversion with A4 sizing
-  - `compress.py` - PDF/DOCX compression with quality levels
-  - `split.py` - PDF splitting
-  - `merge.py` - PDF merging
-- **utils/** - Support utilities
-  - `usage_tracker.py` - Usage tracking and limits
-  - `error_handler.py` - Error handling
-  - `file_processor.py` - File processing utilities
-  - `premium_utils.py` - Premium subscription utilities
-  - `referral_utils.py` - Referral system utilities
-  - `watermark.py` - Watermarking
-  - `backup.py` - Database backups
-
-### Key Features
-- **Document Processing** ✅ FULLY IMPLEMENTED
-  - PDF ↔ Word conversion with layout/formatting preservation
-  - Image → PDF conversion with automatic A4 sizing
-  - File compression (PDF/DOCX) with medium quality optimization
-  - Production-ready with error handling and validation
-- **Premium Subscriptions** - Weekly (₦1,000) and Monthly (₦3,500) plans with Paystack integration
-- **Referral System** - User referrals with rewards and tracking (₦500 for monthly, ₦150 for weekly)
-- **Usage Limits** - Freemium model with 3 free uses per day, unlimited for premium users
-- **Admin Panel** - Advanced user management, analytics, broadcasting, and statistics
-- **Payment Processing** - Secure payment handling with Paystack verification
-- **Webhook Support** - Production-ready webhook mode for scalability
-
-### Dependencies
-- **aiogram 3.13.1** - Modern Telegram Bot API library
-- **aiohttp 3.10.10** - Async HTTP client/server
-- **PyMuPDF 1.23.26** - PDF manipulation
-- **python-docx 1.1.0** - Word document processing
-- **Pillow 10.2.0** - Image processing
-- **python-dotenv 1.0.1** - Environment variable management
-- **reportlab 4.0.8** - PDF generation
-- **docx2pdf 0.1.8** - Document conversion
-- **pdf2docx 0.5.6** - PDF to Word conversion
-- **PyPDF2 3.0.1** - PDF manipulation
-- **aiofiles 23.2.1** - Async file operations
-- **pikepdf** - PDF manipulation
-- **cryptography** - Security utilities
-
-### Security Features
-- **Environment variables** - Secure secret management via Replit Secrets
-- **Sanitized logging** - No secret leakage in logs (HTTP logs set to WARNING level)
-- **Rate limiting** - Abuse prevention and usage controls
-- **File size limits** - 20MB for free users, 50MB for premium users
-- **Admin-only commands** - Restricted access to administrative features
-
-## Deployment Configuration
-- **Development Mode** - Polling mode (default, no webhook required)
-- **Production Mode** - Webhook mode on port 5000 with webhook URL
-- **Deployment Target** - VM (always running, suitable for Telegram bots)
-- **Auto-restart** - Configured to restart automatically on crashes
-
-## Database Schema
-The bot uses SQLite with the following tables:
-- **users** - User profiles, premium status, onboarding tracking
-- **usage_logs** - Tool usage history and success tracking
-- **referrals** - Referral codes, counts, and earnings
-- **feedback** - User feedback collection
-- **payment_logs** - Payment transaction history
-- **referral_rewards** - Referral reward tracking
-- **premium_expiry_warnings** - Premium expiration notification tracking
-
-## Environment Variables
-See `.env.example` for all available configuration options. Required variables:
-- `BOT_TOKEN` - Telegram bot token (required)
-- `ENVIRONMENT` - development or production (optional, defaults to development)
-
-Optional variables for enhanced functionality:
-- `PAYSTACK_SECRET_KEY` - Paystack payment integration
-- `PAYSTACK_PUBLIC_KEY` - Paystack payment integration
-- `WEBHOOK_URL` - Webhook URL for production mode
-- `ADMIN_USER_IDS` - Admin Telegram user IDs
-
-## Troubleshooting
-
-### Bot won't start
-- Check that `BOT_TOKEN` is set in Secrets
-- Review console logs for error messages
-- Verify all dependencies are installed
-
-### Bot not responding
-- Ensure the workflow is running (check console)
-- Verify bot token is valid
-- Check database initialization logs
-
-### Payment issues
-- Verify Paystack credentials are set
-- Check payment logs in database
-- Review Paystack API status
-
-## Support
-For issues or questions:
-1. Check console logs for detailed error messages
-2. Verify environment variables are correctly set
-3. Review database integrity
-4. Contact bot administrator for technical support
+- **Telegram Bot API:** Interacted with via `aiogram` (version 3.13.1).
+- **SQLite:** Used as the primary database, accessed asynchronously via `aiosqlite`.
+- **Paystack:** Integrated for secure payment processing using `PAYSTACK_SECRET_KEY` and `PAYSTACK_PUBLIC_KEY`.
+- **PyMuPDF (fitz):** For high-performance PDF manipulation.
+- **python-docx:** For processing Word documents.
+- **Pillow:** For image processing tasks.
+- **python-dotenv:** For managing environment variables.
+- **reportlab:** For PDF generation.
+- **docx2pdf & pdf2docx:** For robust Word to PDF and PDF to Word conversions.
+- **PyPDF2 & pikepdf:** Additional libraries for PDF manipulation.
+- **aiohttp:** For asynchronous HTTP requests, often used internally by `aiogram` and other libraries.
+- **cryptography:** For security-related utilities.
+- **psutil:** For system monitoring (e.g., resource usage).

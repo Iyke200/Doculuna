@@ -212,7 +212,7 @@ async def admin_command_handler(message: types.Message, state: FSMContext) -> No
         logger.error(f"Error in admin dashboard: {e}", exc_info=True)
         await message.reply("⚠️ Error loading admin panel")
 
-@lru_cache(maxsize=1, ttl=60)
+@lru_cache(maxsize=1)
 async def get_dashboard_stats() -> Dict[str, Any]:
     """Get real-time dashboard statistics"""
     try:
@@ -393,7 +393,7 @@ async def handle_user_management(callback: types.CallbackQuery):
     await send_paginated_text(callback.message, text, builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1, ttl=60)
+@lru_cache(maxsize=1)
 async def get_user_management_stats() -> Dict[str, Any]:
     """Get user management statistics"""
     try:
@@ -488,7 +488,7 @@ async def handle_analytics_period(callback: types.CallbackQuery):
     await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1, ttl=60)
+@lru_cache(maxsize=1)
 async def get_analytics_data() -> Dict[str, Any]:
     """Get analytics data"""
     try:
@@ -607,7 +607,7 @@ async def handle_payments_action(callback: types.CallbackQuery):
     await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1, ttl=60)
+@lru_cache(maxsize=1)
 async def get_payment_stats() -> Dict[str, Any]:
     """Get payment statistics"""
     try:
@@ -913,7 +913,7 @@ async def handle_user_action(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
     elif action.startswith("reset_usage_"):
         user_id = int(action.split("_")[2])
-        await update_user_data_async(user_id, {'usage_today': 0})  # Async stub
+        update_user_data(user_id, {'usage_today': 0, 'usage_reset_date': datetime.now().date().isoformat()})
         logger.info(f"Admin {callback.from_user.id} reset usage for {user_id}")
         await log_admin_action(callback.from_user.id, "reset_usage", str(user_id))
         builder = InlineKeyboardBuilder()
@@ -1007,7 +1007,6 @@ async def list_users(callback: types.CallbackQuery, premium_only: bool = False):
         await callback.answer("⚠️ Error loading users", show_alert=True)
 
 # === MESSAGE HANDLERS FOR FSM ===
-@dp.message(Command("cancel"))
 async def cancel_state(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer("Cancelled ✅")
@@ -1150,7 +1149,7 @@ async def handle_premium_grant_input(message: types.Message, state: FSMContext):
             await message.reply("❌ Days must be between 1 and 365")
             return
 
-        await update_user_premium_status(user_id, days)
+        update_user_premium_status(user_id, days)
         logger.info(f"Admin {message.from_user.id} granted {days} days premium to {user_id}")
         await log_admin_action(message.from_user.id, "grant_premium", f"User {user_id}, {days} days")
         await message.reply(f"✅ Granted {days} days premium to user {user_id}")
@@ -1173,7 +1172,7 @@ async def handle_usage_reset_input(message: types.Message, state: FSMContext):
 
     try:
         user_id = int(message.text.strip())
-        await update_user_data_async(user_id, {'usage_today': 0})
+        update_user_data(user_id, {'usage_today': 0, 'usage_reset_date': datetime.now().date().isoformat()})
         logger.info(f"Admin {message.from_user.id} reset usage for {user_id}")
         await log_admin_action(message.from_user.id, "reset_usage", str(user_id))
         await message.reply(f"✅ Usage reset for user {user_id}")

@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Callable, Awaitable, Dict, Any
 import aiosqlite
 import psutil
-from functools import lru_cache
 import asyncio
 import shutil  # For disk usage
 
@@ -30,6 +29,22 @@ if not os.getenv('BOT_TOKEN'):  # Example check; adjust as needed
     logging.warning(".env file not found or missing BOT_TOKEN")
 
 BOT_START_TIME = time.time()
+
+# Simple time-based cache for admin stats (expires after 30 seconds)
+_stats_cache = {}
+_cache_ttl = 30  # seconds
+
+async def _get_cached_or_fetch_async(cache_key: str, fetch_func: Callable[[], Awaitable[Dict[str, Any]]]) -> Dict[str, Any]:
+    """Get cached value or fetch fresh data if expired (async version)"""
+    now = time.time()
+    if cache_key in _stats_cache:
+        cached_time, cached_value = _stats_cache[cache_key]
+        if now - cached_time < _cache_ttl:
+            return cached_value
+    # Cache expired or doesn't exist, fetch fresh data
+    fresh_value = await fetch_func()
+    _stats_cache[cache_key] = (now, fresh_value)
+    return fresh_value
 
 # Define role levels
 ROLE_LEVELS = {
@@ -174,8 +189,8 @@ async def admin_command_handler(message: types.Message, state: FSMContext) -> No
         return
 
     try:
-        # Get real-time statistics
-        stats = await get_dashboard_stats()
+        # Get real-time statistics (cached for 30 seconds)
+        stats = await _get_cached_or_fetch_async('dashboard_stats', get_dashboard_stats)
 
         admin_text = (
             "👑 <b>ADMIN CONTROL PANEL</b>\n"
@@ -212,7 +227,6 @@ async def admin_command_handler(message: types.Message, state: FSMContext) -> No
         logger.error(f"Error in admin dashboard: {e}", exc_info=True)
         await message.reply("⚠️ Error loading admin panel")
 
-@lru_cache(maxsize=1)
 async def get_dashboard_stats() -> Dict[str, Any]:
     """Get real-time dashboard statistics"""
     try:
@@ -248,7 +262,7 @@ async def get_dashboard_stats() -> Dict[str, Any]:
         disk_usage = f"{disk.used // (2**30)}GB/{disk.total // (2**30)}GB"
 
         # Uptime calculation
-        uptime = str(datetime.timedelta(seconds=int(time.time() - BOT_START_TIME)))
+        uptime = str(timedelta(seconds=int(time.time() - BOT_START_TIME)))
 
         return {
             'total_users': total_users,
@@ -393,7 +407,6 @@ async def handle_user_management(callback: types.CallbackQuery):
     await send_paginated_text(callback.message, text, builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1)
 async def get_user_management_stats() -> Dict[str, Any]:
     """Get user management statistics"""
     try:
@@ -488,7 +501,6 @@ async def handle_analytics_period(callback: types.CallbackQuery):
     await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1)
 async def get_analytics_data() -> Dict[str, Any]:
     """Get analytics data"""
     try:
@@ -607,7 +619,6 @@ async def handle_payments_action(callback: types.CallbackQuery):
     await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     await callback.answer()
 
-@lru_cache(maxsize=1)
 async def get_payment_stats() -> Dict[str, Any]:
     """Get payment statistics"""
     try:

@@ -137,7 +137,7 @@ async def start_bot_clean():
 
     # Initialize database
     logger.info("Initializing database...")
-    handlers["init_db"]()
+    await handlers["init_db"]()
     logger.info("✓ Database initialized")
 
     # Create Bot instance

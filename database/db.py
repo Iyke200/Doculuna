@@ -115,6 +115,11 @@ async def init_db():
                 await conn.execute("ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0")
                 logger.info("Added is_banned column")
             
+            # Add role column for admin functionality
+            if 'role' not in columns:
+                await conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
+                logger.info("Added role column")
+            
             # Referral columns
             async with conn.execute("PRAGMA table_info(referrals)") as cursor:
                 ref_columns = [column[1] for column in await cursor.fetchall()]
@@ -208,5 +213,146 @@ async def update_user_data(user_id: int, data: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Error updating user data for {user_id}: {e}")
 
-# [Include all other functions from previous version unchanged]
-# ... (e.g., add_user, get_user_by_id, etc.)
+async def get_user_data(user_id: int) -> Optional[Dict[str, Any]]:
+    """Get user data by user ID."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return dict(row)
+                return None
+    except Exception as e:
+        logger.error(f"Error getting user data for {user_id}: {e}")
+        return None
+
+async def create_user(user_data: Dict[str, Any]) -> bool:
+    """Create a new user."""
+    try:
+        user_id = user_data.get('user_id')
+        username = user_data.get('username', '')
+        first_name = user_data.get('first_name', '')
+        
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await conn.execute("""
+                INSERT OR IGNORE INTO users (user_id, username, created_at, last_active, usage_today, usage_reset_date)
+                VALUES (?, ?, datetime('now'), datetime('now'), 0, date('now'))
+            """, (user_id, username))
+            await conn.commit()
+            return conn.total_changes > 0
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        return False
+
+async def get_all_users() -> List[Dict[str, Any]]:
+    """Get all users."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("SELECT * FROM users ORDER BY created_at DESC") as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting all users: {e}")
+        return []
+
+async def get_user_role(user_id: int) -> str:
+    """Get user role (admin, premium, or user)."""
+    try:
+        # Check if user is an admin first
+        from config import ADMIN_USER_IDS
+        if user_id in ADMIN_USER_IDS:
+            return 'superadmin'
+        
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            async with conn.execute("SELECT role, is_premium FROM users WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    # Return the role column if set, otherwise fall back to premium/user
+                    role = row[0]
+                    if role and role != 'user':
+                        return role
+                    return 'premium' if row[1] else 'user'
+                return 'user'
+    except Exception as e:
+        logger.error(f"Error getting user role for {user_id}: {e}")
+        return 'user'
+
+async def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """Get user by ID (alias for get_user_data)."""
+    return await get_user_data(user_id)
+
+async def add_usage_log(user_id: int, tool: str, is_success: bool = True) -> bool:
+    """Log user tool usage."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await conn.execute("""
+                INSERT INTO usage_logs (user_id, tool, timestamp, is_success)
+                VALUES (?, ?, datetime('now'), ?)
+            """, (user_id, tool, 1 if is_success else 0))
+            await conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error adding usage log for user {user_id}: {e}")
+        return False
+
+async def get_usage_count(user_id: int, days: int = 1) -> int:
+    """Get usage count for a user within specified days."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            async with conn.execute("""
+                SELECT COUNT(*) FROM usage_logs 
+                WHERE user_id = ? AND date(timestamp) >= date('now', '-' || ? || ' days')
+            """, (user_id, days)) as cursor:
+                row = await cursor.fetchone()
+                return row[0] if row else 0
+    except Exception as e:
+        logger.error(f"Error getting usage count for {user_id}: {e}")
+        return 0
+
+async def update_user_premium_status(user_id: int, days: int) -> bool:
+    """Update user premium status."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await conn.execute("""
+                UPDATE users 
+                SET is_premium = 1, 
+                    premium_expiry = date('now', '+' || ? || ' days')
+                WHERE user_id = ?
+            """, (days, user_id))
+            await conn.commit()
+            return conn.total_changes > 0
+    except Exception as e:
+        logger.error(f"Error updating premium status for {user_id}: {e}")
+        return False
+
+async def get_pending_payments() -> List[Dict[str, Any]]:
+    """Get all pending payments."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("""
+                SELECT * FROM payment_logs 
+                WHERE status = 'pending' 
+                ORDER BY timestamp DESC
+            """) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting pending payments: {e}")
+        return []
+
+async def log_admin_action(admin_id: int, action: str, details: str = "") -> bool:
+    """Log admin actions."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await conn.execute("""
+                INSERT INTO admin_action_logs (admin_id, action, details, timestamp)
+                VALUES (?, ?, ?, datetime('now'))
+            """, (admin_id, action, details))
+            await conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error logging admin action: {e}")
+        return False

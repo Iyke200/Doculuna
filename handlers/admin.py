@@ -23,7 +23,8 @@ from config import ADMIN_USER_IDS, DB_PATH, FREE_USAGE_LIMIT
 from database.db import (
     get_user_role, ban_user, unban_user, get_all_users,
     get_user_by_id, update_user_data, add_usage_log,
-    get_usage_count, update_user_premium_status, get_pending_payments
+    get_usage_count, update_user_premium_status, get_pending_payments,
+    log_admin_action
 )
 
 load_dotenv()

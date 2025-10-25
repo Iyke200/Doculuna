@@ -18,11 +18,11 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
     username = message.from_user.username
     
     try:
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         is_new_user = not user_data
         
         if is_new_user:
-            create_user({
+            await create_user({
                 'user_id': user_id,
                 'username': username,
                 'first_name': first_name,
@@ -50,7 +50,7 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
             today_str = date.today().isoformat()
             
             if last_used < today_str:
-                update_user_data(user_id, {
+                await update_user_data(user_id, {
                     'usage_today': 0,
                     'last_used_date': today_str
                 })
@@ -99,10 +99,10 @@ async def process_referral(start_param: str, user_id: int):
         except Exception as e:
             logger.error(f"Referral processing error: {e}")
 
-def get_user_preferences(user_id: int) -> dict:
+async def get_user_preferences(user_id: int) -> dict:
     """Get user preferences and settings."""
     try:
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         if user_data:
             return {
                 'language': user_data.get('language', 'en'),

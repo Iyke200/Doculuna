@@ -54,8 +54,8 @@ async def _get_cached_or_fetch_async(cache_key: str, fetch_func: Callable[[], Aw
 ROLE_LEVELS = {
     'superadmin': 3,
     'moderator': 2,
-    'premium': 1,
     'support': 1,
+    'premium': 0,
     'user': 0
 }
 
@@ -97,9 +97,14 @@ def rate_limit_check(user_id: int) -> bool:
 
 async def is_admin(user_id: int):
     """Helper to check if user is admin"""
-    # Stub: Make get_user_role async if not already
-    role = await get_user_role(user_id)  # Assume async now
-    return user_id in ADMIN_USER_IDS or role in ROLE_LEVELS
+    # First check if user is in ADMIN_USER_IDS
+    if user_id in ADMIN_USER_IDS:
+        return True
+    
+    # Then check if user has an elevated role (not 'user' or 'premium')
+    role = await get_user_role(user_id)
+    role_level = ROLE_LEVELS.get(role, 0)
+    return role_level >= ROLE_LEVELS.get('support', 1)
 
 def admin_only(min_role: str = 'support') -> Callable:
     """Decorator for role-based access control"""

@@ -2,12 +2,13 @@ import logging
 import time
 import os
 import sys
-from datetime import datetime, timedelta
-from typing import Callable, Awaitable, Dict, Any
+import datetime as dt
+from datetime import timedelta
+from typing import Callable, Awaitable, Dict, Any, List, Tuple
 import aiosqlite
 import psutil
 import asyncio
-import shutil  # For disk usage
+import shutil
 
 from aiogram import Dispatcher, types
 from aiogram.filters import Command
@@ -868,7 +869,7 @@ async def get_system_info() -> Dict[str, Any]:
         ram = psutil.virtual_memory().percent  
 
         # Uptime  
-        uptime = str(datetime.timedelta(seconds=int(time.time() - BOT_START_TIME)))  
+        uptime = str(timedelta(seconds=int(time.time() - BOT_START_TIME)))  
 
         # Python version  
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"  
@@ -953,7 +954,7 @@ async def handle_user_action(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()  
     elif action.startswith("reset_usage_"):  
         user_id = int(action.split("_")[2])  
-        success = await update_user_data_async(user_id, {'usage_today': 0, 'usage_reset_date': datetime.now().date().isoformat()})  
+        success = await update_user_data_async(user_id, {'usage_today': 0, 'usage_reset_date': dt.datetime.now().date().isoformat()})  
         if success:  
             logger.info(f"Admin {callback.from_user.id} reset usage for {user_id}")  
             await log_admin_action(callback.from_user.id, "reset_usage", str(user_id))  
@@ -1024,7 +1025,7 @@ async def update_user_premium_status(user_id: int, days: int):
     if not user_data:
         logger.warning(f"User {user_id} not found for premium grant")
         return False
-    expiry = datetime.now() + timedelta(days=days)
+    expiry = dt.datetime.now() + timedelta(days=days)
     success1 = await execute_write(
         "UPDATE users SET is_premium = 1, premium_expiry = ? WHERE user_id = ?",
         (expiry.isoformat(), user_id)
@@ -1249,7 +1250,7 @@ async def handle_usage_reset_input(message: types.Message, state: FSMContext):
 
     try:  
         user_id = int(message.text.strip())  
-        success = await update_user_data_async(user_id, {'usage_today': 0, 'usage_reset_date': datetime.now().date().isoformat()})  
+        success = await update_user_data_async(user_id, {'usage_today': 0, 'usage_reset_date': dt.datetime.now().date().isoformat()})  
         if success:  
             logger.info(f"Admin {message.from_user.id} reset usage for {user_id}")  
             await log_admin_action(message.from_user.id, "reset_usage", str(user_id))  

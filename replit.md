@@ -8,6 +8,13 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
+## Recent Changes (October 25, 2025)
+- **Database Functions:** Added complete set of async database functions including `get_user_data`, `create_user`, `get_all_users`, `get_user_role`, `get_user_by_id`, `add_usage_log`, `get_usage_count`, `update_user_premium_status`, `get_pending_payments`, and `log_admin_action`.
+- **Admin Functionality:** Verified and tested full admin system with role-based access control, user management, analytics dashboard, payment tracking, activity logs, system tools, and broadcasting capabilities.
+- **Async/Await:** Fixed all async patterns throughout handlers to properly await database operations.
+- **Database Migrations:** Added automatic migrations for `is_banned` and `role` columns in the users table.
+- **Bot Status:** Successfully running in polling mode with all handlers registered and database initialized.
+
 ## System Architecture
 
 ### Core Design Principles

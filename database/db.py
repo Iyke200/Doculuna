@@ -130,6 +130,13 @@ async def init_db():
                 await conn.execute("ALTER TABLE referrals ADD COLUMN total_earnings INTEGER DEFAULT 0")
                 logger.info("Added total_earnings to referrals")
             
+            # Payment logs status column
+            async with conn.execute("PRAGMA table_info(payment_logs)") as cursor:
+                payment_columns = [column[1] for column in await cursor.fetchall()]
+            if 'status' not in payment_columns:
+                await conn.execute("ALTER TABLE payment_logs ADD COLUMN status TEXT DEFAULT 'pending'")
+                logger.info("Added status column to payment_logs")
+            
             await conn.commit()
             logger.info("Database initialized")
     except Exception as e:

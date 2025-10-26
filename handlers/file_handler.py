@@ -145,7 +145,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             
             if not is_premium:
                 remaining = max(0, FREE_USAGE_LIMIT - usage_today)
-                success_text += f"\n📊 Daily uses remaining: {remaining}/{FREE_USAGE_LIMIT}"
+                success_text += f"\n📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)"
                 
                 if remaining == 0:
                     success_text += "\n\n💎 Upgrade to Premium for unlimited processing!"

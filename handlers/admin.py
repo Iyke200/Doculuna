@@ -1128,6 +1128,7 @@ async def handle_user_id_input(message: types.Message, state: FSMContext):
             is_premium = user_data.get('is_premium', False)  
             username = user_data.get('username', 'N/A')  
             usage_today = user_data.get('usage_today', 0)  
+            remaining = max(0, FREE_USAGE_LIMIT - usage_today)
 
             text = (  
                 f"👤 <b>USER PROFILE</b>\n"  
@@ -1135,8 +1136,12 @@ async def handle_user_id_input(message: types.Message, state: FSMContext):
                 f"ID: <code>{user_id}</code>\n"  
                 f"Username: <b>{username}</b>\n"  
                 f"Status: {'⭐ Premium' if is_premium else '👤 Free'}\n"  
-                f"Usage Today: <b>{usage_today}/{FREE_USAGE_LIMIT}</b>\n"  
-            )  
+            )
+            
+            if not is_premium:
+                text += f"Usage Today: <b>{usage_today}/{FREE_USAGE_LIMIT}</b> ({remaining} remaining)\n"
+            else:
+                text += f"Usage: <b>Unlimited ♾️</b>\n"  
 
             builder = InlineKeyboardBuilder()  
             builder.button(text="🎁 Grant Premium", callback_data=f"grant_premium_{user_id}")  

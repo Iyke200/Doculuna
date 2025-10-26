@@ -54,19 +54,26 @@ async def handle_my_account(callback: CallbackQuery, state: FSMContext) -> None:
     first_name = callback.from_user.first_name or "User"
     
     try:
+        from config import FREE_USAGE_LIMIT
+        
         user_data = await get_user_data(user_id)
         usage_today = user_data.get('usage_today', 0) if user_data else 0
         is_premium = user_data.get('is_premium', False) if user_data else False
         plan_expiry = user_data.get('premium_expiry', 'N/A') if user_data else 'N/A'
         
         status_text = "Premium" if is_premium else "Free"
+        remaining = max(0, FREE_USAGE_LIMIT - usage_today)
         
         account_text = (
             "👤 Your Account Overview\n\n"
             f"🪪 Name: {first_name}\n"
             f"💎 Status: {status_text}\n"
-            f"📊 Usage Today: {usage_today}/3 (Free plan limit)\n"
         )
+        
+        if not is_premium:
+            account_text += f"📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)\n"
+        else:
+            account_text += "📊 Usage: Unlimited ♾️\n"
         
         if is_premium and plan_expiry != 'N/A':
             account_text += f"⏳ Plan Expires: {plan_expiry}\n"

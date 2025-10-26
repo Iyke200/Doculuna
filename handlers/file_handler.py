@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import FSInputFile
 
 from utils.usage_tracker import check_usage_limit, increment_usage
+from utils.simple_watermark import add_pdf_watermark, add_docx_watermark
 from tools.pdf_to_word import PDFToWordConverter
 from tools.word_to_pdf import WordToPDFConverter
 from tools.compress import PDFCompressor, DOCXCompressor, CompressionLevel
@@ -120,13 +121,13 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         file_name = user_data.get('file_name', 'file')
         
         if operation == "convert_file":
-            result_file_path = await convert_file(callback.bot, file_id, file_name)
+            result_file_path = await convert_file(callback.bot, file_id, file_name, user_id)
         elif operation == "compress_file":
             result_file_path = await compress_file(callback.bot, file_id, file_name)
         elif operation == "compress_image":
             result_file_path = await compress_image(callback.bot, file_id, file_name)
         elif operation == "image_to_pdf":
-            result_file_path = await image_to_pdf(callback.bot, file_id, file_name)
+            result_file_path = await image_to_pdf(callback.bot, file_id, file_name, user_id)
         else:
             await callback.message.edit_text("Operation not yet implemented")
             return
@@ -183,7 +184,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         
         await callback.message.edit_text(error_message)
 
-async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
+async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Convert PDF to Word or Word to PDF based on file type."""
     try:
         file = await bot.get_file(file_id)
@@ -199,6 +200,15 @@ async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
                 extract_images=True
             )
             logger.info(f"PDF to Word conversion: {result['success']}")
+            
+            if user_id:
+                from database.db import get_user_data
+                user_data = await get_user_data(user_id)
+                is_premium = user_data.get('is_premium', False) if user_data else False
+                if not is_premium:
+                    add_docx_watermark(output_path)
+                    logger.info(f"Added watermark to DOCX for free user {user_id}")
+                    
         elif file_name.lower().endswith(('.docx', '.doc')):
             output_path = tempfile.mktemp(suffix=".pdf")
             result = WordToPDFConverter.convert_docx_to_pdf(
@@ -208,6 +218,15 @@ async def convert_file(bot: Bot, file_id: str, file_name: str) -> str:
                 high_quality=True
             )
             logger.info(f"Word to PDF conversion: {result['success']}")
+            
+            if user_id:
+                from database.db import get_user_data
+                user_data = await get_user_data(user_id)
+                is_premium = user_data.get('is_premium', False) if user_data else False
+                if not is_premium:
+                    add_pdf_watermark(output_path)
+                    logger.info(f"Added watermark to PDF for free user {user_id}")
+                    
         else:
             raise ValueError("Unsupported file type for conversion")
         
@@ -289,7 +308,7 @@ async def compress_image(bot: Bot, file_id: str, file_name: str) -> str:
         logger.error(f"Image compression error: {e}", exc_info=True)
         raise
 
-async def image_to_pdf(bot: Bot, file_id: str, file_name: str) -> str:
+async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Convert image to PDF."""
     try:
         file = await bot.get_file(file_id)
@@ -312,6 +331,14 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str) -> str:
         
         c.drawImage(input_path, x, y, img_width * scale, img_height * scale)
         c.save()
+        
+        if user_id:
+            from database.db import get_user_data
+            user_data = await get_user_data(user_id)
+            is_premium = user_data.get('is_premium', False) if user_data else False
+            if not is_premium:
+                add_pdf_watermark(output_path)
+                logger.info(f"Added watermark to PDF for free user {user_id}")
         
         try:
             os.remove(input_path)

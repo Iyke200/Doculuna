@@ -139,6 +139,7 @@ async def fetch_one(query: str, params=()):
     """Safe async DB fetch one row"""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row  # Enable dict conversion
             async with db.execute(query, params) as cursor:
                 return await cursor.fetchone()
     except aiosqlite.OperationalError as e:
@@ -155,6 +156,7 @@ async def fetch_all(query: str, params=()):
     """Safe async DB fetch all rows"""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row  # Enable dict conversion
             async with db.execute(query, params) as cursor:
                 return await cursor.fetchall()
     except aiosqlite.OperationalError as e:

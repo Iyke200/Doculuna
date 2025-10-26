@@ -8,14 +8,16 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (October 25, 2025)
+## Recent Changes (October 26, 2025)
+- **Tools Functionality Fixed:** Resolved critical async/await issues that were preventing document processing tools from working. All calls to async database functions (`get_user_data`, `update_user_data`) now properly use `await`.
+- **Files Fixed:** callbacks.py, file_handler.py, referrals.py, premium.py (including `get_premium_data` function).
+- **Schema Warning Eliminated:** Removed early `verify_schema()` call that ran before database initialization, eliminating startup schema warnings.
 - **Database Schema:** Added `admin_action_logs` table for tracking admin actions, and `status` column to `payment_logs` table with automatic migrations.
 - **Admin Security Fix:** Fixed critical privilege escalation vulnerability where all users could access admin panel. Now properly restricts access to ADMIN_USER_IDS or users with elevated roles (support, moderator, superadmin).
-- **Database Functions:** Verified all async database functions including `get_user_data`, `create_user`, `get_all_users`, `get_user_role`, `get_user_by_id`, `add_usage_log`, `get_usage_count`, `update_user_premium_status`, `get_pending_payments`, and `log_admin_action`.
 - **Admin Functionality:** Full admin system with role-based access control (ROLE_LEVELS), user management, analytics dashboard, payment tracking, activity logs, system tools, and broadcasting capabilities. All handlers properly secured.
 - **Runtime Fixes:** Fixed datetime import errors in admin.py, installed missing dependencies (pikepdf, cryptography), resolved all runtime errors.
 - **Database Migrations:** Automatic migrations for `is_banned`, `role`, and `status` columns working correctly.
-- **Bot Status:** Successfully running in polling mode with all handlers registered, database initialized, and admin panel secured.
+- **Bot Status:** Successfully running in polling mode with all handlers registered, database initialized, admin panel secured, and **all tools functioning correctly**.
 
 ## System Architecture
 

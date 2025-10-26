@@ -204,8 +204,8 @@ async def verify_schema():
         logger.warning(f"Schema issues: {issues}")
     return issues
 
-# Call on init if desired
-asyncio.create_task(verify_schema())
+# Schema verification will be called after database initialization if needed
+# asyncio.create_task(verify_schema())
 
 # DB migrations: Simple manual version check
 DB_VERSION = 1  # Increment on changes

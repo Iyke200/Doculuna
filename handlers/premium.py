@@ -31,7 +31,7 @@ class PremiumStatus(Enum):
 async def get_premium_data(user_id: int) -> Dict[str, Any]:
     """Get user's premium subscription data."""
     try:
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         if not user_data:
             return {
                 "status": PremiumStatus.EXPIRED.value,
@@ -69,7 +69,7 @@ async def activate_premium(user_id: int, transaction: Any, plan: PremiumPlan) ->
         plan_data = plan.value
         expiry_date = datetime.now() + timedelta(days=plan_data["duration_days"])
         
-        update_user_data(user_id, {
+        await update_user_data(user_id, {
             "premium_plan": plan_data["id"],
             "premium_expiry": expiry_date.isoformat(),
             "is_premium": True
@@ -84,7 +84,7 @@ async def activate_premium(user_id: int, transaction: Any, plan: PremiumPlan) ->
 async def downgrade_premium(user_id: int) -> bool:
     """Downgrade user from premium to basic."""
     try:
-        update_user_data(user_id, {
+        await update_user_data(user_id, {
             "premium_plan": "basic",
             "premium_expiry": None,
             "is_premium": False

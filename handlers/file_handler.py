@@ -137,7 +137,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             from database.db import get_user_data
             from config import FREE_USAGE_LIMIT
             
-            user_data = get_user_data(user_id)
+            user_data = await get_user_data(user_id)
             usage_today = user_data.get('usage_today', 0) if user_data else 0
             is_premium = user_data.get('is_premium', False) if user_data else False
             

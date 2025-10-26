@@ -54,7 +54,7 @@ async def handle_my_account(callback: CallbackQuery, state: FSMContext) -> None:
     first_name = callback.from_user.first_name or "User"
     
     try:
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         usage_today = user_data.get('usage_today', 0) if user_data else 0
         is_premium = user_data.get('is_premium', False) if user_data else False
         plan_expiry = user_data.get('premium_expiry', 'N/A') if user_data else 'N/A'

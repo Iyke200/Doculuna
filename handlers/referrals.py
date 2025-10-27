@@ -237,13 +237,13 @@ async def confirm_withdrawal_handler(callback: types.CallbackQuery, state: FSMCo
         from config import DB_PATH
         
         async with aiosqlite.connect(DB_PATH) as conn:
-            await conn.execute("""
+            cursor = await conn.execute("""
                 INSERT INTO withdrawal_requests 
                 (user_id, amount, account_name, account_number, bank_name, status, requested_at)
                 VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
             """, (user_id, amount, account_name, account_number, bank_name))
             
-            request_id = conn.last_insert_rowid
+            request_id = cursor.lastrowid
             
             await update_user_data(user_id, {'referral_earnings': 0})
             

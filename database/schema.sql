@@ -82,3 +82,19 @@ CREATE TABLE IF NOT EXISTS admin_action_logs (
     details TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount INTEGER,
+    account_name TEXT,
+    account_number TEXT,
+    bank_name TEXT,
+    status TEXT DEFAULT 'pending',
+    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    processed_by INTEGER,
+    notes TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (processed_by) REFERENCES users(user_id)
+);

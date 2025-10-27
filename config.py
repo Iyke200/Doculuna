@@ -107,6 +107,7 @@ REFERRAL_REWARDS = {
     "monthly": 500,  # 500 NGN for referring monthly premium user
     "weekly": 150,   # 150 NGN for referring weekly premium user
 }
+MINIMUM_WITHDRAWAL_AMOUNT = 2000  # Minimum amount for withdrawal in NGN
 WELCOME_SERIES_ENABLED = True
 RETENTION_CAMPAIGN_ENABLED = True
 

@@ -8,16 +8,15 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (October 26, 2025)
-- **Tools Functionality Fixed:** Resolved critical async/await issues that were preventing document processing tools from working. All calls to async database functions (`get_user_data`, `update_user_data`) now properly use `await`.
-- **Files Fixed:** callbacks.py, file_handler.py, referrals.py, premium.py (including `get_premium_data` function).
-- **Schema Warning Eliminated:** Removed early `verify_schema()` call that ran before database initialization, eliminating startup schema warnings.
-- **Database Schema:** Added `admin_action_logs` table for tracking admin actions, and `status` column to `payment_logs` table with automatic migrations.
-- **Admin Security Fix:** Fixed critical privilege escalation vulnerability where all users could access admin panel. Now properly restricts access to ADMIN_USER_IDS or users with elevated roles (support, moderator, superadmin).
-- **Admin Functionality:** Full admin system with role-based access control (ROLE_LEVELS), user management, analytics dashboard, payment tracking, activity logs, system tools, and broadcasting capabilities. All handlers properly secured.
-- **Runtime Fixes:** Fixed datetime import errors in admin.py, installed missing dependencies (pikepdf, cryptography), resolved all runtime errors.
-- **Database Migrations:** Automatic migrations for `is_banned`, `role`, and `status` columns working correctly.
-- **Bot Status:** Successfully running in polling mode with all handlers registered, database initialized, admin panel secured, and **all tools functioning correctly**.
+## Recent Changes (October 27, 2025)
+- **Watermark System Implemented:** Free users now receive watermarked documents (PDF and DOCX) with "Processed with DocuLuna - Upgrade for Watermark-Free" footer text. Premium users receive clean, unwatermarked files.
+- **Advanced Referral Withdrawal System:** Complete withdrawal flow with minimum ₦2,000 threshold, account details collection (name, number, bank), eligibility checking, and admin approval workflow.
+- **Referral Balance for Premium:** Users can now use their referral earnings to purchase premium plans, with automatic balance deduction from the plan price.
+- **Admin Notification System:** Admins receive instant notifications when users request withdrawals, including all account details and request ID for processing.
+- **Database Enhancements:** Added `withdrawal_requests` table to track all withdrawal requests with status tracking (pending, completed, rejected).
+- **Usage Tracking Fixed:** Resolved critical async/await issues in usage_tracker.py that were preventing watermark application and usage limits from working correctly.
+- **Improved UX:** Users with insufficient balance see helpful messages with option to use balance for premium purchase instead of withdrawal.
+- **Bot Status:** Successfully running in polling mode with all features operational - watermarking for free users, referral system, withdrawal flow, and admin notifications all working correctly.
 
 ## System Architecture
 

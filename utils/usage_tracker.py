@@ -489,7 +489,7 @@ async def check_usage_limit(user_id: int) -> bool:
         from database.db import get_user_data, update_user_data
         from datetime import date
         
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         if not user_data:
             return True
         
@@ -500,7 +500,7 @@ async def check_usage_limit(user_id: int) -> bool:
         today = date.today().isoformat()
         
         if usage_reset_date != today:
-            update_user_data(user_id, {'usage_today': 0, 'usage_reset_date': today})
+            await update_user_data(user_id, {'usage_today': 0, 'usage_reset_date': today})
             usage_today = 0
             logger.info(f"Reset daily usage for user {user_id} - new day detected")
         
@@ -519,7 +519,7 @@ async def increment_usage(user_id: int):
         from database.db import get_user_data, update_user_data
         from datetime import date
         
-        user_data = get_user_data(user_id)
+        user_data = await get_user_data(user_id)
         if user_data:
             usage_today = user_data.get('usage_today', 0)
             usage_reset_date = user_data.get('usage_reset_date')
@@ -529,7 +529,7 @@ async def increment_usage(user_id: int):
                 usage_today = 0
                 logger.info(f"Reset daily usage for user {user_id} during increment - new day detected")
             
-            update_user_data(user_id, {
+            await update_user_data(user_id, {
                 'usage_today': usage_today + 1,
                 'usage_reset_date': today
             })

@@ -8,15 +8,18 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (October 27, 2025)
-- **Watermark System Implemented:** Free users now receive watermarked documents (PDF and DOCX) with "Processed with DocuLuna - Upgrade for Watermark-Free" footer text. Premium users receive clean, unwatermarked files.
-- **Advanced Referral Withdrawal System:** Complete withdrawal flow with minimum ₦2,000 threshold, account details collection (name, number, bank), eligibility checking, and admin approval workflow.
-- **Referral Balance for Premium:** Users can now use their referral earnings to purchase premium plans, with automatic balance deduction from the plan price.
-- **Admin Notification System:** Admins receive instant notifications when users request withdrawals, including all account details and request ID for processing.
-- **Database Enhancements:** Added `withdrawal_requests` table to track all withdrawal requests with status tracking (pending, completed, rejected).
-- **Usage Tracking Fixed:** Resolved critical async/await issues in usage_tracker.py that were preventing watermark application and usage limits from working correctly.
-- **Improved UX:** Users with insufficient balance see helpful messages with option to use balance for premium purchase instead of withdrawal.
-- **Bot Status:** Successfully running in polling mode with all features operational - watermarking for free users, referral system, withdrawal flow, and admin notifications all working correctly.
+## Recent Changes (October 28, 2025)
+- **Complete Wallet System:** Implemented comprehensive wallet management with balance tracking, total earnings display, and referral code generation (format: DOCU{user_id}).
+- **Referral Tracking System:** New users using referral links are automatically tracked; referrers earn ₦150 for weekly plans and ₦350 for monthly plans when referred users purchase premium.
+- **Withdrawal Flow with FSM:** Multi-step withdrawal process collecting amount, account name, bank name, and account number with ₦2,000 minimum threshold and validation.
+- **Admin Withdrawal Management:** Admins receive instant notifications for withdrawal requests with inline approve/reject buttons; approval deducts from wallet, rejection keeps balance intact.
+- **Referral Statistics:** Users can view complete referral stats including total referrals, completed/pending status, total earned, and shareable referral link.
+- **Weekly Leaderboard:** Dynamic leaderboard showing top 10 referrers by total earnings to encourage engagement.
+- **Withdrawal History:** Users can view their past withdrawal requests with status indicators (pending, approved, rejected).
+- **Database Schema Updates:** Added `wallets`, `referral_relationships` tables with proper foreign keys and constraints preventing duplicate referrals.
+- **Pricing Corrections:** Fixed premium plan pricing to ₦1,000 (weekly) and ₦3,500 (monthly) with corresponding referral rewards.
+- **Integration Points:** Referral rewards automatically credited in `activate_premium()` function; start handler tracks referrals from /start commands.
+- **Bot Status:** All wallet, referral, and withdrawal features tested and running successfully with proper error handling and security controls.
 
 ## System Architecture
 
@@ -35,10 +38,13 @@ The user interface is designed to be direct and functional. Key UX flows include
 - **Document Processing:** Full support for PDF ↔ Word conversion (preserving layout), Image → PDF conversion (A4 sizing), and file compression for PDF/DOCX (medium quality). All tools include robust error handling and validation.
 - **Freemium Model:** Users receive 3 free daily uses, with unlimited access provided to premium subscribers.
 - **Premium Subscriptions:** Offers weekly (₦1,000) and monthly (₦3,500) plans, integrated with payment gateways.
-- **Referral System:** Rewards users for successful referrals (₦500 for monthly, ₦150 for weekly).
-- **Admin Panel:** Provides user management, analytics, broadcasting capabilities, and statistics for administrators.
-- **Database:** Uses SQLite for persistent storage of user profiles, usage logs, referral data, payment history, and feedback.
-- **Security:** Incorporates environment variables for sensitive data (BOT_TOKEN, ADMIN_USER_IDS), sanitized logging, rate limiting, and file size restrictions to prevent abuse.
+- **Wallet System:** Each user has a digital wallet tracking balance and total earnings from referrals with transaction history.
+- **Referral System:** Automated referral tracking with unique codes (DOCU{user_id}); rewards credited on successful premium purchases (₦350 for monthly, ₦150 for weekly).
+- **Withdrawal System:** Users can request withdrawals (minimum ₦2,000) with multi-step FSM collecting bank details; admin approval/rejection flow with automated notifications.
+- **Leaderboard:** Weekly ranking of top 10 referrers by earnings to gamify the referral system.
+- **Admin Panel:** Provides user management, analytics, broadcasting capabilities, withdrawal management, and statistics for administrators.
+- **Database:** Uses SQLite with tables for users, wallets, referral_relationships, withdrawal_requests, usage logs, payment history, and feedback.
+- **Security:** Incorporates environment variables for sensitive data (BOT_TOKEN, ADMIN_USER_IDS), sanitized logging, rate limiting, file size restrictions, admin-only access controls, and UNIQUE constraints preventing duplicate referrals.
 
 ### System Design Choices
 - **Modular Handlers:** Command and callback handlers are organized into separate files (`start.py`, `file_handler.py`, `admin.py`, etc.) for maintainability.

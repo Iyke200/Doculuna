@@ -19,7 +19,8 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Database Schema Updates:** Added `wallets`, `referral_relationships` tables with proper foreign keys and constraints preventing duplicate referrals.
 - **Pricing Corrections:** Fixed premium plan pricing to ₦1,000 (weekly) and ₦3,500 (monthly) with corresponding referral rewards.
 - **Integration Points:** Referral rewards automatically credited in `activate_premium()` function; start handler tracks referrals from /start commands.
-- **Bot Status:** All wallet, referral, and withdrawal features tested and running successfully with proper error handling and security controls.
+- **Watermark System:** Integrated comprehensive watermarking for all free user document operations (PDF/Word conversion, Image to PDF, PDF/DOCX compression) using utils/watermark.py with bottom-center text placement, gray color, and low opacity.
+- **Bot Status:** All wallet, referral, withdrawal, and watermark features tested and running successfully with proper error handling and security controls.
 
 ## System Architecture
 
@@ -36,7 +37,8 @@ The user interface is designed to be direct and functional. Key UX flows include
 
 ### Technical Implementation & Feature Specifications
 - **Document Processing:** Full support for PDF ↔ Word conversion (preserving layout), Image → PDF conversion (A4 sizing), and file compression for PDF/DOCX (medium quality). All tools include robust error handling and validation.
-- **Freemium Model:** Users receive 3 free daily uses, with unlimited access provided to premium subscribers.
+- **Freemium Model:** Users receive 3 free daily uses, with unlimited access provided to premium subscribers. Free users receive watermarked documents; premium users receive clean files.
+- **Watermarking:** Comprehensive watermark system using utils/watermark.py applied to all free user operations (PDF/Word conversion, Image to PDF, PDF/DOCX compression). Watermark text: "Processed with DocuLuna - Upgrade for Watermark-Free" placed at bottom-center with gray color and low opacity.
 - **Premium Subscriptions:** Offers weekly (₦1,000) and monthly (₦3,500) plans, integrated with payment gateways.
 - **Wallet System:** Each user has a digital wallet tracking balance and total earnings from referrals with transaction history.
 - **Referral System:** Automated referral tracking with unique codes (DOCU{user_id}); rewards credited on successful premium purchases (₦350 for monthly, ₦150 for weekly).

@@ -52,6 +52,8 @@ def import_handlers():
         from handlers.payments import register_payment_handlers
         from handlers.paystack import register_paystack_handlers
         from handlers.file_handler import register_file_handlers
+        from handlers.wallet import register_wallet_handlers
+        from handlers.admin_withdrawals import register_admin_withdrawal_handlers
         from config import ADMIN_USER_IDS
 
         return {
@@ -67,6 +69,8 @@ def import_handlers():
             "register_payment_handlers": register_payment_handlers,
             "register_paystack_handlers": register_paystack_handlers,
             "register_file_handlers": register_file_handlers,
+            "register_wallet_handlers": register_wallet_handlers,
+            "register_admin_withdrawal_handlers": register_admin_withdrawal_handlers,
             "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
@@ -114,6 +118,8 @@ def register_handlers():
     handlers["register_upgrade_handlers"](dp)
     handlers["register_help_handlers"](dp)
     handlers["register_admin_handlers"](dp)
+    handlers["register_wallet_handlers"](dp)
+    handlers["register_admin_withdrawal_handlers"](dp)
     handlers["register_stats_handlers"](dp)
     handlers["register_payment_handlers"](dp)
     handlers["register_paystack_handlers"](dp)

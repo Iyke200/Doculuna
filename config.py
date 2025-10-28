@@ -13,8 +13,8 @@ PREMIUM_USAGE_LIMIT = 999999  # Unlimited
 REFERRAL_BONUS = 1  # Extra uses per successful referral
 
 # Pricing for premium subscriptions (in Naira) - PRODUCTION PRICING
-WEEKLY_PREMIUM_PRICE = 3500  # Weekly plan
-MONTHLY_PREMIUM_PRICE = 1000  # Monthly plan
+WEEKLY_PREMIUM_PRICE = 1000  # Weekly plan
+MONTHLY_PREMIUM_PRICE = 3500  # Monthly plan
 
 # Legacy pricing (deprecated)
 DAILY_PREMIUM_PRICE = 3500
@@ -48,13 +48,13 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB max file size
 # Premium plans configuration - PRODUCTION PLANS
 PREMIUM_PLANS = {
     "weekly": {
-        "price": WEEKLY_PREMIUM_PRICE,  # 3500 NGN
+        "price": WEEKLY_PREMIUM_PRICE,  # 1000 NGN
         "duration_days": 7,
         "name": "Weekly Pro",
         "description": "Perfect for quick projects"
     },
     "monthly": {
-        "price": MONTHLY_PREMIUM_PRICE,  # 1000 NGN
+        "price": MONTHLY_PREMIUM_PRICE,  # 3500 NGN
         "duration_days": 30,
         "name": "Monthly Pro", 
         "description": "Best value for regular users"
@@ -104,7 +104,7 @@ BACKUP_INTERVAL_HOURS = 6
 # Marketing settings - PRODUCTION REFERRAL SYSTEM
 REFERRAL_REWARD_USES = 1
 REFERRAL_REWARDS = {
-    "monthly": 500,  # 500 NGN for referring monthly premium user
+    "monthly": 350,  # 350 NGN for referring monthly premium user
     "weekly": 150,   # 150 NGN for referring weekly premium user
 }
 MINIMUM_WITHDRAWAL_AMOUNT = 2000  # Minimum amount for withdrawal in NGN

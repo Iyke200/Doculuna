@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.db import get_user_data, create_user, update_user_data
+from database.db import get_user_data, create_user, update_user_data, track_referral, create_referral_code
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,6 +16,9 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "there"
     username = message.from_user.username
+    
+    command_args = message.text.split()
+    referral_code = command_args[1] if len(command_args) > 1 else None
     
     try:
         user_data = await get_user_data(user_id)
@@ -31,6 +34,18 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
                 'plan': 'free',
                 'last_used_date': date.today().isoformat()
             })
+            
+            await create_referral_code(user_id)
+            
+            if referral_code and referral_code.startswith("DOCU"):
+                try:
+                    referrer_id = int(referral_code.replace("DOCU", ""))
+                    if referrer_id != user_id:
+                        success = await track_referral(referrer_id, user_id)
+                        if success:
+                            logger.info(f"Tracked referral: {referrer_id} -> {user_id}")
+                except Exception as e:
+                    logger.error(f"Error tracking referral: {e}")
             
             welcome_text = (
                 f"👋 Hello {first_name}!\n\n"

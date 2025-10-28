@@ -363,3 +363,279 @@ async def log_admin_action(admin_id: int, action: str, details: str = "") -> boo
     except Exception as e:
         logger.error(f"Error logging admin action: {e}")
         return False
+
+async def get_or_create_wallet(user_id: int) -> Dict[str, Any]:
+    """Get or create wallet for user."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            await conn.execute("""
+                INSERT OR IGNORE INTO wallets (user_id, balance, total_earned, last_updated)
+                VALUES (?, 0, 0, datetime('now'))
+            """, (user_id,))
+            await conn.commit()
+            
+            async with conn.execute("SELECT * FROM wallets WHERE user_id = ?", (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else {"user_id": user_id, "balance": 0, "total_earned": 0}
+    except Exception as e:
+        logger.error(f"Error getting/creating wallet for {user_id}: {e}")
+        return {"user_id": user_id, "balance": 0, "total_earned": 0}
+
+async def update_wallet_balance(user_id: int, amount: int, operation: str = "add") -> bool:
+    """Update wallet balance (add or deduct)."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await get_or_create_wallet(user_id)
+            
+            if operation == "add":
+                await conn.execute("""
+                    UPDATE wallets 
+                    SET balance = balance + ?, 
+                        total_earned = total_earned + ?,
+                        last_updated = datetime('now')
+                    WHERE user_id = ?
+                """, (amount, amount, user_id))
+            elif operation == "deduct":
+                async with conn.execute("SELECT balance FROM wallets WHERE user_id = ?", (user_id,)) as cursor:
+                    row = await cursor.fetchone()
+                    if not row or row[0] < amount:
+                        return False
+                
+                await conn.execute("""
+                    UPDATE wallets 
+                    SET balance = balance - ?,
+                        last_updated = datetime('now')
+                    WHERE user_id = ?
+                """, (amount, user_id))
+            
+            await conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error updating wallet for {user_id}: {e}")
+        return False
+
+async def create_referral_code(user_id: int) -> str:
+    """Create or get referral code for user."""
+    referral_code = f"DOCU{user_id}"
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            await conn.execute("""
+                INSERT OR IGNORE INTO referrals (user_id, referral_code, referral_count, premium_days_earned, total_earnings)
+                VALUES (?, ?, 0, 0, 0)
+            """, (user_id, referral_code))
+            await conn.commit()
+            return referral_code
+    except Exception as e:
+        logger.error(f"Error creating referral code for {user_id}: {e}")
+        return referral_code
+
+async def track_referral(referrer_id: int, referred_id: int) -> bool:
+    """Track a referral relationship (pending until payment)."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            async with conn.execute("SELECT referred_id FROM referral_relationships WHERE referred_id = ?", (referred_id,)) as cursor:
+                if await cursor.fetchone():
+                    return False
+            
+            await conn.execute("""
+                INSERT INTO referral_relationships (referrer_id, referred_id, status, created_at)
+                VALUES (?, ?, 'pending', datetime('now'))
+            """, (referrer_id, referred_id))
+            await conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error tracking referral {referrer_id} -> {referred_id}: {e}")
+        return False
+
+async def complete_referral(referred_id: int, plan_type: str) -> Optional[int]:
+    """Complete referral when referred user makes a purchase. Returns referrer_id if successful."""
+    try:
+        reward_map = {"weekly": 150, "monthly": 350}
+        reward_amount = reward_map.get(plan_type, 0)
+        
+        if reward_amount == 0:
+            return None
+        
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            async with conn.execute("""
+                SELECT referrer_id FROM referral_relationships 
+                WHERE referred_id = ? AND status = 'pending'
+            """, (referred_id,)) as cursor:
+                row = await cursor.fetchone()
+                if not row:
+                    return None
+                
+                referrer_id = row[0]
+            
+            await conn.execute("BEGIN")
+            try:
+                await conn.execute("""
+                    UPDATE referral_relationships 
+                    SET status = 'completed', plan_type = ?, reward_amount = ?, rewarded_at = datetime('now')
+                    WHERE referred_id = ?
+                """, (plan_type, reward_amount, referred_id))
+                
+                await conn.execute("""
+                    INSERT OR IGNORE INTO wallets (user_id, balance, total_earned)
+                    VALUES (?, 0, 0)
+                """, (referrer_id,))
+                
+                await conn.execute("""
+                    UPDATE wallets 
+                    SET balance = balance + ?, total_earned = total_earned + ?, last_updated = datetime('now')
+                    WHERE user_id = ?
+                """, (reward_amount, reward_amount, referrer_id))
+                
+                await conn.commit()
+                logger.info(f"Referral completed: {referrer_id} earned ₦{reward_amount} from {referred_id}")
+                return referrer_id
+            except:
+                await conn.rollback()
+                raise
+    except Exception as e:
+        logger.error(f"Error completing referral for {referred_id}: {e}")
+        return None
+
+async def get_referral_stats(user_id: int) -> Dict[str, Any]:
+    """Get referral statistics for a user."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            
+            async with conn.execute("""
+                SELECT COUNT(*) as total, 
+                       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                       SUM(CASE WHEN status = 'completed' THEN reward_amount ELSE 0 END) as total_earned
+                FROM referral_relationships
+                WHERE referrer_id = ?
+            """, (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return {
+                        "total_referrals": row["total"] or 0,
+                        "completed": row["completed"] or 0,
+                        "pending": row["pending"] or 0,
+                        "total_earned": row["total_earned"] or 0
+                    }
+                return {"total_referrals": 0, "completed": 0, "pending": 0, "total_earned": 0}
+    except Exception as e:
+        logger.error(f"Error getting referral stats for {user_id}: {e}")
+        return {"total_referrals": 0, "completed": 0, "pending": 0, "total_earned": 0}
+
+async def create_withdrawal_request(user_id: int, amount: int, account_name: str, bank_name: str, account_number: str) -> Optional[int]:
+    """Create a withdrawal request."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            wallet = await get_or_create_wallet(user_id)
+            if wallet["balance"] < amount:
+                return None
+            
+            async with conn.execute("""
+                SELECT COUNT(*) FROM withdrawal_requests 
+                WHERE user_id = ? AND status = 'pending'
+            """, (user_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row and row[0] > 0:
+                    return None
+            
+            async with conn.execute("""
+                INSERT INTO withdrawal_requests (user_id, amount, account_name, bank_name, account_number, status, requested_at)
+                VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
+            """, (user_id, amount, account_name, bank_name, account_number)) as cursor:
+                await conn.commit()
+                return cursor.lastrowid
+    except Exception as e:
+        logger.error(f"Error creating withdrawal request for {user_id}: {e}")
+        return None
+
+async def get_withdrawal_requests(user_id: Optional[int] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get withdrawal requests filtered by user and/or status."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            
+            query = "SELECT * FROM withdrawal_requests WHERE 1=1"
+            params = []
+            
+            if user_id:
+                query += " AND user_id = ?"
+                params.append(user_id)
+            if status:
+                query += " AND status = ?"
+                params.append(status)
+            
+            query += " ORDER BY requested_at DESC"
+            
+            async with conn.execute(query, params) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting withdrawal requests: {e}")
+        return []
+
+async def process_withdrawal(withdrawal_id: int, admin_id: int, approved: bool, notes: str = "") -> bool:
+    """Process a withdrawal request (approve or reject)."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            async with conn.execute("""
+                SELECT user_id, amount, status FROM withdrawal_requests WHERE id = ?
+            """, (withdrawal_id,)) as cursor:
+                row = await cursor.fetchone()
+                if not row or row[2] != 'pending':
+                    return False
+                
+                user_id, amount = row[0], row[1]
+            
+            await conn.execute("BEGIN")
+            try:
+                if approved:
+                    wallet = await get_or_create_wallet(user_id)
+                    if wallet["balance"] < amount:
+                        await conn.rollback()
+                        return False
+                    
+                    await conn.execute("""
+                        UPDATE wallets 
+                        SET balance = balance - ?, last_updated = datetime('now')
+                        WHERE user_id = ?
+                    """, (amount, user_id))
+                    
+                    status = 'approved'
+                else:
+                    status = 'rejected'
+                
+                await conn.execute("""
+                    UPDATE withdrawal_requests 
+                    SET status = ?, processed_at = datetime('now'), processed_by = ?, notes = ?
+                    WHERE id = ?
+                """, (status, admin_id, notes, withdrawal_id))
+                
+                await conn.commit()
+                return True
+            except:
+                await conn.rollback()
+                raise
+    except Exception as e:
+        logger.error(f"Error processing withdrawal {withdrawal_id}: {e}")
+        return False
+
+async def get_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
+    """Get top referrers by total earned (weekly leaderboard)."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("""
+                SELECT w.user_id, u.username, w.total_earned
+                FROM wallets w
+                LEFT JOIN users u ON w.user_id = u.user_id
+                WHERE w.total_earned > 0
+                ORDER BY w.total_earned DESC
+                LIMIT ?
+            """, (limit,)) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting leaderboard: {e}")
+        return []

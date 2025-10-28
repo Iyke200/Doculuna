@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.db import get_user_data, update_user_data
+from database.db import get_user_data, update_user_data, complete_referral
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -74,6 +74,10 @@ async def activate_premium(user_id: int, transaction: Any, plan: PremiumPlan) ->
             "premium_expiry": expiry_date.isoformat(),
             "is_premium": True
         })
+        
+        referrer_id = await complete_referral(user_id, plan_data["id"])
+        if referrer_id:
+            logger.info(f"Referral reward credited to user {referrer_id} for referring {user_id}")
         
         logger.info(f"Premium activated for user {user_id}, plan: {plan_data['id']}")
         return True

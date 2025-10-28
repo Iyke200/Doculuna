@@ -98,3 +98,24 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (processed_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE IF NOT EXISTS wallets (
+    user_id INTEGER PRIMARY KEY,
+    balance INTEGER DEFAULT 0,
+    total_earned INTEGER DEFAULT 0,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS referral_relationships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referrer_id INTEGER,
+    referred_id INTEGER UNIQUE,
+    plan_type TEXT,
+    reward_amount INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    rewarded_at DATETIME,
+    FOREIGN KEY (referrer_id) REFERENCES users(user_id),
+    FOREIGN KEY (referred_id) REFERENCES users(user_id)
+);

@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import FSInputFile
 
 from utils.usage_tracker import check_usage_limit, increment_usage
-from utils.simple_watermark import add_pdf_watermark, add_docx_watermark
+from utils.watermark import WatermarkManager, WatermarkConfig
 from tools.pdf_to_word import PDFToWordConverter
 from tools.word_to_pdf import WordToPDFConverter
 from tools.compress import PDFCompressor, DOCXCompressor, CompressionLevel
@@ -17,9 +17,14 @@ from tools.image_to_pdf import handle_image_to_pdf
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize watermark manager
+watermark_manager = WatermarkManager()
+WATERMARK_TEXT = "Processed with DocuLuna - Upgrade for Watermark-Free"
 
 async def handle_document(message: types.Message, state: FSMContext):
     """Handle file received."""
@@ -123,7 +128,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         if operation == "convert_file":
             result_file_path = await convert_file(callback.bot, file_id, file_name, user_id)
         elif operation == "compress_file":
-            result_file_path = await compress_file(callback.bot, file_id, file_name)
+            result_file_path = await compress_file(callback.bot, file_id, file_name, user_id)
         elif operation == "compress_image":
             result_file_path = await compress_image(callback.bot, file_id, file_name)
         elif operation == "image_to_pdf":
@@ -206,7 +211,7 @@ async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = No
                 user_data = await get_user_data(user_id)
                 is_premium = user_data.get('is_premium', False) if user_data else False
                 if not is_premium:
-                    add_docx_watermark(output_path)
+                    await add_watermark_to_docx(output_path)
                     logger.info(f"Added watermark to DOCX for free user {user_id}")
                     
         elif file_name.lower().endswith(('.docx', '.doc')):
@@ -224,7 +229,7 @@ async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = No
                 user_data = await get_user_data(user_id)
                 is_premium = user_data.get('is_premium', False) if user_data else False
                 if not is_premium:
-                    add_pdf_watermark(output_path)
+                    await add_watermark_to_pdf(output_path)
                     logger.info(f"Added watermark to PDF for free user {user_id}")
                     
         else:
@@ -240,7 +245,7 @@ async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = No
         logger.error(f"Conversion error: {e}", exc_info=True)
         raise
 
-async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
+async def compress_file(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Compress PDF or DOCX file."""
     try:
         file = await bot.get_file(file_id)
@@ -256,6 +261,15 @@ async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
                 CompressionLevel.MEDIUM
             )
             logger.info(f"PDF compressed: {original_size} → {compressed_size} bytes")
+            
+            if user_id:
+                from database.db import get_user_data
+                user_data = await get_user_data(user_id)
+                is_premium = user_data.get('is_premium', False) if user_data else False
+                if not is_premium:
+                    await add_watermark_to_pdf(output_path)
+                    logger.info(f"Added watermark to compressed PDF for free user {user_id}")
+                    
         elif file_name.lower().endswith('.docx'):
             original_size, compressed_size = DOCXCompressor.compress_docx(
                 input_path, 
@@ -263,6 +277,15 @@ async def compress_file(bot: Bot, file_id: str, file_name: str) -> str:
                 CompressionLevel.MEDIUM
             )
             logger.info(f"DOCX compressed: {original_size} → {compressed_size} bytes")
+            
+            if user_id:
+                from database.db import get_user_data
+                user_data = await get_user_data(user_id)
+                is_premium = user_data.get('is_premium', False) if user_data else False
+                if not is_premium:
+                    await add_watermark_to_docx(output_path)
+                    logger.info(f"Added watermark to compressed DOCX for free user {user_id}")
+                    
         else:
             raise ValueError("Unsupported file type for compression")
         
@@ -337,7 +360,7 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = No
             user_data = await get_user_data(user_id)
             is_premium = user_data.get('is_premium', False) if user_data else False
             if not is_premium:
-                add_pdf_watermark(output_path)
+                await add_watermark_to_pdf(output_path)
                 logger.info(f"Added watermark to PDF for free user {user_id}")
         
         try:
@@ -350,6 +373,80 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = No
     except Exception as e:
         logger.error(f"Image to PDF error: {e}", exc_info=True)
         raise
+
+async def add_watermark_to_pdf(pdf_path: str):
+    """Add watermark to PDF using comprehensive watermark system."""
+    try:
+        # Read PDF file
+        with open(pdf_path, 'rb') as f:
+            pdf_data = f.read()
+        
+        # Configure watermark for bottom of page
+        config = WatermarkConfig(
+            text=WATERMARK_TEXT,
+            position="bottom-center",
+            opacity=0.4,
+            font_size=9,
+            font_color=(128, 128, 128),
+            rotation=0
+        )
+        
+        # Add watermark
+        watermarked_data = await watermark_manager.add_text_watermark(
+            BytesIO(pdf_data),
+            WATERMARK_TEXT,
+            config,
+            output_format='.pdf'
+        )
+        
+        # Save watermarked PDF
+        with open(pdf_path, 'wb') as f:
+            f.write(watermarked_data)
+        
+        logger.info(f"Added watermark to PDF: {pdf_path}")
+        
+    except Exception as e:
+        logger.error(f"Error adding PDF watermark: {e}", exc_info=True)
+
+async def add_watermark_to_docx(docx_path: str):
+    """Add watermark to DOCX using footer."""
+    try:
+        from docx import Document
+        from docx.shared import Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        
+        # Run in executor since python-docx is sync
+        import asyncio
+        loop = asyncio.get_event_loop()
+        
+        def add_footer_watermark():
+            doc = Document(docx_path)
+            
+            # Add to footer of first section
+            section = doc.sections[0]
+            footer = section.footer
+            
+            if footer.paragraphs:
+                paragraph = footer.paragraphs[0]
+            else:
+                paragraph = footer.add_paragraph()
+            
+            paragraph.text = WATERMARK_TEXT
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            if paragraph.runs:
+                run = paragraph.runs[0]
+                run.font.size = Pt(8)
+                run.font.color.rgb = RGBColor(128, 128, 128)
+                run.font.italic = True
+            
+            doc.save(docx_path)
+        
+        await loop.run_in_executor(None, add_footer_watermark)
+        logger.info(f"Added watermark to DOCX: {docx_path}")
+        
+    except Exception as e:
+        logger.error(f"Error adding DOCX watermark: {e}", exc_info=True)
 
 def register_file_handlers(dp: Dispatcher):
     """Register file handlers."""

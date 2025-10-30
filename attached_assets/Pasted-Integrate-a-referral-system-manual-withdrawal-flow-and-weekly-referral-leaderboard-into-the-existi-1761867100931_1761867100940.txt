@@ -1,0 +1,267 @@
+Integrate a referral system, manual withdrawal flow, and weekly referral leaderboard into the existing asynchronous Telegram bot.
+Do not alter existing project structure — keep everything inside handlers/, database/, keyboards/, and utils/.
+
+
+---
+
+🏠 Main Menu (Inline)
+
+When user sends /start or selects “🏦 Wallet”, display:
+
+💼 Doculuna Wallet  
+Balance: ₦{balance}  
+Total Earned: ₦{total_earned}
+
+👥 Referrals: {total_referrals}
+🔗 Referral Code: {referral_code}
+
+Options:
+[💰 Withdraw] [📊 Referral Stats]  
+[📜 Withdrawal History] [🏆 Leaderboard]
+
+
+---
+
+👥 Referral System
+
+Every user automatically gets a unique referral code: DOCU<user_id>.
+
+When a new user joins using someone’s referral code or link, save referrer_id.
+
+Each user can only be referred once.
+
+Referrers earn only when the referred user successfully purchases a premium plan.
+
+
+Premium Plan Rewards:
+
+Weekly (₦1,000) → referrer earns ₦150
+
+Monthly (₦3,500) → referrer earns ₦350
+
+Reward credited immediately after payment confirmation.
+
+
+Referral Table
+
+class Referral(Base):
+    id: int
+    referrer_id: int
+    referred_id: int
+    plan_type: str  # "weekly" or "monthly"
+    reward_amount: int
+    status: str  # "pending" or "completed"
+    created_at: datetime
+
+Wallet Table
+
+class Wallet(Base):
+    user_id: int
+    balance: int = 0
+    total_earned: int = 0
+
+On reward:
+
+wallet.balance += reward_amount
+wallet.total_earned += reward_amount
+
+
+---
+
+💸 Manual Withdrawal Flow
+
+Minimum: ₦2,000
+Process:
+
+1. User clicks “💰 Withdraw”.
+
+
+2. Bot asks for:
+
+Amount
+
+Account name
+
+Bank name
+
+Account number
+
+
+
+3. Save request to database as "pending".
+
+
+4. Notify user:
+
+> “✅ Withdrawal request submitted and is pending admin review.”
+
+
+
+
+
+WithdrawalRequest Table
+
+class WithdrawalRequest(Base):
+    id: int
+    user_id: int
+    amount: int
+    account_name: str
+    bank_name: str
+    account_number: str
+    status: str  # "pending", "approved", "rejected"
+    created_at: datetime
+    processed_at: datetime | None
+
+
+---
+
+🧑‍💼 Admin Flow
+
+When a withdrawal is created:
+
+Bot sends admin message:
+
+💸 New Withdrawal Request
+User: @username (ID: {user_id})
+Amount: ₦{amount}
+Account Name: {account_name}
+Bank: {bank_name}
+Account Number: {account_number}
+
+Inline admin buttons: Approve ✅ | Reject ❌
+
+
+If Approved:
+
+Deduct from wallet.
+
+Update status to "approved".
+
+Notify user:
+
+> “✅ Your ₦{amount} withdrawal has been approved.”
+
+
+
+
+If Rejected:
+
+Mark as "rejected", do not deduct funds.
+
+Notify user.
+
+
+
+---
+
+📊 Referral Stats Menu
+
+When user clicks “📊 Referral Stats”:
+
+👥 Referral Summary
+Total Referrals: {count}
+Completed Referrals: {completed}
+Pending Referrals: {pending}
+
+💸 Total Earned from Referrals: ₦{total_earned}
+🔗 Your Referral Link: t.me/{BOT_USERNAME}?start={referral_code}
+
+
+---
+
+🏆 Leaderboard System
+
+Show top 10 referrers (based on total completed referrals or total earned).
+
+Update automatically each week.
+
+Store leaderboard data in a Leaderboard table or generate dynamically.
+
+
+Display:
+
+🏆 Weekly Referral Leaderboard
+
+1️⃣ @username1 — ₦4500
+2️⃣ @username2 — ₦3800
+3️⃣ @username3 — ₦3100
+...
+10️⃣ @username10 — ₦900
+
+🔥 Keep referring to reach the top!
+
+Leaderboard Table (optional)
+
+class Leaderboard(Base):
+    id: int
+    user_id: int
+    total_earned: int
+    week_start: date
+    week_end: date
+
+If dynamic, simply query top users by Wallet.total_earned within the last 7 days.
+
+
+---
+
+📜 Withdrawal History
+
+When user clicks “📜 Withdrawal History”:
+
+📜 Your Withdrawal History
+
+1. ₦1500 - Pending
+2. ₦2000 - Approved
+3. ₦1000 - Rejected
+
+If none:
+
+> “You have no past withdrawals yet.”
+
+
+
+
+---
+
+⚙️ General Rules
+
+Use async/await everywhere.
+
+Validate:
+
+No duplicate referrals.
+
+No withdrawal below ₦2,000.
+
+No multiple pending withdrawals.
+
+
+Notify users and admin for every action.
+
+Keep code modular, clean, and readable.
+
+Inline keyboards for everything — no text-based command input.
+
+Maintain existing handlers and file structure.
+
+
+
+---
+
+🧩 Inline Keyboards
+
+User Menu
+
+[
+  [InlineKeyboardButton("💰 Withdraw", callback_data="withdraw")],
+  [InlineKeyboardButton("📊 Referral Stats", callback_data="ref_stats")],
+  [InlineKeyboardButton("📜 Withdrawal History", callback_data="withdraw_history")],
+  [InlineKeyboardButton("🏆 Leaderboard", callback_data="leaderboard")]
+]
+
+Admin Menu
+
+[
+  [InlineKeyboardButton("✅ Approve", callback_data="approve_{id}")],
+  [InlineKeyboardButton("❌ Reject", callback_data="reject_{id}")]
+]

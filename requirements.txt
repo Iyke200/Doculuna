@@ -48,3 +48,7 @@ PyPDF2
 python-docx
 python-dotenv
 reportlab
+aiosqlite
+cryptography
+pikepdf
+psutil

@@ -11,10 +11,13 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.pdfgen import canvas
 from config import MAX_FILE_SIZE_FREE, MAX_FILE_SIZE_PREMIUM
 from database.db import get_user_data, update_user_data
-# from utils.watermark import add_pdf_watermark  # Temporarily disabled
+from utils.watermark import WatermarkManager, WatermarkConfig
 from utils.usage_tracker import increment_usage
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
+watermark_manager = WatermarkManager()
+WATERMARK_TEXT = "Processed with DocuLuna - Upgrade for Watermark-Free"
 
 async def handle_image_to_pdf(message: types.Message, state: FSMContext = None):
     """Convert image to PDF document."""
@@ -89,9 +92,33 @@ async def handle_image_to_pdf(message: types.Message, state: FSMContext = None):
         c.drawImage(input_path, x, y, width=scaled_width, height=scaled_height)
         c.save()
 
-        # Add watermark for free users (commented out for now)
-        # if not is_premium:
-        #     add_pdf_watermark(output_path)
+        # Add watermark for free users
+        if not is_premium:
+            try:
+                with open(output_path, 'rb') as f:
+                    pdf_data = f.read()
+                
+                config = WatermarkConfig(
+                    text=WATERMARK_TEXT,
+                    position="bottom-center",
+                    opacity=0.3,
+                    font_size=36,
+                    rotation=0
+                )
+                
+                watermarked_data = await watermark_manager.add_text_watermark(
+                    BytesIO(pdf_data),
+                    WATERMARK_TEXT,
+                    config,
+                    output_format="pdf"
+                )
+                
+                with open(output_path, 'wb') as f:
+                    f.write(watermarked_data)
+                
+                logger.info(f"Added watermark to PDF for free user {user_id}")
+            except Exception as e:
+                logger.error(f"Error adding watermark: {e}")
 
         # Send the converted file
         with open(output_path, "rb") as pdf_file:

@@ -180,9 +180,12 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
 async def handle_refer_and_earn(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle 'Refer & Earn' button."""
     user_id = callback.from_user.id
-    bot_username = "DocuLunaBot"
     
     try:
+        bot = callback.bot
+        bot_info = await bot.get_me()
+        bot_username = bot_info.username or "DocuLuna_OfficialBot"
+        
         referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
         
         referral_text = (

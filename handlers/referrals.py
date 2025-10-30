@@ -28,9 +28,12 @@ class WithdrawalStates(StatesGroup):
 async def refer_command_handler(message: types.Message, state: FSMContext) -> None:
     """Handle /refer command - shows referral info and earnings."""
     user_id = message.from_user.id
-    bot_username = "DocuLunaBot"
     
     try:
+        bot = message.bot
+        bot_info = await bot.get_me()
+        bot_username = bot_info.username or "DocuLuna_OfficialBot"
+        
         user_data = await get_user_data(user_id)
         referral_earnings = user_data.get('referral_earnings', 0) if user_data else 0
         referral_count = user_data.get('referral_count', 0) if user_data else 0

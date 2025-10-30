@@ -92,9 +92,10 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
         builder = InlineKeyboardBuilder()
         builder.button(text="📂 Process Document", callback_data="process_document")
         builder.button(text="💎 Go Premium", callback_data="go_premium")
+        builder.button(text="🏦 Wallet", callback_data="wallet")
         builder.button(text="👤 My Account", callback_data="my_account")
         builder.button(text="❓ Help", callback_data="help")
-        builder.adjust(2, 2)
+        builder.adjust(2, 2, 1)
         
         await message.reply(welcome_text, reply_markup=builder.as_markup())
         

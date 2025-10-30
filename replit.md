@@ -8,7 +8,13 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (October 28, 2025)
+## Recent Changes (October 30, 2025)
+- **Main Menu Wallet Access:** Added "🏦 Wallet" button to /start menu for easy access to wallet features
+- **Referral Link Fix:** Fixed "username not found" error by implementing dynamic bot.get_me() instead of hardcoded username
+- **Watermark Enhancement:** Enabled watermarking for image-to-PDF conversions for free users
+- **Feature Verification:** All wallet, referral, withdrawal, and leaderboard features tested and confirmed operational
+
+## Previous Changes (October 28, 2025)
 - **Complete Wallet System:** Implemented comprehensive wallet management with balance tracking, total earnings display, and referral code generation (format: DOCU{user_id}).
 - **Referral Tracking System:** New users using referral links are automatically tracked; referrers earn ₦150 for weekly plans and ₦350 for monthly plans when referred users purchase premium.
 - **Withdrawal Flow with FSM:** Multi-step withdrawal process collecting amount, account name, bank name, and account number with ₦2,000 minimum threshold and validation.

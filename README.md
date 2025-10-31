@@ -13,8 +13,8 @@ A professional Telegram bot for document processing, featuring PDF/Word conversi
 - 🗜️ **File Compression** - Reduce file sizes while maintaining quality
 
 ### Premium Features
-- 💎 **Weekly Premium** - ₦3,500 for 7 days of unlimited access
-- 💎 **Monthly Premium** - ₦1,000 for 30 days of unlimited access
+- 💎 **Weekly Premium** - ₦1,000 for 7 days of unlimited access
+- 💎 **Monthly Premium** - ₦3,500 for 30 days of unlimited access
 - 🎁 **Referral System** - Earn ₦500 for monthly referrals, ₦150 for weekly
 - 📊 **Usage Tracking** - Monitor your document processing activity
 - 🚀 **Priority Processing** - Faster processing for premium users

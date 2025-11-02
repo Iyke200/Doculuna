@@ -136,7 +136,7 @@ async def handle_image_to_pdf(message: types.Message, state: FSMContext = None):
             
             # Increment usage count for daily limits
             try:
-                await increment_usage(user_id, "image_to_pdf")
+                await increment_usage(user_id)
             except Exception as e:
                 logger.warning(f"Usage increment failed: {e}")
 

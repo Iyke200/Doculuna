@@ -13,7 +13,6 @@ from utils.watermark import WatermarkManager, WatermarkConfig
 from tools.pdf_to_word import PDFToWordConverter
 from tools.word_to_pdf import WordToPDFConverter
 from tools.compress import PDFCompressor, DOCXCompressor, CompressionLevel
-from tools.image_to_pdf import handle_image_to_pdf
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas

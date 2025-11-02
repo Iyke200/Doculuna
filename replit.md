@@ -8,7 +8,15 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (October 30, 2025)
+## Recent Changes (November 2, 2025)
+- **User Registration Fix:** Fixed `create_user` function to properly store `first_name` field, resolving admin panel user display issues
+- **Production Webhook Mode:** Implemented comprehensive webhook mode for Render deployment with proper webhook registration, health checks, and async server setup
+- **Render Deployment Config:** Added `render.yaml` for infrastructure-as-code deployment and comprehensive `RENDER_DEPLOYMENT.md` guide
+- **Health Check Endpoints:** Added `/health` and `/` endpoints for Render's health monitoring
+- **Environment Detection:** Bot automatically switches between polling (development) and webhook (production) based on `ENVIRONMENT` variable
+- **Webhook Management:** Automatic webhook deletion for polling mode and proper webhook URL registration for production
+
+## Previous Changes (October 30, 2025)
 - **Main Menu Wallet Access:** Added "🏦 Wallet" button to /start menu for easy access to wallet features
 - **Referral Link Fix:** Fixed "username not found" error by implementing dynamic bot.get_me() instead of hardcoded username
 - **Watermark Enhancement:** Enabled watermarking for image-to-PDF conversions for free users
@@ -32,6 +40,12 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 
 ### Core Design Principles
 The bot is built with a focus on modularity, scalability, and ease of use. It employs an asynchronous programming model using `aiogram` for efficient handling of Telegram API interactions. A key design decision was to integrate all document processing capabilities directly within Telegram, avoiding external websites or complex setups. The architecture supports both polling (development) and webhook (production) modes for deployment flexibility.
+
+### Deployment Modes
+- **Development (Polling):** Uses long-polling for local development and testing on Replit
+- **Production (Webhook):** Uses webhook mode for cloud deployment on Render with automatic webhook registration
+- **Mode Detection:** Automatically switches based on `ENVIRONMENT` variable (production/development)
+- **Health Monitoring:** Includes `/health` and `/` endpoints for platform health checks
 
 ### UI/UX Decisions
 The user interface is designed to be direct and functional. Key UX flows include:

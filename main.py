@@ -155,33 +155,78 @@ async def start_bot_clean():
     logger.info("✓ Bot created")
 
     # Start bot
-    logger.info("Starting bot polling...")
     print("🤖 DocuLuna Bot is now running!")
     print("✓ Database initialized")
     print("✓ Handlers registered")
-    print("✓ Polling started")
 
     logger.info("✅ DocuLuna started successfully")
 
     # Production webhook mode vs development polling mode
     webhook_url = os.getenv("WEBHOOK_URL")
     if os.getenv("ENVIRONMENT") == "production" and webhook_url:
-        port = int(os.getenv("PORT", 5000))
-        logger.info(f"🌐 Starting webhook mode on port {port}")
-        print(f"🌐 Webhook mode: {webhook_url}")
+        port = int(os.getenv("PORT", 10000))
+        webhook_path = "/webhook"
+        full_webhook_url = f"{webhook_url}{webhook_path}"
         
-        # For webhook mode in aiogram 3.22
+        logger.info(f"🌐 Starting webhook mode on port {port}")
+        logger.info(f"🌐 Webhook URL: {full_webhook_url}")
+        print(f"🌐 Webhook mode (production)")
+        print(f"🌐 Port: {port}")
+        print(f"🌐 Webhook URL: {full_webhook_url}")
+        
+        # Import webhook dependencies
         from aiohttp import web
         from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
         
+        # Delete existing webhook and set new one
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            logger.info("✓ Deleted old webhook")
+            
+            await bot.set_webhook(
+                url=full_webhook_url,
+                allowed_updates=["message", "callback_query"],
+                drop_pending_updates=False
+            )
+            logger.info(f"✓ Webhook set to: {full_webhook_url}")
+        except Exception as e:
+            logger.error(f"Error setting webhook: {e}")
+            raise
+        
+        # Create aiohttp application
         app = web.Application()
-        SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+        
+        # Health check endpoint for Render
+        async def health_check(request):
+            return web.Response(text="OK", status=200)
+        
+        app.router.add_get("/", health_check)
+        app.router.add_get("/health", health_check)
+        
+        # Register webhook handler
+        SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=webhook_path)
         setup_application(app, dp, bot=bot)
         
-        web.run_app(app, host="0.0.0.0", port=port)
+        # Start web server
+        logger.info(f"🚀 Starting web server on 0.0.0.0:{port}")
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, host="0.0.0.0", port=port)
+        await site.start()
+        logger.info("✓ Webhook server started successfully")
+        
+        # Keep the application running
+        await asyncio.Event().wait()
     else:
         logger.info("🔄 Starting polling mode (development)")
         print("🔄 Polling mode (development)")
+        
+        # Delete webhook if any (ensure polling works)
+        try:
+            await bot.delete_webhook(drop_pending_updates=False)
+            logger.info("✓ Webhook deleted for polling mode")
+        except Exception as e:
+            logger.warning(f"Could not delete webhook: {e}")
         
         # Start polling in aiogram 3.22 style
         await dp.start_polling(bot, allowed_updates=["message", "callback_query"])

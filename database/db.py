@@ -243,9 +243,9 @@ async def create_user(user_data: Dict[str, Any]) -> bool:
         
         async with aiosqlite.connect(DATABASE_PATH) as conn:
             await conn.execute("""
-                INSERT OR IGNORE INTO users (user_id, username, created_at, last_active, usage_today, usage_reset_date)
-                VALUES (?, ?, datetime('now'), datetime('now'), 0, date('now'))
-            """, (user_id, username))
+                INSERT OR IGNORE INTO users (user_id, username, first_name, created_at, last_active, usage_today, usage_reset_date)
+                VALUES (?, ?, ?, datetime('now'), datetime('now'), 0, date('now'))
+            """, (user_id, username, first_name))
             await conn.commit()
             return conn.total_changes > 0
     except Exception as e:

@@ -6,6 +6,7 @@ import asyncio
 import shutil
 import io
 import csv
+import aiosqlite
 try:
     import psutil
 except ImportError:
@@ -38,9 +39,9 @@ if not os.getenv('BOT_TOKEN'):  # Example check; adjust as needed
 
 BOT_START_TIME = time.time()
 
-# Simple time-based cache for admin stats (expires after 30 seconds)
+# Simple time-based cache for admin stats (expires after 5 seconds for accuracy)
 _stats_cache = {}
-_cache_ttl = 30  # seconds
+_cache_ttl = 5  # seconds - reduced from 30 for more accurate admin data
 
 async def _get_cached_or_fetch_async(cache_key: str, fetch_func: Callable[[], Awaitable[Dict[str, Any]]]) -> Dict[str, Any]:
     """Get cached value or fetch fresh data if expired (async version)"""

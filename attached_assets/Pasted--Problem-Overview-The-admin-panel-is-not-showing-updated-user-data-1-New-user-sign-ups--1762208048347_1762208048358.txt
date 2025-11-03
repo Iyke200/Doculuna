@@ -1,0 +1,86 @@
+
+ 
+**Problem Overview**: The admin panel is not showing updated user data:
+ 
+ 
+1. New user sign-ups aren’t appearing in the user management section.
+ 
+2. Premium status changes (e.g., temporary upgrades) are not expiring correctly after the specified duration.
+ 
+
+ 
+**Objective**: Ensure that:
+ 
+ 
+- New user data appears immediately in the admin panel.
+ 
+- Premium status updates (with expiration) are correctly applied and reflected in both the database and the admin panel.
+ 
+
+  
+**Troubleshooting Steps**:
+ 
+ 
+1.  
+**Database Synchronization**:
+ 
+ 
+  - Ensure that new user sign-ups and premium status changes are being correctly written to your database.
+ 
+  - Confirm that the admin panel is querying the most up-to-date user data. If using SQLite or another database, check if the data is being committed and saved properly.
+ 
+
+ 
+ 
+2.  
+**Check Caching**:
+ 
+ 
+  - If the admin panel uses caching, ensure that it is clearing the cache after any updates to user data (sign-ups or premium status).
+ 
+  - Test the admin panel by manually refreshing the page or forcing it to pull fresh data.
+ 
+
+ 
+ 
+3.  
+**Verify Premium Status Expiration Logic**:
+ 
+ 
+  - Check your code to ensure the premium status is being updated correctly after the time period has passed.
+ 
+  - Use Python's `datetime` module to track time accurately and set up a cron job or scheduled task to check for expired statuses.
+ 
+
+ 
+ 
+4.  
+**Scheduled Tasks (Cron Jobs)**:
+ 
+ 
+  - If you’re using scheduled tasks to handle premium expiration (e.g., with `schedule` or `APScheduler`), ensure the task is running as expected and is correctly updating the user's premium status.
+ 
+  - Verify that your bot is checking for premium status expiration at regular intervals.
+ 
+
+ 
+ 
+5.  
+**Polling vs Webhooks**:
+ 
+ 
+  - If using polling, ensure that the bot is actively listening for updates and not getting "stuck" or "sleeping" due to inactivity.
+ 
+  - If using webhooks, check that the webhook is correctly configured and receiving updates in real-time.
+ 
+
+ 
+ 
+6.  
+**Logging and Error Handling**:
+ 
+ 
+  - Implement logging to capture any errors or issues related to user data updates (use Python’s `logging` module).
+ 
+  - Check if any exceptions are preventing status updates or database writes.
+ 

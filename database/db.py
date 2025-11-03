@@ -334,6 +334,26 @@ async def update_user_premium_status(user_id: int, days: int) -> bool:
         logger.error(f"Error updating premium status for {user_id}: {e}")
         return False
 
+async def expire_premium_statuses() -> int:
+    """Check and expire premium statuses for users whose expiry date has passed."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as conn:
+            cursor = await conn.execute("""
+                UPDATE users 
+                SET is_premium = 0
+                WHERE is_premium = 1 
+                AND premium_expiry IS NOT NULL 
+                AND premium_expiry < datetime('now')
+            """)
+            await conn.commit()
+            expired_count = cursor.rowcount
+            if expired_count > 0:
+                logger.info(f"Expired premium status for {expired_count} user(s)")
+            return expired_count
+    except Exception as e:
+        logger.error(f"Error expiring premium statuses: {e}")
+        return 0
+
 async def get_pending_payments() -> List[Dict[str, Any]]:
     """Get all pending payments."""
     try:

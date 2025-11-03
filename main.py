@@ -40,7 +40,7 @@ dp = Dispatcher(storage=MemoryStorage())
 def import_handlers():
     """Import handler registration functions."""
     try:
-        from database.db import init_db
+        from database.db import init_db, expire_premium_statuses
         from handlers.start import register_start_handlers
         from handlers.referrals import register_referral_handlers
         from handlers.premium import register_premium_handlers
@@ -58,6 +58,7 @@ def import_handlers():
 
         return {
             "init_db": init_db,
+            "expire_premium_statuses": expire_premium_statuses,
             "register_start_handlers": register_start_handlers,
             "register_referral_handlers": register_referral_handlers,
             "register_premium_handlers": register_premium_handlers,

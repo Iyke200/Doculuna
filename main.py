@@ -130,6 +130,22 @@ def register_handlers():
     logger.info("✓ All handlers registered")
     return handlers
 
+async def premium_expiry_task(expire_premium_statuses_func):
+    """Background task to check and expire premium statuses periodically."""
+    logger.info("⏰ Starting premium expiry background task")
+    while True:
+        try:
+            await asyncio.sleep(3600)  # Check every hour
+            expired_count = await expire_premium_statuses_func()
+            if expired_count > 0:
+                logger.info(f"✅ Background task: Expired {expired_count} premium subscription(s)")
+        except asyncio.CancelledError:
+            logger.info("⏹ Premium expiry task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in premium expiry task: {e}", exc_info=True)
+            await asyncio.sleep(60)  # Wait a minute before retrying
+
 async def start_bot_clean():
     """Start the bot with clean initialization."""
     logger.info("🚀 Starting DocuLuna Bot...")
@@ -146,6 +162,15 @@ async def start_bot_clean():
     logger.info("Initializing database...")
     await handlers["init_db"]()
     logger.info("✓ Database initialized")
+    
+    # Run initial premium expiry check
+    expired_count = await handlers["expire_premium_statuses"]()
+    if expired_count > 0:
+        logger.info(f"✅ Initial check: Expired {expired_count} premium subscription(s)")
+    
+    # Start background task for premium expiry
+    expiry_task = asyncio.create_task(premium_expiry_task(handlers["expire_premium_statuses"]))
+    logger.info("✓ Premium expiry background task started")
 
     # Create Bot instance
     logger.info("Creating Telegram bot...")
@@ -159,6 +184,7 @@ async def start_bot_clean():
     print("🤖 DocuLuna Bot is now running!")
     print("✓ Database initialized")
     print("✓ Handlers registered")
+    print("✓ Premium expiry task running")
 
     logger.info("✅ DocuLuna started successfully")
 

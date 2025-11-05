@@ -43,6 +43,12 @@ BOT_START_TIME = time.time()
 _stats_cache = {}
 _cache_ttl = 5  # seconds - reduced from 30 for more accurate admin data
 
+def clear_admin_cache():
+    """Clear all admin panel caches to ensure fresh data"""
+    global _stats_cache
+    _stats_cache.clear()
+    logger.info("Admin cache cleared")
+
 async def _get_cached_or_fetch_async(cache_key: str, fetch_func: Callable[[], Awaitable[Dict[str, Any]]]) -> Dict[str, Any]:
     """Get cached value or fetch fresh data if expired (async version)"""
     now = time.time()

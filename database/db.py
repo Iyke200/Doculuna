@@ -9,6 +9,16 @@ from config import DB_PATH as DATABASE_PATH
 
 logger = logging.getLogger(__name__)
 
+def _clear_admin_cache_safe():
+    """Safely clear admin cache (imported dynamically to avoid circular import)"""
+    try:
+        from handlers.admin import clear_admin_cache
+        clear_admin_cache()
+    except ImportError:
+        pass  # Admin module not yet loaded, cache will be fresh anyway
+    except Exception as e:
+        logger.debug(f"Could not clear admin cache: {e}")
+
 # Minimal schema fallback if schema.sql missing
 MINIMAL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -219,6 +229,10 @@ async def update_user_data(user_id: int, data: Dict[str, Any]):
                     days = data.get('days', 30)
                     await update_user_premium_status(user_id, days)
             
+            # Always update last_active when user data is updated
+            if 'last_active' not in data:
+                data['last_active'] = 'datetime_now'
+            
             # Other updates
             update_fields = []
             values = []
@@ -226,7 +240,9 @@ async def update_user_data(user_id: int, data: Dict[str, Any]):
                 if key in ['username', 'last_active', 'preferences', 'onboarding_complete', 
                           'onboarding_date', 'language', 'timezone', 'total_interactions',
                           'premium_status', 'referral_used', 'usage_today', 'usage_reset_date']:
-                    if isinstance(value, (str, int, float, bool)):
+                    if value == 'datetime_now':
+                        update_fields.append(f"{key} = datetime('now')")
+                    elif isinstance(value, (str, int, float, bool)):
                         update_fields.append(f"{key} = ?")
                         values.append(value)
                     else:
@@ -267,7 +283,14 @@ async def create_user(user_data: Dict[str, Any]) -> bool:
                 VALUES (?, ?, ?, datetime('now'), datetime('now'), 0, date('now'))
             """, (user_id, username, first_name))
             await conn.commit()
-            return conn.total_changes > 0
+            result = conn.total_changes > 0
+            
+            # Clear admin cache when new user is created
+            if result:
+                _clear_admin_cache_safe()
+                logger.info(f"New user created: {user_id}")
+            
+            return result
     except Exception as e:
         logger.error(f"Error creating user: {e}")
         return False
@@ -311,13 +334,20 @@ async def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     return await get_user_data(user_id)
 
 async def add_usage_log(user_id: int, tool: str, is_success: bool = True) -> bool:
-    """Log user tool usage."""
+    """Log user tool usage and update last_active timestamp."""
     try:
         async with aiosqlite.connect(DATABASE_PATH) as conn:
             await conn.execute("""
                 INSERT INTO usage_logs (user_id, tool, timestamp, is_success)
                 VALUES (?, ?, datetime('now'), ?)
             """, (user_id, tool, 1 if is_success else 0))
+            
+            # Update last_active when user uses a tool
+            await conn.execute("""
+                UPDATE users SET last_active = datetime('now')
+                WHERE user_id = ?
+            """, (user_id,))
+            
             await conn.commit()
             return True
     except Exception as e:
@@ -349,7 +379,14 @@ async def update_user_premium_status(user_id: int, days: int) -> bool:
                 WHERE user_id = ?
             """, (days, user_id))
             await conn.commit()
-            return conn.total_changes > 0
+            result = conn.total_changes > 0
+            
+            # Clear admin cache when premium status changes
+            if result:
+                _clear_admin_cache_safe()
+                logger.info(f"Premium status updated for user {user_id}: +{days} days")
+            
+            return result
     except Exception as e:
         logger.error(f"Error updating premium status for {user_id}: {e}")
         return False
@@ -368,6 +405,7 @@ async def expire_premium_statuses() -> int:
             await conn.commit()
             expired_count = cursor.rowcount
             if expired_count > 0:
+                _clear_admin_cache_safe()
                 logger.info(f"Expired premium status for {expired_count} user(s)")
             return expired_count
     except Exception as e:

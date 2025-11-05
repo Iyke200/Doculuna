@@ -203,21 +203,49 @@ async def add_referral_reward(user_id: int, amount: int, plan_type: str):
         async with aiosqlite.connect(DATABASE_PATH) as conn:
             await conn.execute("BEGIN")
             try:
+                # Ensure wallet exists before updating (atomic upsert)
+                await conn.execute("""
+                    INSERT OR IGNORE INTO wallets (user_id, balance, total_earned, last_updated)
+                    VALUES (?, 0, 0, datetime('now'))
+                """, (user_id,))
+                
+                # Insert reward record
                 await conn.execute("""
                     INSERT INTO referral_rewards (user_id, amount, plan_type, timestamp)
                     VALUES (?, ?, ?, datetime('now'))
                 """, (user_id, amount, plan_type))
+                
+                # Update wallet balance atomically and verify it succeeded
+                cursor = await conn.execute("""
+                    UPDATE wallets 
+                    SET balance = balance + ?,
+                        total_earned = total_earned + ?,
+                        last_updated = datetime('now')
+                    WHERE user_id = ?
+                """, (amount, amount, user_id))
+                
+                # Verify wallet was updated (rowcount should be 1)
+                if cursor.rowcount == 0:
+                    await conn.rollback()
+                    logger.error(f"Wallet update failed for user {user_id} - no rows affected")
+                    raise ValueError(f"Failed to credit wallet for user {user_id}")
+                
+                # Update referrals table for stats
                 await conn.execute("""
                     UPDATE referrals 
                     SET total_earnings = COALESCE(total_earnings, 0) + ?
                     WHERE user_id = ?
                 """, (amount, user_id))
+                
                 await conn.commit()
-            except:
+                logger.info(f"Referral reward added: user={user_id}, amount=₦{amount}, plan={plan_type}")
+            except Exception as e:
                 await conn.rollback()
+                logger.error(f"Transaction failed adding referral reward for user {user_id}: {e}")
                 raise
     except Exception as e:
         logger.error(f"Error adding referral reward for user {user_id}: {e}")
+        raise
 
 async def update_user_data(user_id: int, data: Dict[str, Any]):
     """Generic user data update with type guards."""
@@ -654,46 +682,56 @@ async def get_withdrawal_requests(user_id: Optional[int] = None, status: Optiona
         return []
 
 async def process_withdrawal(withdrawal_id: int, admin_id: int, approved: bool, notes: str = "") -> bool:
-    """Process a withdrawal request (approve or reject)."""
+    """Process a withdrawal request (approve or reject) with atomic balance check."""
     try:
         async with aiosqlite.connect(DATABASE_PATH) as conn:
+            # Get withdrawal details
             async with conn.execute("""
                 SELECT user_id, amount, status FROM withdrawal_requests WHERE id = ?
             """, (withdrawal_id,)) as cursor:
                 row = await cursor.fetchone()
                 if not row or row[2] != 'pending':
+                    logger.warning(f"Withdrawal {withdrawal_id} not found or already processed")
                     return False
                 
                 user_id, amount = row[0], row[1]
             
+            # Start atomic transaction
             await conn.execute("BEGIN")
             try:
                 if approved:
-                    wallet = await get_or_create_wallet(user_id)
-                    if wallet["balance"] < amount:
-                        await conn.rollback()
-                        return False
-                    
-                    await conn.execute("""
+                    # Atomic balance check and deduction in single statement
+                    # This prevents race conditions - only deducts if balance is sufficient
+                    cursor = await conn.execute("""
                         UPDATE wallets 
                         SET balance = balance - ?, last_updated = datetime('now')
-                        WHERE user_id = ?
-                    """, (amount, user_id))
+                        WHERE user_id = ? AND balance >= ?
+                    """, (amount, user_id, amount))
+                    
+                    # Check if update succeeded (rowcount > 0 means balance was sufficient)
+                    if cursor.rowcount == 0:
+                        await conn.rollback()
+                        logger.warning(f"Withdrawal {withdrawal_id} rejected: insufficient balance for user {user_id}")
+                        return False
                     
                     status = 'approved'
+                    logger.info(f"Withdrawal {withdrawal_id} approved: user={user_id}, amount={amount}")
                 else:
                     status = 'rejected'
+                    logger.info(f"Withdrawal {withdrawal_id} rejected by admin {admin_id}")
                 
+                # Update withdrawal request status
                 await conn.execute("""
                     UPDATE withdrawal_requests 
                     SET status = ?, processed_at = datetime('now'), processed_by = ?, notes = ?
-                    WHERE id = ?
+                    WHERE id = ? AND status = 'pending'
                 """, (status, admin_id, notes, withdrawal_id))
                 
                 await conn.commit()
                 return True
-            except:
+            except Exception as e:
                 await conn.rollback()
+                logger.error(f"Transaction failed processing withdrawal {withdrawal_id}: {e}")
                 raise
     except Exception as e:
         logger.error(f"Error processing withdrawal {withdrawal_id}: {e}")

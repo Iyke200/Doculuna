@@ -119,3 +119,18 @@ CREATE TABLE IF NOT EXISTS referral_relationships (
     FOREIGN KEY (referrer_id) REFERENCES users(user_id),
     FOREIGN KEY (referred_id) REFERENCES users(user_id)
 );
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+    transaction_id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    gateway TEXT NOT NULL,
+    status TEXT NOT NULL,
+    metadata TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    webhook_received INTEGER DEFAULT 0,
+    retry_count INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);

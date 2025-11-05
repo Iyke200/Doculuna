@@ -316,8 +316,7 @@ class PaymentOrchestrator:
             return sorted(user_transactions, key=lambda x: x.updated_at, reverse=True)[offset:offset + limit]
     
     async def _store_transaction(self, transaction: Transaction) -> None:
-        """Internal: Store transaction in persistence layer."""
-        transaction_key = f"transaction:{transaction.user_id}:{transaction.transaction_id}"
+        """Internal: Store transaction in persistence layer (Redis or Database)."""
         transaction_data = {
             'transaction_id': transaction.transaction_id,
             'user_id': transaction.user_id,
@@ -325,22 +324,48 @@ class PaymentOrchestrator:
             'currency': transaction.currency,
             'gateway': transaction.gateway,
             'status': transaction.status.value,
-            'metadata': transaction.metadata,
+            'metadata': json.dumps(transaction.metadata),
             'created_at': transaction.created_at.isoformat(),
             'updated_at': transaction.updated_at.isoformat(),
-            'webhook_received': transaction.webhook_received,
+            'webhook_received': int(transaction.webhook_received),
             'retry_count': transaction.retry_count
         }
         
         if REDIS_AVAILABLE:
             # Set with 7-day expiration
+            transaction_key = f"transaction:{transaction.user_id}:{transaction.transaction_id}"
             redis_client.setex(transaction_key, 604800, json.dumps(transaction_data))
         else:
-            transaction_store[transaction_key] = transaction
+            # Persist to database when Redis is not available
+            from database.db import DATABASE_PATH
+            import aiosqlite
+            try:
+                async with aiosqlite.connect(DATABASE_PATH) as conn:
+                    await conn.execute("""
+                        INSERT OR REPLACE INTO payment_transactions 
+                        (transaction_id, user_id, amount, currency, gateway, status, 
+                         metadata, created_at, updated_at, webhook_received, retry_count)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        transaction_data['transaction_id'],
+                        transaction_data['user_id'],
+                        transaction_data['amount'],
+                        transaction_data['currency'],
+                        transaction_data['gateway'],
+                        transaction_data['status'],
+                        transaction_data['metadata'],
+                        transaction_data['created_at'],
+                        transaction_data['updated_at'],
+                        transaction_data['webhook_received'],
+                        transaction_data['retry_count']
+                    ))
+                    await conn.commit()
+                    logger.info(f"Transaction {transaction.transaction_id} persisted to database")
+            except Exception as e:
+                logger.error(f"Failed to persist transaction to database: {e}")
     
     async def _get_transaction(self, transaction_id: str) -> Optional[Transaction]:
-        """Internal: Retrieve transaction from persistence layer."""
-        # First try to find by transaction_id across all users
+        """Internal: Retrieve transaction from persistence layer (Redis or Database)."""
         if REDIS_AVAILABLE:
             pattern = f"transaction:*:*"
             keys = redis_client.keys(pattern)
@@ -349,13 +374,42 @@ class PaymentOrchestrator:
                     data = redis_client.get(key)
                     if data:
                         transaction_dict = json.loads(data)
+                        transaction_dict['status'] = PaymentStatus(transaction_dict['status'])
+                        transaction_dict['created_at'] = datetime.fromisoformat(transaction_dict['created_at'])
+                        transaction_dict['updated_at'] = datetime.fromisoformat(transaction_dict['updated_at'])
+                        transaction_dict['metadata'] = json.loads(transaction_dict.get('metadata', '{}'))
                         return Transaction(**transaction_dict)
             return None
         else:
-            for key, transaction in transaction_store.items():
-                if hasattr(transaction, 'transaction_id') and transaction.transaction_id == transaction_id:
-                    return transaction
-            return None
+            # Retrieve from database when Redis is not available
+            from database.db import DATABASE_PATH
+            import aiosqlite
+            try:
+                async with aiosqlite.connect(DATABASE_PATH) as conn:
+                    conn.row_factory = aiosqlite.Row
+                    async with conn.execute("""
+                        SELECT * FROM payment_transactions WHERE transaction_id = ?
+                    """, (transaction_id,)) as cursor:
+                        row = await cursor.fetchone()
+                        if row:
+                            row_dict = dict(row)
+                            return Transaction(
+                                transaction_id=row_dict['transaction_id'],
+                                user_id=row_dict['user_id'],
+                                amount=row_dict['amount'],
+                                currency=row_dict['currency'],
+                                gateway=row_dict['gateway'],
+                                status=PaymentStatus(row_dict['status']),
+                                metadata=json.loads(row_dict.get('metadata', '{}')),
+                                created_at=datetime.fromisoformat(row_dict['created_at']),
+                                updated_at=datetime.fromisoformat(row_dict['updated_at']),
+                                webhook_received=bool(row_dict.get('webhook_received', 0)),
+                                retry_count=row_dict.get('retry_count', 0)
+                            )
+                return None
+            except Exception as e:
+                logger.error(f"Failed to retrieve transaction from database: {e}")
+                return None
 
 # Global orchestrator instance
 payment_orchestrator = PaymentOrchestrator()

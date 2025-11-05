@@ -352,10 +352,14 @@ class AdvancedWordProcessor:
         Returns:
             Path to preprocessed DOCX
         """
+        created_temp = False
+        temp_file_path = None
         try:
             if temp_path is None:
                 with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp:
                     temp_path = tmp.name
+                    temp_file_path = temp_path
+                    created_temp = True
             
             doc = Document(docx_path)
             
@@ -387,7 +391,14 @@ class AdvancedWordProcessor:
             return temp_path
             
         except Exception as e:
-            logger.warning(f"Preprocessing warning: {e}")
+            logger.warning(f"Preprocessing failed: {e}")
+            # Cleanup temp file if we created it and preprocessing failed
+            if created_temp and temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                    logger.debug(f"Cleaned up failed preprocessing temp file: {temp_file_path}")
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to cleanup temp file {temp_file_path}: {cleanup_error}")
             return docx_path  # Return original if preprocessing fails
     
     @staticmethod
@@ -407,6 +418,7 @@ class AdvancedWordProcessor:
         Returns:
             Dictionary with conversion results
         """
+        processed_path = None
         try:
             logger.info("Starting optimized DOCX to PDF conversion")
             
@@ -446,13 +458,6 @@ class AdvancedWordProcessor:
             converted_size = os.path.getsize(output_path)
             size_change = ((converted_size - original_size) / original_size) * 100 if original_size > 0 else 0
             
-            # Cleanup temporary file if created
-            if processed_path != input_path:
-                try:
-                    os.unlink(processed_path)
-                except:
-                    pass
-            
             return {
                 'success': True,
                 'original_size': original_size,
@@ -470,6 +475,15 @@ class AdvancedWordProcessor:
         except Exception as e:
             logger.error(f"Optimized conversion error: {e}")
             raise ValueError(f"Optimized DOCX to PDF conversion failed: {str(e)}")
+        finally:
+            # Always cleanup temporary file, even if an error occurred
+            if processed_path and processed_path != input_path:
+                try:
+                    if os.path.exists(processed_path):
+                        os.unlink(processed_path)
+                        logger.debug(f"Cleaned up temporary file: {processed_path}")
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to cleanup temp file {processed_path}: {cleanup_error}")
 
 class DocumentConverter:
     """Main document conversion orchestrator."""

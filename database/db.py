@@ -120,6 +120,22 @@ async def init_db():
                 await conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
                 logger.info("Added role column")
             
+            # CRITICAL FIX: Add missing columns that admin panel expects
+            if 'created_at' not in columns:
+                # Add created_at column
+                await conn.execute("ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+                # If joined_at exists, copy its data to created_at
+                if 'joined_at' in columns:
+                    await conn.execute("UPDATE users SET created_at = joined_at WHERE created_at IS NULL")
+                logger.info("Added created_at column and migrated data from joined_at")
+            
+            if 'last_active' not in columns:
+                # Add last_active column
+                await conn.execute("ALTER TABLE users ADD COLUMN last_active DATETIME DEFAULT CURRENT_TIMESTAMP")
+                # Initialize with created_at or current time
+                await conn.execute("UPDATE users SET last_active = COALESCE(created_at, datetime('now')) WHERE last_active IS NULL")
+                logger.info("Added last_active column")
+            
             # Referral columns
             async with conn.execute("PRAGMA table_info(referrals)") as cursor:
                 ref_columns = [column[1] for column in await cursor.fetchall()]

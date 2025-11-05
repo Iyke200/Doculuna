@@ -9,6 +9,12 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
 ## Recent Changes (November 5, 2025)
+- **Admin Panel Data Accuracy Improvements:** Implemented comprehensive fixes to ensure real-time data accuracy in the admin panel:
+  - Added automatic cache invalidation when user data changes (new signups, premium updates, expiring subscriptions)
+  - Implemented hourly background task to automatically expire premium subscriptions with proper error handling
+  - Enhanced user activity tracking by updating `last_active` timestamp on all tool usage and data updates
+  - All database operations now trigger admin cache refresh ensuring panel always shows current data
+  - Cache TTL reduced to 5 seconds for better responsiveness while maintaining performance
 - **Admin Panel Schema Fix:** Fixed critical database schema mismatch where admin panel queries expected `created_at` and `last_active` columns that were missing from the users table. The database had `joined_at` instead. Added proper migration in `database/db.py` to add both columns with SQLite-compatible default handling (two-step: add column, then backfill values). Data from `joined_at` was migrated to `created_at` to preserve user registration history. This fix resolves admin panel user listing errors and ensures accurate user statistics display.
 
 ## Previous Changes (November 2, 2025)

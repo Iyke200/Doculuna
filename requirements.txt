@@ -89,3 +89,14 @@ PyPDF2
 python-docx
 python-dotenv
 reportlab
+aiofiles
+aiogram
+aiohttp
+docx2pdf
+pdf2docx
+Pillow
+PyMuPDF
+PyPDF2
+python-docx
+python-dotenv
+reportlab

@@ -8,7 +8,10 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (November 2, 2025)
+## Recent Changes (November 5, 2025)
+- **Admin Panel Schema Fix:** Fixed critical database schema mismatch where admin panel queries expected `created_at` and `last_active` columns that were missing from the users table. The database had `joined_at` instead. Added proper migration in `database/db.py` to add both columns with SQLite-compatible default handling (two-step: add column, then backfill values). Data from `joined_at` was migrated to `created_at` to preserve user registration history. This fix resolves admin panel user listing errors and ensures accurate user statistics display.
+
+## Previous Changes (November 2, 2025)
 - **User Registration Fix:** Fixed `create_user` function to properly store `first_name` field, resolving admin panel user display issues
 - **Production Webhook Mode:** Implemented comprehensive webhook mode for Render deployment with proper webhook registration, health checks, and async server setup
 - **Render Deployment Config:** Added `render.yaml` for infrastructure-as-code deployment and comprehensive `RENDER_DEPLOYMENT.md` guide

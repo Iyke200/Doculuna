@@ -121,17 +121,21 @@ async def init_db():
                 logger.info("Added role column")
             
             # CRITICAL FIX: Add missing columns that admin panel expects
+            # SQLite limitation: Cannot use CURRENT_TIMESTAMP with ALTER TABLE
+            # Solution: Add column with NULL default, then update rows
             if 'created_at' not in columns:
-                # Add created_at column
-                await conn.execute("ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
-                # If joined_at exists, copy its data to created_at
+                # Add created_at column without default
+                await conn.execute("ALTER TABLE users ADD COLUMN created_at DATETIME")
+                # If joined_at exists, copy its data to created_at; otherwise use current time
                 if 'joined_at' in columns:
                     await conn.execute("UPDATE users SET created_at = joined_at WHERE created_at IS NULL")
-                logger.info("Added created_at column and migrated data from joined_at")
+                else:
+                    await conn.execute("UPDATE users SET created_at = datetime('now') WHERE created_at IS NULL")
+                logger.info("Added created_at column and migrated data")
             
             if 'last_active' not in columns:
-                # Add last_active column
-                await conn.execute("ALTER TABLE users ADD COLUMN last_active DATETIME DEFAULT CURRENT_TIMESTAMP")
+                # Add last_active column without default
+                await conn.execute("ALTER TABLE users ADD COLUMN last_active DATETIME")
                 # Initialize with created_at or current time
                 await conn.execute("UPDATE users SET last_active = COALESCE(created_at, datetime('now')) WHERE last_active IS NULL")
                 logger.info("Added last_active column")

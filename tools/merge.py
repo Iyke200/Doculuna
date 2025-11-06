@@ -213,20 +213,69 @@ class PDFMerger:
             # Perform merge
             output_pdf = Pdf.new()
             
+            # Preserve metadata from the first PDF if available
+            with Pdf.open(input_paths[0]) as first_pdf:
+                if hasattr(first_pdf, 'docinfo'):
+                    output_pdf.docinfo = first_pdf.docinfo.copy()
+                if '/Metadata' in first_pdf.Root:
+                    output_pdf.Root['/Metadata'] = output_pdf.copy_foreign(first_pdf.Root['/Metadata'])
+            
+            # Track page offsets for bookmark adjustments
+            page_offset = 0
+            outline_items = []  # Collect outline items to merge
+            
+            from pikepdf import Outline, OutlineItem
+            
             for idx, input_path in enumerate(input_paths):
                 with Pdf.open(input_path) as input_pdf:
-                    # Append pages
-                    output_pdf.pages.extend(input_pdf.pages)
+                    # Copy pages properly using copy_foreign to handle resources
+                    for page in input_pdf.pages:
+                        copied_page = output_pdf.copy_foreign(page)
+                        output_pdf.pages.append(copied_page)
                     
-                    # Preserve bookmarks if enabled
-                    if preserve_bookmarks and input_pdf.Root.get('/Outlines'):
-                        # Simple bookmark preservation - offset by previous pages
-                        if idx == 0:
-                            if '/Outlines' in input_pdf.Root:
-                                output_pdf.Root['/Outlines'] = input_pdf.Root['/Outlines']
-                        else:
-                            # TODO: Implement bookmark offsetting for multiple files
-                            logger.warning("Advanced bookmark merging not implemented; using first file's bookmarks only")
+                    # Merge metadata if not the first file (override conflicting keys if needed)
+                    if idx > 0 and hasattr(input_pdf, 'docinfo'):
+                        for key, value in input_pdf.docinfo.items():
+                            if key not in output_pdf.docinfo:
+                                output_pdf.docinfo[key] = value
+                    
+                    # Collect bookmarks if preservation is enabled
+                    if preserve_bookmarks and '/Outlines' in input_pdf.Root:
+                        with Outline(input_pdf) as in_outline:
+                            for item in in_outline.root:
+                                # Clone the item and offset page destinations
+                                cloned_item = OutlineItem(item.title)
+                                if item.destination is not None:
+                                    # Offset the page number in the destination
+                                    dest = list(item.destination)
+                                    if isinstance(dest[0], int):  # Page number destination
+                                        dest[0] += page_offset
+                                    elif '/Page' in dest[0]:  # Indirect page reference (rare)
+                                        # For simplicity, assume direct page indices; adjust if needed
+                                        pass
+                                    cloned_item.destination = dest
+                                # Recursively clone children
+                                def clone_children(parent, children):
+                                    for child in children:
+                                        cloned_child = OutlineItem(child.title)
+                                        if child.destination is not None:
+                                            child_dest = list(child.destination)
+                                            if isinstance(child_dest[0], int):
+                                                child_dest[0] += page_offset
+                                            cloned_child.destination = child_dest
+                                        parent.children.append(cloned_child)
+                                        clone_children(cloned_child, child.children)
+                                clone_children(cloned_item, item.children)
+                                outline_items.append(cloned_item)
+                
+                # Update page offset for next file
+                page_offset += len(input_pdf.pages)
+            
+            # Apply merged bookmarks to output if any
+            if preserve_bookmarks and outline_items:
+                with Outline(output_pdf) as out_outline:
+                    for item in outline_items:
+                        out_outline.root.append(item)
             
             # Apply optimization if enabled
             save_kwargs = {}
@@ -278,6 +327,39 @@ class PDFMerger:
         except Exception as e:
             logger.error(f"PDF merge failed: {str(e)}", exc_info=True)
             raise ValueError(f"Merge operation failed: {str(e)}")
+    
+    @staticmethod
+    def _validate_merge(
+        input_pages: int,
+        input_images: int,
+        input_annotations: int,
+        input_has_bookmarks: bool,
+        output_analysis: Dict
+    ) -> Dict:
+        """
+        Validate merge integrity.
+        
+        Args:
+            input_pages: Total input pages
+            input_images: Total input images
+            input_annotations: Total input annotations
+            input_has_bookmarks: Whether inputs had bookmarks
+            output_analysis: Output PDF analysis
+            
+        Returns:
+            Validation metrics dictionary
+        """
+        validation = {
+            'page_count_match': output_analysis['page_count'] == input_pages,
+            'image_count_match': output_analysis['image_count'] >= input_images,  # May be optimized
+            'annotation_count_match': output_analysis['annotation_count'] >= input_annotations,
+            'bookmarks_preserved': output_analysis['has_bookmarks'] == input_has_bookmarks if input_has_bookmarks else True
+        }
+        
+        if not all(validation.values()):
+            logger.warning(f"Merge validation warnings: {validation}")
+        
+        return validation
 
 async def handle_merge_pdf_callback(callback, state=None):
     """Handle Merge PDF callback from menu."""

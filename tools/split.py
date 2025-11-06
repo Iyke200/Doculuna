@@ -5,7 +5,7 @@ import argparse
 import os
 import logging
 from typing import Dict
-from pikepdf import Pdf, PdfError
+from pikepdf import Pdf, PdfError, Outline, OutlineItem
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -27,15 +27,40 @@ class PDFSplitter:
         try:
             with Pdf.open(input_path) as pdf:
                 total_pages = len(pdf.pages)
+                if total_pages == 0:
+                    raise ValueError("PDF contains no pages")
+                
                 num_files = (total_pages + pages_per_file - 1) // pages_per_file
                 
                 for file_num in range(num_files):
                     output_pdf = Pdf.new()
-                    start_page = file_num * pages_per_file
+                    
+                    # Preserve metadata from original PDF
+                    if hasattr(pdf, 'docinfo'):
+                        output_pdf.docinfo = pdf.docinfo.copy()
+                    if '/Metadata' in pdf.Root:
+                        output_pdf.Root['/Metadata'] = output_pdf.copy_foreign(pdf.Root['/Metadata'])
+                    
+                    # Preserve AcroForm (forms) if present, to keep form fields functional
+                    if '/AcroForm' in pdf.Root:
+                        output_pdf.Root['/AcroForm'] = output_pdf.copy_foreign(pdf.Root['/AcroForm'])
+                    
+                    start_page = file_num * pages_per_file  # 0-based index
                     end_page = min(start_page + pages_per_file, total_pages)
                     
+                    # Copy pages using copy_foreign to preserve resources (images, fonts, etc.)
                     for page_num in range(start_page, end_page):
-                        output_pdf.pages.append(pdf.pages[page_num])
+                        copied_page = output_pdf.copy_foreign(pdf.pages[page_num])
+                        output_pdf.pages.append(copied_page)
+                    
+                    # Preserve and adjust bookmarks (outlines) within the page range
+                    if '/Outlines' in pdf.Root:
+                        with Outline(output_pdf) as out_outline:
+                            with Outline(pdf) as in_outline:
+                                for item in in_outline.root:
+                                    cloned_item = PDFSplitter._clone_outline_item(item, start_page, end_page, start_page)
+                                    if cloned_item:
+                                        out_outline.root.append(cloned_item)
                     
                     output_filename = f"{prefix}_{file_num + 1:03d}.pdf"
                     output_path = os.path.join(output_dir, output_filename)
@@ -51,6 +76,52 @@ class PDFSplitter:
         except PdfError as e:
             logger.error(f"PDF error: {e}")
             raise ValueError(f"Invalid PDF file: {str(e)}")
+    
+    @staticmethod
+    def _clone_outline_item(item: OutlineItem, start_page: int, end_page: int, page_offset: int) -> Optional[OutlineItem]:
+        """
+        Recursively clone outline item if it or its children fall within the page range,
+        adjusting page destinations accordingly.
+        
+        Args:
+            item: The outline item to clone.
+            start_page: Start of the page range (0-based).
+            end_page: End of the page range (exclusive).
+            page_offset: Offset to subtract from page destinations (start_page).
+        
+        Returns:
+            Cloned OutlineItem if relevant, else None.
+        """
+        dest = item.destination
+        dest_page = None
+        if dest is not None:
+            dest = list(dest)
+            if len(dest) > 0 and isinstance(dest[0], int):
+                dest_page = dest[0]
+        
+        # Skip if destination is outside range (but check children first)
+        if dest_page is not None and not (start_page <= dest_page < end_page):
+            dest = None  # Will check children
+        
+        cloned_item = OutlineItem(item.title)
+        if dest is not None:
+            dest[0] -= page_offset
+            cloned_item.destination = dest
+        if item.action is not None:
+            cloned_item.action = item.action
+        
+        # Recursively clone children
+        has_valid_children = False
+        for child in item.children:
+            cloned_child = PDFSplitter._clone_outline_item(child, start_page, end_page, page_offset)
+            if cloned_child:
+                cloned_item.children.append(cloned_child)
+                has_valid_children = True
+        
+        # Return cloned item if it has a valid destination or valid children
+        if dest is not None or has_valid_children:
+            return cloned_item
+        return None
 
 async def handle_split_pdf_callback(callback, state=None):
     """Handle Split PDF callback from menu."""

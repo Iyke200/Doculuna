@@ -12,6 +12,7 @@ from tools.word_to_pdf import register_word_to_pdf, handle_word_to_pdf_callback
 from tools.merge import register_merge_pdf, handle_merge_pdf_callback
 from tools.split import register_split_pdf, handle_split_pdf_callback
 from tools.compress import register_compress_pdf, handle_compress_pdf_callback
+from tools.text_to_pdf import register_text_to_pdf, handle_text_to_pdf_callback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -127,6 +128,7 @@ async def handle_back_to_menu(callback: CallbackQuery, state: FSMContext) -> Non
             "Welcome to DocuLuna Bot 🌙 — your intelligent digital assistant for all document tasks.\n\n"
             "✨ With me, you can easily:\n"
             "• 📄 Convert between PDF ↔️ Word\n"
+            "• 📝 Convert Text to PDF\n"
             "• 🖼️ Turn Images into PDF\n"
             "• 📊 Merge or Split PDF files\n"
             "• 🗜️ Compress large documents quickly\n\n"
@@ -157,7 +159,8 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
             "1️⃣ Convert PDF ↔️ Word\n"
             "2️⃣ Merge multiple PDFs\n"
             "3️⃣ Split pages from a PDF\n"
-            "4️⃣ Compress PDF file size\n\n"
+            "4️⃣ Compress PDF file size\n"
+            "5️⃣ Convert Text to PDF\n\n"
             "Select an option below 👇"
         )
 
@@ -167,8 +170,9 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
         builder.button(text="🧩 Merge PDFs", callback_data="merge_pdf")
         builder.button(text="✂️ Split PDF", callback_data="split_pdf")
         builder.button(text="🗜️ Compress PDF", callback_data="compress_pdf")
+        builder.button(text="📝 Text ➡️ PDF", callback_data="text_to_pdf")
         builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
-        builder.adjust(2, 2, 1, 1)
+        builder.adjust(2, 2, 2, 1)
 
         await callback.message.edit_text(process_text, reply_markup=builder.as_markup())
         await callback.answer()
@@ -224,6 +228,7 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
         "merge_pdf": handle_merge_pdf_callback,
         "split_pdf": handle_split_pdf_callback,
         "compress_pdf": handle_compress_pdf_callback,
+        "text_to_pdf": handle_text_to_pdf_callback,
     }
     
     handler = handlers.get(callback_data)

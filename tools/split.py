@@ -4,7 +4,7 @@
 import argparse
 import os
 import logging
-from typing import Dict
+from typing import Dict, Optional
 from pikepdf import Pdf, PdfError, Outline, OutlineItem
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

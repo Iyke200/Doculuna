@@ -54,6 +54,10 @@ def import_handlers():
         from handlers.file_handler import register_file_handlers
         from handlers.wallet import register_wallet_handlers
         from handlers.admin_withdrawals import register_admin_withdrawal_handlers
+        from handlers.profile_handlers import register_profile_handlers
+        from handlers.gamification import gamification_engine
+        from handlers.smart_recommendation import smart_recommendation
+        from handlers.history import init_history_db
         from config import ADMIN_USER_IDS
 
         return {
@@ -72,6 +76,10 @@ def import_handlers():
             "register_file_handlers": register_file_handlers,
             "register_wallet_handlers": register_wallet_handlers,
             "register_admin_withdrawal_handlers": register_admin_withdrawal_handlers,
+            "register_profile_handlers": register_profile_handlers,
+            "gamification_engine": gamification_engine,
+            "smart_recommendation": smart_recommendation,
+            "init_history_db": init_history_db,
             "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
@@ -124,7 +132,8 @@ def register_handlers():
     handlers["register_stats_handlers"](dp)
     handlers["register_payment_handlers"](dp)
     handlers["register_paystack_handlers"](dp)
-    handlers["register_file_handlers"](dp)  # File handlers
+    handlers["register_profile_handlers"](dp)  # Profile, recommend, history handlers
+    handlers["register_file_handlers"](dp)  # File handlers with gamification
     handlers["register_callback_handlers"](dp)  # General callback handler last
 
     logger.info("✓ All handlers registered")
@@ -162,6 +171,13 @@ async def start_bot_clean():
     logger.info("Initializing database...")
     await handlers["init_db"]()
     logger.info("✓ Database initialized")
+    
+    # Initialize gamification database
+    logger.info("Initializing gamification system...")
+    await handlers["gamification_engine"].init_db()
+    await handlers["init_history_db"]()
+    handlers["smart_recommendation"].set_gamification(handlers["gamification_engine"])
+    logger.info("✓ Gamification system initialized")
     
     # Run initial premium expiry check
     expired_count = await handlers["expire_premium_statuses"]()

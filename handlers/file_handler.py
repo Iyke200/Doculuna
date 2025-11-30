@@ -1,8 +1,9 @@
-# file_handler.py - File handling with new UX
+# file_handler.py - File handling with gamification integration
 import logging
 import os
 import tempfile
 import asyncio
+import time
 from aiogram import Dispatcher, types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -18,12 +19,74 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from io import BytesIO
 
+# Import gamification and history modules
+from handlers.gamification import gamification_engine
+from handlers.history import log_operation, get_history_count
+from handlers.file_naming import sanitize_filename, generate_output_filename
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize watermark manager
 watermark_manager = WatermarkManager()
 WATERMARK_TEXT = "Processed with DocuLuna - Upgrade for Watermark-Free"
+
+# XP rewards for different operations
+XP_REWARDS = {
+    "convert": 50,
+    "compress": 40,
+    "image_to_pdf": 45,
+    "merge": 60,
+    "split": 55,
+    "ocr": 65,
+}
+
+
+async def process_gamification(user_id: int, operation: str, filename: str, duration: float, file_size: int = 0, output_filename: str = None):
+    """Process gamification rewards and log the operation."""
+    try:
+        # Update streak first
+        streak_result = await gamification_engine.update_streak(user_id)
+        
+        # Add XP for the operation
+        xp_amount = XP_REWARDS.get(operation, 50)
+        xp_result = await gamification_engine.add_xp(user_id, xp_amount)
+        
+        # Log the operation to history
+        await log_operation(
+            user_id=user_id,
+            operation=operation,
+            filename=filename,
+            duration=duration,
+            status='success',
+            file_size=file_size,
+            output_filename=output_filename
+        )
+        
+        # Check for history-based achievements
+        history_count = await get_history_count(user_id)
+        await gamification_engine.check_history_achievements(user_id, history_count)
+        
+        # Build reward message
+        rewards = []
+        if xp_result.get("leveled_up"):
+            rewards.extend(xp_result.get("messages", []))
+        if streak_result.get("message"):
+            rewards.append(streak_result["message"])
+        
+        return {
+            "xp_gained": xp_amount,
+            "leveled_up": xp_result.get("leveled_up", False),
+            "new_level": xp_result.get("new_level"),
+            "new_rank": xp_result.get("new_rank"),
+            "streak": streak_result.get("streak", 0),
+            "streak_increased": streak_result.get("increased", False),
+            "messages": rewards
+        }
+    except Exception as e:
+        logger.error(f"Error processing gamification for user {user_id}: {e}", exc_info=True)
+        return {"xp_gained": 0, "messages": []}
+
 
 async def handle_document(message: types.Message, state: FSMContext):
     """Handle file received."""
@@ -66,6 +129,7 @@ async def handle_document(message: types.Message, state: FSMContext):
             "Please try again later or contact @DocuLunaSupport"
         )
 
+
 async def handle_photo(message: types.Message, state: FSMContext):
     """Handle image received."""
     user_id = message.from_user.id
@@ -106,10 +170,12 @@ async def handle_photo(message: types.Message, state: FSMContext):
             "Please try again later or contact @DocuLunaSupport"
         )
 
+
 async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext):
-    """Handle file operation callbacks."""
+    """Handle file operation callbacks with gamification integration."""
     operation = callback.data
     user_id = callback.from_user.id
+    start_time = time.time()
     
     try:
         processing_text = (
@@ -124,14 +190,21 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         file_id = user_data.get('file_id')
         file_name = user_data.get('file_name', 'file')
         
+        result_file_path = None
+        operation_type = None
+        
         if operation == "convert_file":
             result_file_path = await convert_file(callback.bot, file_id, file_name, user_id)
+            operation_type = "convert"
         elif operation == "compress_file":
             result_file_path = await compress_file(callback.bot, file_id, file_name, user_id)
+            operation_type = "compress"
         elif operation == "compress_image":
             result_file_path = await compress_image(callback.bot, file_id, file_name)
+            operation_type = "compress"
         elif operation == "image_to_pdf":
             result_file_path = await image_to_pdf(callback.bot, file_id, file_name, user_id)
+            operation_type = "image_to_pdf"
         elif operation in ["merge_pdfs", "merge_pdf"]:
             await callback.message.edit_text(
                 "🧩 PDF Merge Feature\n\n"
@@ -151,7 +224,22 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             return
         
         if result_file_path:
+            # Calculate processing duration
+            duration = time.time() - start_time
+            file_size = os.path.getsize(result_file_path) if os.path.exists(result_file_path) else 0
+            
+            # Increment usage
             await increment_usage(user_id)
+            
+            # Process gamification rewards
+            gamification_result = await process_gamification(
+                user_id=user_id,
+                operation=operation_type,
+                filename=file_name,
+                duration=duration,
+                file_size=file_size,
+                output_filename=os.path.basename(result_file_path)
+            )
             
             from database.db import get_user_data
             from config import FREE_USAGE_LIMIT
@@ -160,11 +248,27 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             usage_today = user_data.get('usage_today', 0) if user_data else 0
             is_premium = user_data.get('is_premium', False) if user_data else False
             
+            # Build success message with gamification info
             success_text = "✅ Done! Your document is ready 🎉\n"
+            
+            # Add XP info
+            xp_gained = gamification_result.get("xp_gained", 0)
+            if xp_gained > 0:
+                success_text += f"\n⚡ +{xp_gained} XP earned!"
+            
+            # Add streak info
+            if gamification_result.get("streak_increased"):
+                success_text += f" | 🔥 {gamification_result.get('streak', 1)} day streak!"
+            
+            # Show level up message
+            if gamification_result.get("leveled_up"):
+                new_level = gamification_result.get("new_level", 1)
+                new_rank = gamification_result.get("new_rank", "")
+                success_text += f"\n\n🎊 Level Up! You're now Level {new_level} - {new_rank}"
             
             if not is_premium:
                 remaining = max(0, FREE_USAGE_LIMIT - usage_today)
-                success_text += f"\n📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)"
+                success_text += f"\n\n📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)"
                 
                 if remaining == 0:
                     success_text += "\n\n💎 Upgrade to Premium for unlimited processing!"
@@ -172,6 +276,10 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
                     success_text += "\n\n⚠️ Last free use for today!"
             
             success_text += "\n\nDownload your file below 👇"
+            
+            # Add gamification messages
+            for msg in gamification_result.get("messages", []):
+                success_text += f"\n\n{msg}"
             
             document = FSInputFile(result_file_path)
             await callback.message.answer_document(document)
@@ -182,6 +290,15 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             except:
                 pass
         else:
+            # Log failed operation
+            duration = time.time() - start_time
+            await log_operation(
+                user_id=user_id,
+                operation=operation_type or operation,
+                filename=file_name,
+                duration=duration,
+                status='failed'
+            )
             raise Exception("Processing failed")
         
     except Exception as e:
@@ -201,6 +318,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         error_message += "\n\nIf the problem persists, contact @DocuLunaSupport"
         
         await callback.message.edit_text(error_message)
+
 
 async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Convert PDF to Word or Word to PDF based on file type."""
@@ -258,6 +376,7 @@ async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = No
         logger.error(f"Conversion error: {e}", exc_info=True)
         raise
 
+
 async def compress_file(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Compress PDF or DOCX file."""
     try:
@@ -312,6 +431,7 @@ async def compress_file(bot: Bot, file_id: str, file_name: str, user_id: int = N
         logger.error(f"Compression error: {e}", exc_info=True)
         raise
 
+
 async def compress_image(bot: Bot, file_id: str, file_name: str) -> str:
     """Compress image file."""
     try:
@@ -343,6 +463,7 @@ async def compress_image(bot: Bot, file_id: str, file_name: str) -> str:
     except Exception as e:
         logger.error(f"Image compression error: {e}", exc_info=True)
         raise
+
 
 async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:
     """Convert image to PDF."""
@@ -387,6 +508,7 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = No
         logger.error(f"Image to PDF error: {e}", exc_info=True)
         raise
 
+
 async def add_watermark_to_pdf(pdf_path: str):
     """Add watermark to PDF using comprehensive watermark system."""
     try:
@@ -421,6 +543,7 @@ async def add_watermark_to_pdf(pdf_path: str):
     except Exception as e:
         logger.error(f"Error adding PDF watermark: {e}", exc_info=True)
 
+
 async def add_watermark_to_docx(docx_path: str):
     """Add watermark to DOCX using footer."""
     try:
@@ -429,7 +552,6 @@ async def add_watermark_to_docx(docx_path: str):
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         
         # Run in executor since python-docx is sync
-        import asyncio
         loop = asyncio.get_event_loop()
         
         def add_footer_watermark():
@@ -461,6 +583,7 @@ async def add_watermark_to_docx(docx_path: str):
     except Exception as e:
         logger.error(f"Error adding DOCX watermark: {e}", exc_info=True)
 
+
 def register_file_handlers(dp: Dispatcher):
     """Register file handlers."""
     dp.message.register(handle_document, lambda m: m.document is not None)
@@ -469,3 +592,4 @@ def register_file_handlers(dp: Dispatcher):
         "convert_file", "merge_pdfs", "split_pdf", "compress_file", 
         "compress_image", "image_to_pdf"
     ])
+    logger.info("✓ File handlers registered with gamification integration")

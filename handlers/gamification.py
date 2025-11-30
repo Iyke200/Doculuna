@@ -9,23 +9,54 @@ database operations and includes robust error handling and logging.
 import aiosqlite
 import math
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Tuple
-from messages import LEVEL_UP_MESSAGES, ACHIEVEMENT_MESSAGES, STREAK_MESSAGES
+from typing import Dict, Any, List, Tuple, Optional
 import random
 import logging
 
+from config import DB_PATH
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+
+# Message templates
+LEVEL_UP_MESSAGES: List[str] = [
+    "⚡ Boom! Level {level} → {rank} | +{moons} moons",
+    "🌕 Your lunar glow intensifies! Welcome to Level {level}",
+    "✨ Level {level} unlocked! You are now a {rank} | +{moons} moons reward!",
+    "🌑 From new moon to {rank}! Level {level} achieved | {moons} moons gifted.",
+    "🌓 Waxing strong! Level {level} → {rank} | {moons} moons added.",
+    "🪐 Celestial leap! Level {level} as {rank} | {moons} moons orbit you.",
+    "🌙 Overlord in sight? Level {level} unlocked! {rank} | +{moons} moons.",
+    "🔥 Level up alert! {level} reached – {rank} status | Bonus: {moons} moons.",
+    "⭐ Shining brighter! Level {level} as {rank} | Collect {moons} moons."
+]
+
+ACHIEVEMENT_MESSAGES: Dict[str, str] = {
+    "First Document": "⭐ First step on the moon: 'First Document' badge earned!",
+    "Speedster": "🚀 Blasting off with 'Speedster'! Quick as lunar light.",
+    "Streak Lord": "🔥 On fire! 'Streak Lord' for unbreakable 7-day dedication.",
+    "Scholar": "📚 Lunar library built: 'Scholar' achievement unlocked!",
+    "Moon Collector": "🌙 Hoarding moons? 'Moon Collector' badge shines bright.",
+    "Smart Worker": "🧠 Brainy moves: 'Smart Worker' badge unlocked — you followed Luna's wisdom!",
+    "Document Master": "🛡️ Document Master unlocked! 50 conversions mastered.",
+    "Lunar Legend": "🌌 Lunar Legend! Reached level 50 with style."
+}
+
+STREAK_MESSAGES: List[str] = [
+    "🔥 You're on a {streak}-day streak! Luna is proud!",
+    "✨ {streak} days strong! Keep the lunar momentum.",
+    "🌓 Streak at {streak}! The moon bows to your consistency.",
+    "🌕 Full power streak: {streak} days. Legendary!",
+    "🌔 Waxing streak to {streak}! More moons await.",
+    "🌒 Building momentum: {streak}-day streak unlocked!",
+    "🪐 Orbital consistency: {streak} days in a row!"
+]
+
 
 class GamificationEngine:
     """Core class for managing gamification features."""
 
-    def __init__(self, db_path: str = "doculuna.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or DB_PATH
         self.rank_thresholds: List[Tuple[int, str]] = [
             (4, '🌑 New Moon'),
             (9, '🌒 Crescent Seeker'),
@@ -34,7 +65,7 @@ class GamificationEngine:
             (49, '🌕 Full Moon Pro'),
             (69, '🪐 Orbital Master'),
             (99, '✨ Celestial Elite'),
-            (float('inf'), '🌙 Luna Overlord')  # Use inf for the last rank
+            (float('inf'), '🌙 Luna Overlord')
         ]
 
     async def init_db(self) -> None:
@@ -42,7 +73,7 @@ class GamificationEngine:
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.executescript('''
-                    CREATE TABLE IF NOT EXISTS users (
+                    CREATE TABLE IF NOT EXISTS gamification_users (
                         user_id INTEGER PRIMARY KEY,
                         xp INTEGER DEFAULT 0,
                         level INTEGER DEFAULT 1,
@@ -51,7 +82,7 @@ class GamificationEngine:
                         last_activity TEXT,
                         moons INTEGER DEFAULT 0
                     );
-                    CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_gamification_users_user_id ON gamification_users(user_id);
                     
                     CREATE TABLE IF NOT EXISTS achievements (
                         user_id INTEGER,
@@ -62,30 +93,33 @@ class GamificationEngine:
                     CREATE INDEX IF NOT EXISTS idx_achievements_user_id ON achievements(user_id);
                 ''')
                 await db.commit()
-            logger.info("Database initialized successfully.")
+            logger.info("Gamification database initialized successfully.")
         except aiosqlite.Error as e:
-            logger.error(f"Database initialization error: {e}")
+            logger.error(f"Gamification database initialization error: {e}")
             raise
 
     async def ensure_user(self, user_id: int) -> None:
-        """Ensure a user exists in the database."""
+        """Ensure a user exists in the gamification database."""
         await self.init_db()
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
-                    'INSERT OR IGNORE INTO users (user_id) VALUES (?)',
-                    (user_id,)
+                    'INSERT OR IGNORE INTO gamification_users (user_id, last_activity) VALUES (?, ?)',
+                    (user_id, datetime.now().isoformat())
                 )
                 await db.commit()
         except aiosqlite.Error as e:
-            logger.error(f"Error ensuring user {user_id}: {e}")
+            logger.error(f"Error ensuring gamification user {user_id}: {e}")
 
     async def add_xp(self, user_id: int, amount: int = 50) -> Dict[str, Any]:
         """Add XP to a user and handle level ups."""
         await self.ensure_user(user_id)
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute('SELECT xp, level, moons FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                async with db.execute(
+                    'SELECT xp, level, moons FROM gamification_users WHERE user_id = ?', 
+                    (user_id,)
+                ) as cursor:
                     row = await cursor.fetchone()
                     xp, level, moons = row or (0, 1, 0)
 
@@ -106,7 +140,7 @@ class GamificationEngine:
                     await self._check_achievements(user_id, new_level=new_level)
 
                 await db.execute(
-                    'UPDATE users SET xp = ?, level = ?, rank = ?, moons = ? WHERE user_id = ?',
+                    'UPDATE gamification_users SET xp = ?, level = ?, rank = ?, moons = ? WHERE user_id = ?',
                     (new_xp, new_level, rank, moons, user_id)
                 )
                 await db.commit()
@@ -116,11 +150,12 @@ class GamificationEngine:
                 "new_level": new_level,
                 "new_rank": rank,
                 "moons_reward": moons_reward,
+                "total_xp": new_xp,
                 "messages": messages
             }
         except aiosqlite.Error as e:
             logger.error(f"Error adding XP for user {user_id}: {e}")
-            return {}
+            return {"leveled_up": False, "messages": []}
 
     async def update_streak(self, user_id: int) -> Dict[str, Any]:
         """Update user's streak based on activity."""
@@ -128,10 +163,18 @@ class GamificationEngine:
         today = datetime.now().date()
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute('SELECT streak, last_activity FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                async with db.execute(
+                    'SELECT streak, last_activity FROM gamification_users WHERE user_id = ?', 
+                    (user_id,)
+                ) as cursor:
                     row = await cursor.fetchone()
                     streak, last_str = row or (0, None)
-                    last_date = datetime.fromisoformat(last_str).date() if last_str else None
+                    last_date = None
+                    if last_str:
+                        try:
+                            last_date = datetime.fromisoformat(last_str).date()
+                        except ValueError:
+                            last_date = None
 
                 if last_date == today:
                     return {"streak": streak, "increased": False, "message": None}
@@ -151,7 +194,7 @@ class GamificationEngine:
                         streak_message = random.choice(STREAK_MESSAGES).format(streak=new_streak)
 
                 await db.execute(
-                    'UPDATE users SET streak = ?, last_activity = ? WHERE user_id = ?',
+                    'UPDATE gamification_users SET streak = ?, last_activity = ? WHERE user_id = ?',
                     (new_streak, today.isoformat(), user_id)
                 )
                 await db.commit()
@@ -163,13 +206,17 @@ class GamificationEngine:
             }
         except aiosqlite.Error as e:
             logger.error(f"Error updating streak for user {user_id}: {e}")
-            return {}
+            return {"streak": 0, "increased": False, "message": None}
 
     async def reward_moons(self, user_id: int, amount: int) -> None:
         """Reward moons to a user."""
+        await self.ensure_user(user_id)
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                await db.execute('UPDATE users SET moons = moons + ? WHERE user_id = ?', (amount, user_id))
+                await db.execute(
+                    'UPDATE gamification_users SET moons = moons + ? WHERE user_id = ?', 
+                    (amount, user_id)
+                )
                 await db.commit()
             total_moons = await self.get_moons(user_id)
             if total_moons >= 100:
@@ -179,9 +226,13 @@ class GamificationEngine:
 
     async def get_moons(self, user_id: int) -> int:
         """Get the number of moons for a user."""
+        await self.ensure_user(user_id)
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute('SELECT moons FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                async with db.execute(
+                    'SELECT moons FROM gamification_users WHERE user_id = ?', 
+                    (user_id,)
+                ) as cursor:
                     row = await cursor.fetchone()
                     return row[0] if row else 0
         except aiosqlite.Error as e:
@@ -203,57 +254,104 @@ class GamificationEngine:
                     (user_id, achievement, datetime.now().isoformat())
                 )
                 await db.commit()
+            logger.info(f"Achievement unlocked: {achievement} for user {user_id}")
             return True
         except aiosqlite.Error as e:
             logger.error(f"Error unlocking achievement {achievement} for user {user_id}: {e}")
             return False
 
-    async def _check_achievements(self, user_id: int, new_level: int) -> None:
-        """Check and unlock level-based achievements."""
-        achievements = []
+    async def _check_achievements(self, user_id: int, new_level: int) -> List[str]:
+        """Check and unlock level-based achievements. Returns list of unlocked achievements."""
+        achievements_to_check = []
+        unlocked = []
+        
         if new_level >= 2:
-            achievements.append("First Document")
+            achievements_to_check.append("First Document")
         if new_level >= 5:
-            achievements.append("Speedster")
+            achievements_to_check.append("Speedster")
         if new_level >= 20:
-            achievements.append("Scholar")
+            achievements_to_check.append("Scholar")
         if new_level >= 50:
-            achievements.append("Lunar Legend")
+            achievements_to_check.append("Lunar Legend")
 
-        for ach in achievements:
-            unlocked = await self._unlock_achievement(user_id, ach)
-            if unlocked:
+        for ach in achievements_to_check:
+            if await self._unlock_achievement(user_id, ach):
+                unlocked.append(ach)
                 logger.info(f"Unlocked {ach} for user {user_id}")
 
-        # Check history-based achievements
-        from history import get_recent_history  # Deferred import to avoid circular deps
-        history = await get_recent_history(user_id, limit=1000)
-        if len(history) >= 50:
-            unlocked = await self._unlock_achievement(user_id, "Document Master")
-            if unlocked:
-                logger.info(f"Unlocked Document Master for user {user_id}")
+        return unlocked
+
+    async def check_history_achievements(self, user_id: int, history_count: int) -> List[str]:
+        """Check history-based achievements."""
+        unlocked = []
+        if history_count >= 50:
+            if await self._unlock_achievement(user_id, "Document Master"):
+                unlocked.append("Document Master")
+        return unlocked
 
     async def get_profile(self, user_id: int) -> Dict[str, Any]:
         """Retrieve user's gamification profile."""
-        await self.init_db()
+        await self.ensure_user(user_id)
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute('SELECT * FROM users WHERE user_id = ?', (user_id,)) as cursor:
+                async with db.execute(
+                    'SELECT user_id, xp, level, rank, streak, last_activity, moons FROM gamification_users WHERE user_id = ?', 
+                    (user_id,)
+                ) as cursor:
                     row = await cursor.fetchone()
                 if not row:
-                    return {}
-                async with db.execute('SELECT achievement FROM achievements WHERE user_id = ?', (user_id,)) as cursor:
-                    badges = [r[0] for r in await cursor.fetchall()]
+                    return {
+                        "xp": 0, "level": 1, "rank": "🌑 New Moon",
+                        "streak": 0, "moons": 0, "badges": [],
+                        "next_level_xp": 100
+                    }
+                    
+                async with db.execute(
+                    'SELECT achievement, unlocked_at FROM achievements WHERE user_id = ?', 
+                    (user_id,)
+                ) as cursor:
+                    badges = [{"name": r[0], "unlocked_at": r[1]} for r in await cursor.fetchall()]
+            
+            current_level = row[2]
+            next_level_xp = ((current_level) ** 2) * 100
+            
             return {
-                "xp": row[1], "level": row[2], "rank": row[3],
-                "streak": row[4], "moons": row[6], "badges": badges
+                "xp": row[1], 
+                "level": row[2], 
+                "rank": row[3],
+                "streak": row[4], 
+                "last_activity": row[5],
+                "moons": row[6], 
+                "badges": badges,
+                "next_level_xp": next_level_xp
             }
         except aiosqlite.Error as e:
             logger.error(f"Error getting profile for user {user_id}: {e}")
-            return {}
+            return {
+                "xp": 0, "level": 1, "rank": "🌑 New Moon",
+                "streak": 0, "moons": 0, "badges": [],
+                "next_level_xp": 100
+            }
+
+    async def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get top users by XP."""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                async with db.execute(
+                    'SELECT user_id, xp, level, rank, moons FROM gamification_users ORDER BY xp DESC LIMIT ?',
+                    (limit,)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                    return [
+                        {"user_id": r[0], "xp": r[1], "level": r[2], "rank": r[3], "moons": r[4]}
+                        for r in rows
+                    ]
+        except aiosqlite.Error as e:
+            logger.error(f"Error getting leaderboard: {e}")
+            return []
 
     def _calculate_level(self, xp: int) -> int:
-        """Calculate level from XP."""
+        """Calculate level from XP using square root progression."""
         return int(math.sqrt(max(0, xp) / 100)) + 1
 
     def _get_rank(self, level: int) -> str:
@@ -262,3 +360,11 @@ class GamificationEngine:
             if level <= max_level:
                 return rank
         return '🌙 Luna Overlord'
+
+    def get_achievement_message(self, achievement: str) -> str:
+        """Get the message for an achievement."""
+        return ACHIEVEMENT_MESSAGES.get(achievement, f"🏆 Achievement unlocked: {achievement}!")
+
+
+# Global instance
+gamification_engine = GamificationEngine()

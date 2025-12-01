@@ -305,16 +305,17 @@ async def callback_leaderboard(callback: CallbackQuery):
             if is_you:
                 user_rank = i
             
+            user_label = "<b>YOU</b>" if is_you else f"User {leader['user_id']}"
             lines.append(
-                f"{medal} {'<b>YOU</b>' if is_you else f'User {leader[\"user_id\"]}'} "
-                f"| Level {leader['level']} | {leader['xp']} XP | {leader['moons']} 🌙"
+                f"{medal} {user_label} | Level {leader['level']} | {leader['xp']} XP | {leader['moons']} 🌙"
             )
         
         position_text = f"\n\n📍 Your position: #{user_rank}" if user_rank else ""
+        lines_joined = "\n".join(lines)
         
         leaderboard_text = f"""🏆 <b>DocuLuna Leaderboard</b>
 
-{chr(10).join(lines)}{position_text}
+{lines_joined}{position_text}
 
 <i>Keep processing documents to climb the ranks!</i>"""
 

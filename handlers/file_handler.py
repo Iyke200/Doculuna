@@ -4,6 +4,7 @@ import os
 import tempfile
 import asyncio
 import time
+from typing import Optional
 from aiogram import Dispatcher, types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder

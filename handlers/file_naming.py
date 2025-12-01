@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 import aiosqlite
 import os
-from typing import Optional
+from typing import Optional, Tuple
 import logging
 
 from config import DB_PATH
@@ -113,7 +113,7 @@ async def generate_smart_name(
     operation: str, 
     user_id: int, 
     original: str, 
-    db_path: str = None
+    db_path: Optional[str] = None
 ) -> str:
     """
     Generate a unique, versioned filename based on operation and history.

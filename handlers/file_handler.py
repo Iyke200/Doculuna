@@ -42,7 +42,7 @@ XP_REWARDS = {
 }
 
 
-async def process_gamification(user_id: int, operation: str, filename: str, duration: float, file_size: int = 0, output_filename: str = None):
+async def process_gamification(user_id: int, operation: str, filename: str, duration: float, file_size: int = 0, output_filename: Optional[str] = None):
     """Process gamification rewards and log the operation."""
     try:
         # Update streak first

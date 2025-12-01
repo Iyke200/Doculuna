@@ -14,7 +14,7 @@ from config import DB_PATH
 logger = logging.getLogger(__name__)
 
 
-async def init_history_db(db_path: str = None) -> None:
+async def init_history_db(db_path: Optional[str] = None) -> None:
     """Initialize the history database table."""
     db_path = db_path or DB_PATH
     try:
@@ -50,8 +50,8 @@ async def log_operation(
     duration: float = 0, 
     status: str = 'success', 
     file_size: int = 0,
-    output_filename: str = None,
-    db_path: str = None
+    output_filename: Optional[str] = None,
+    db_path: Optional[str] = None
 ) -> bool:
     """Log a user operation to the history."""
     db_path = db_path or DB_PATH
@@ -79,7 +79,7 @@ async def log_operation(
 async def get_recent_history(
     user_id: int, 
     limit: int = 10, 
-    db_path: str = None
+    db_path: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Retrieve recent history for a user."""
     db_path = db_path or DB_PATH
@@ -115,7 +115,7 @@ async def get_recent_history(
         return []
 
 
-async def get_history_count(user_id: int, db_path: str = None) -> int:
+async def get_history_count(user_id: int, db_path: Optional[str] = None) -> int:
     """Get total history count for a user."""
     db_path = db_path or DB_PATH
     await init_history_db(db_path)
@@ -133,7 +133,7 @@ async def get_history_count(user_id: int, db_path: str = None) -> int:
         return 0
 
 
-async def get_history_stats(user_id: int, db_path: str = None) -> Dict[str, Any]:
+async def get_history_stats(user_id: int, db_path: Optional[str] = None) -> Dict[str, Any]:
     """Get aggregated statistics from user's history."""
     db_path = db_path or DB_PATH
     await init_history_db(db_path)
@@ -210,7 +210,7 @@ async def get_history_stats(user_id: int, db_path: str = None) -> Dict[str, Any]
 async def clean_old_history(
     user_id: int, 
     days_old: int = 30, 
-    db_path: str = None
+    db_path: Optional[str] = None
 ) -> int:
     """Clean old history entries for a user."""
     db_path = db_path or DB_PATH
@@ -231,7 +231,7 @@ async def clean_old_history(
         return 0
 
 
-async def clear_all_history(user_id: int, db_path: str = None) -> int:
+async def clear_all_history(user_id: int, db_path: Optional[str] = None) -> int:
     """Clear all history for a user."""
     db_path = db_path or DB_PATH
     

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def format_profile_message(user_id: int, username: str = None) -> str:
+async def format_profile_message(user_id: int, username: Optional[str] = None) -> str:
     """Format the user profile message with gamification data."""
     profile = await gamification_engine.get_profile(user_id)
     history_count = await get_history_count(user_id)

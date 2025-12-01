@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Tuple, Optional
 import random
 import logging
+from typing import Optional
 
 from config import DB_PATH
 
@@ -55,9 +56,9 @@ STREAK_MESSAGES: List[str] = [
 class GamificationEngine:
     """Core class for managing gamification features."""
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or DB_PATH
-        self.rank_thresholds: List[Tuple[int, str]] = [
+        self.rank_thresholds: List[Tuple[float, str]] = [
             (4, '🌑 New Moon'),
             (9, '🌒 Crescent Seeker'),
             (19, '🌓 Half-Moon Adept'),

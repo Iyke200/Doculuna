@@ -8,6 +8,7 @@ users for following them.
 import random
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 import logging
+from datetime import datetime
 
 if TYPE_CHECKING:
     from handlers.gamification import GamificationEngine

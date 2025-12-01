@@ -279,9 +279,9 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             # Get smart recommendation
             try:
                 from handlers.smart_recommendation import smart_recommendation
-                recommendation = await smart_recommendation.get_recommendation(user_id)
-                if recommendation and recommendation.get("tip"):
-                    success_text += f"\n\n💡 <b>Smart Tip:</b> {recommendation['tip']}"
+                recommendation = await smart_recommendation.analyze_and_suggest(user_id)
+                if recommendation and recommendation.get("message"):
+                    success_text += f"\n\n💡 <b>Smart Tip:</b> {recommendation['message']}"
             except Exception as e:
                 logger.warning(f"Could not get recommendation: {e}")
             

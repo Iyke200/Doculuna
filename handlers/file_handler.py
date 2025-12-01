@@ -206,19 +206,13 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         elif operation == "image_to_pdf":
             result_file_path = await image_to_pdf(callback.bot, file_id, file_name, user_id)
             operation_type = "image_to_pdf"
-        elif operation in ["merge_pdfs", "merge_pdf"]:
-            await callback.message.edit_text(
-                "🧩 PDF Merge Feature\n\n"
-                "Sorry, merge is not available in this flow.\n"
-                "Please use the menu: /start → Process Document → Merge PDFs"
-            )
-            return
-        elif operation in ["split_pdf", "split_pdfs"]:
-            await callback.message.edit_text(
-                "✂️ PDF Split Feature\n\n"
-                "Sorry, split is not available in this flow.\n"
-                "Please use the menu: /start → Process Document → Split PDF"
-            )
+        elif operation in ["merge_pdfs", "merge_pdf", "split_pdf", "split_pdfs"]:
+            # Merge/split are handled in callbacks.py
+            from handlers.callbacks import handle_merge_pdf_callback, handle_split_pdf_callback
+            if operation in ["merge_pdfs", "merge_pdf"]:
+                await handle_merge_pdf_callback(callback, state)
+            else:
+                await handle_split_pdf_callback(callback, state)
             return
         else:
             await callback.message.edit_text("Operation not yet implemented")

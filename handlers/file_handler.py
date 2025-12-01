@@ -276,6 +276,15 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             for msg in gamification_result.get("messages", []):
                 success_text += f"\n\n{msg}"
             
+            # Get smart recommendation
+            try:
+                from handlers.smart_recommendation import smart_recommendation
+                recommendation = await smart_recommendation.get_recommendation(user_id)
+                if recommendation and recommendation.get("tip"):
+                    success_text += f"\n\n💡 <b>Smart Tip:</b> {recommendation['tip']}"
+            except Exception as e:
+                logger.warning(f"Could not get recommendation: {e}")
+            
             document = FSInputFile(result_file_path)
             await callback.message.answer_document(document)
             await callback.message.edit_text(success_text)

@@ -50,48 +50,44 @@ async def handle_go_premium(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer("Error loading premium plans", show_alert=True)
 
 async def handle_my_account(callback: CallbackQuery, state: FSMContext) -> None:
-    """Handle 'My Account' button."""
+    """Handle 'My Account' button - show gamification profile."""
     user_id = callback.from_user.id
-    first_name = callback.from_user.first_name or "User"
     
     try:
+        # Import gamification to show profile
+        from handlers.gamification import gamification_engine
+        from handlers.profile_handlers import format_profile_message
         from config import FREE_USAGE_LIMIT
         
+        # Ensure user exists
+        await gamification_engine.ensure_user(user_id)
+        
+        # Get gamification profile
+        profile_text = await format_profile_message(user_id, callback.from_user.username)
+        
+        # Add premium/usage info
         user_data = await get_user_data(user_id)
-        usage_today = user_data.get('usage_today', 0) if user_data else 0
         is_premium = user_data.get('is_premium', False) if user_data else False
-        plan_expiry = user_data.get('premium_expiry', 'N/A') if user_data else 'N/A'
         
-        status_text = "Premium" if is_premium else "Free"
-        remaining = max(0, FREE_USAGE_LIMIT - usage_today)
-        
-        account_text = (
-            "👤 Your Account Overview\n\n"
-            f"🪪 Name: {first_name}\n"
-            f"💎 Status: {status_text}\n"
-        )
-        
-        if not is_premium:
-            account_text += f"📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)\n"
+        if is_premium:
+            profile_text += "\n\n💎 <b>Premium Account</b>"
         else:
-            account_text += "📊 Usage: Unlimited ♾️\n"
-        
-        if is_premium and plan_expiry != 'N/A':
-            account_text += f"⏳ Plan Expires: {plan_expiry}\n"
-        
-        account_text += "\nNeed more daily access or faster processing?\nUpgrade to Premium anytime 🚀"
+            usage_today = user_data.get('usage_today', 0) if user_data else 0
+            remaining = max(0, FREE_USAGE_LIMIT - usage_today)
+            profile_text += f"\n\n📊 Usage: {usage_today}/{FREE_USAGE_LIMIT} (Free)\n{remaining} uses remaining today"
         
         builder = InlineKeyboardBuilder()
+        builder.button(text="🎯 Get Recommendations", callback_data="show_recommendations")
         builder.button(text="💎 Go Premium", callback_data="go_premium")
         builder.button(text="⬅️ Back", callback_data="back_to_menu")
-        builder.adjust(1)
+        builder.adjust(1, 1, 1)
         
-        await callback.message.edit_text(account_text, reply_markup=builder.as_markup())
+        await callback.message.edit_text(profile_text, reply_markup=builder.as_markup(), parse_mode="HTML")
         await callback.answer()
         
     except Exception as e:
         logger.error(f"Error in my_account: {e}", exc_info=True)
-        await callback.answer("Error loading account", show_alert=True)
+        await callback.answer("Error loading profile", show_alert=True)
 
 async def handle_help(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle 'Help' button."""
@@ -215,6 +211,17 @@ async def handle_refer_and_earn(callback: CallbackQuery, state: FSMContext) -> N
 async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> None:
     """Route callback queries to appropriate handlers."""
     callback_data = callback.data
+    
+    # Handle show_recommendations callback
+    if callback_data == "show_recommendations":
+        try:
+            from handlers.profile_handlers import cmd_recommend
+            # Create a fake message object for the recommend command
+            await cmd_recommend(callback.message)
+        except Exception as e:
+            logger.error(f"Error in show_recommendations: {e}")
+            await callback.answer("Error loading recommendations", show_alert=True)
+        return
     
     handlers = {
         "go_premium": handle_go_premium,

@@ -510,6 +510,24 @@ async def callback_cancel(callback: CallbackQuery):
     await callback.answer("Cancelled")
 
 
+@router.message(Command("leaderboard"))
+async def cmd_leaderboard(message: Message):
+    """Show XP leaderboard."""
+    try:
+        leaders = await gamification_engine.get_leaderboard(limit=10)
+        lines = ["🏆 <b>DocuLuna Leaderboard</b>\n"]
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, leader in enumerate(leaders, 1):
+            medal = medals[i-1] if i <= 3 else f"{i}."
+            lines.append(f"{medal} Lvl {leader['level']} | {leader['xp']} XP | 🌙 {leader['moons']}\n")
+        
+        await message.answer("".join(lines), parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Leaderboard error: {e}")
+        await message.answer("❌ Could not load leaderboard.")
+
+
 def register_profile_handlers(dp: Dispatcher):
     """Register all profile-related handlers with the dispatcher."""
     dp.include_router(router)

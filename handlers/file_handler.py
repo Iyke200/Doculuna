@@ -276,6 +276,14 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             for msg in gamification_result.get("messages", []):
                 success_text += f"\n\n{msg}"
             
+            # Show achievement unlocks if any
+            achievements = gamification_result.get("achievements", [])
+            if achievements:
+                from handlers.gamification import ACHIEVEMENT_MESSAGES
+                for ach in achievements:
+                    if ach in ACHIEVEMENT_MESSAGES:
+                        success_text += f"\n\n🏆 {ACHIEVEMENT_MESSAGES[ach]}"
+            
             # Get smart recommendation
             try:
                 from handlers.smart_recommendation import smart_recommendation

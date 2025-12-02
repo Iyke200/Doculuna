@@ -284,14 +284,25 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
                     if ach in ACHIEVEMENT_MESSAGES:
                         success_text += f"\n\n🏆 {ACHIEVEMENT_MESSAGES[ach]}"
             
-            # Get smart recommendation
+            # Get smart recommendation with exact format
             try:
                 from handlers.smart_recommendation import smart_recommendation
+                username = callback.from_user.first_name or "there"
                 recommendation = await smart_recommendation.analyze_and_suggest(user_id)
                 if recommendation and recommendation.get("message"):
-                    success_text += f"\n\n💡 <b>Smart Tip:</b> {recommendation['message']}"
+                    action = recommendation['message'].split('\n')[0] if recommendation['message'] else "process more files"
+                    smart_rec_msg = (
+                        f"\n\n💡 {username}, your file's ready ✅\n"
+                        f"I noticed this file could also be {action} to make your life easier ✨\n"
+                        f"What's next? I'm still here 😎"
+                    )
+                    success_text += smart_rec_msg
             except Exception as e:
                 logger.warning(f"Could not get recommendation: {e}")
+            
+            # Add ending message
+            username = callback.from_user.first_name or "there"
+            success_text += f"\n\n✅ Done, {username}! What's next? I'm still here 🔥"
             
             document = FSInputFile(result_file_path)
             await callback.message.answer_document(document)

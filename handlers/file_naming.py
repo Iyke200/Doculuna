@@ -71,7 +71,9 @@ def generate_output_filename(
     output_ext: str = None
 ) -> str:
     """
-    Generate a clean output filename based on operation and original filename.
+    Generate a professional output filename with date and operation type.
+    
+    Example: Invoice_20251116_Compressed.pdf
     
     Args:
         operation: The operation type (convert, compress, merge, etc.)
@@ -79,13 +81,13 @@ def generate_output_filename(
         output_ext: The output extension (if different from original)
     
     Returns:
-        A clean, descriptive output filename
+        A clean, professional output filename
     """
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    date_str = datetime.now().strftime('%Y%m%d')
     
     # Get clean base name without extension
     base = os.path.splitext(original)[0]
-    clean_base = sanitize_filename(base, max_length=100)
+    clean_base = sanitize_filename(base, max_length=50)
     
     # Determine output extension
     if output_ext:
@@ -93,20 +95,20 @@ def generate_output_filename(
     else:
         ext = get_file_extension(original)
     
-    # Operation-specific prefixes
-    operation_prefixes = {
-        'convert': 'converted',
-        'compress': 'compressed',
-        'merge': 'merged',
-        'split': 'split',
-        'ocr': 'ocr',
-        'watermark': 'watermarked',
-        'image_to_pdf': 'img2pdf'
+    # Operation-specific display names (capitalized for professional look)
+    operation_names = {
+        'convert': 'Converted',
+        'compress': 'Compressed',
+        'merge': 'Merged',
+        'split': 'Split',
+        'ocr': 'OCR',
+        'watermark': 'Watermarked',
+        'image_to_pdf': 'PDF'
     }
     
-    prefix = operation_prefixes.get(operation.lower(), operation.lower())
+    op_name = operation_names.get(operation.lower(), operation.capitalize())
     
-    return f"{clean_base}_{prefix}_{timestamp}{ext}"
+    return f"{clean_base}_{date_str}_{op_name}{ext}"
 
 
 async def generate_smart_name(

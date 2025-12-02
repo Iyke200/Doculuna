@@ -23,6 +23,34 @@ WELCOME_MESSAGES: List[str] = [
     "🚀 Launch into lunar docs! What's on the agenda?"
 ]
 
+WELCOME_MSG = """🌙 <b>Welcome to DocuLuna</b>
+
+I'm Luna, your document transformation assistant! Here's what I can do:
+
+📄 <b>PDF & Document Tools:</b>
+• Convert between PDF ↔️ Word
+• Merge multiple PDFs together
+• Split pages from PDFs
+• Compress PDFs to save space
+
+🖼️ <b>Smart Tools:</b>
+• Convert images to PDF
+• Extract text with OCR
+• Get personalized recommendations
+
+📊 <b>Your Profile:</b>
+• Track your progress with XP & levels
+• Earn moons and achievements
+• View operation history
+
+<b>Choose an option below to get started!</b>"""
+
+PROCESSING_MSG = """⏳ <b>Processing your file...</b>
+
+🌙 Luna is working her magic on your document.
+Please wait, this typically takes just a few seconds.
+"""
+
 LEVEL_UP_MESSAGES: List[str] = [
     "⚡ Boom! Level {level} → {rank} | +{moons} moons",
     "🌕 Your lunar glow intensifies! Welcome to Level {level}",

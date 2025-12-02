@@ -47,18 +47,8 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
                 except Exception as e:
                     logger.error(f"Error tracking referral: {e}")
             
-            welcome_text = (
-                f"👋 Hello {first_name}!\n\n"
-                "Welcome to DocuLuna Bot 🌙 — your intelligent digital assistant for all document tasks.\n\n"
-                "✨ With me, you can easily:\n"
-                "• 📄 Convert between PDF ↔️ Word\n"
-                "• 🖼️ Turn Images into PDF\n"
-                "• 📊 Merge or Split PDF files\n"
-                "• 🗜️ Compress large documents quickly\n\n"
-                "🎁 You currently have 3 free uses per day.\n"
-                "Upgrade to Premium for unlimited access, faster speed, and earn up to ₦500 with our referral system!\n\n"
-                "Choose an option below 👇"
-            )
+            from utils.messages import WELCOME_MSG
+            welcome_text = f"👋 Hello {first_name}!\n\n{WELCOME_MSG}"
             
         else:
             last_used = user_data.get('last_used_date', date.today().isoformat())
@@ -70,24 +60,11 @@ async def start_command_handler(message: types.Message, state: FSMContext) -> No
                     'last_used_date': today_str
                 })
                 
-                welcome_text = (
-                    f"👋 Welcome back, {first_name}!\n\n"
-                    "Your daily free limit has been refreshed 🌙\n"
-                    "Let's get your documents ready again."
-                )
+                from utils.messages import WELCOME_MSG
+                welcome_text = f"👋 Welcome back, {first_name}!\nYour daily limit refreshed! 🌙\n\n{WELCOME_MSG}"
             else:
-                welcome_text = (
-                    f"👋 Hello {first_name}!\n\n"
-                    "Welcome to DocuLuna Bot 🌙 — your intelligent digital assistant for all document tasks.\n\n"
-                    "✨ With me, you can easily:\n"
-                    "• 📄 Convert between PDF ↔️ Word\n"
-                    "• 🖼️ Turn Images into PDF\n"
-                    "• 📊 Merge or Split PDF files\n"
-                    "• 🗜️ Compress large documents quickly\n\n"
-                    "🎁 You currently have 3 free uses per day.\n"
-                    "Upgrade to Premium for unlimited access, faster speed, and earn up to ₦500 with our referral system!\n\n"
-                    "Choose an option below 👇"
-                )
+                from utils.messages import WELCOME_MSG
+                welcome_text = f"👋 Hello {first_name}!\n\n{WELCOME_MSG}"
         
         builder = InlineKeyboardBuilder()
         builder.button(text="📂 Process Document", callback_data="process_document")

@@ -96,6 +96,72 @@ ERROR_MESSAGES: List[str] = [
     "🚀 Command misfire! Check /help for guidance."
 ]
 
+ERROR_CORRUPTED = """❌ File appears corrupted
+
+This file might be damaged or incomplete.
+
+Try:
+• Re-download from source
+• Send a fresh copy
+• Use a different file
+
+"""
+
+ERROR_UNSUPPORTED = """🚫 Format not supported
+
+I work with: PDF • Word • Images (JPG, PNG, GIF)
+
+Try:
+• Save as .pdf and send again
+• Check the file extension
+
+"""
+
+ERROR_OVERSIZED = """⚠️ File too large
+
+Free limit: 50 MB | Premium: 500 MB
+
+Solutions:
+• Upgrade to Premium for unlimited
+• Split into smaller parts
+• Compress before uploading
+
+"""
+
+ERROR_CORRUPTED_PDF = """🔐 This file is password-protected
+
+I can't convert locked documents.
+
+Fix it:
+1. Open in Word/PDF reader
+2. Remove password protection
+3. Send unprotected version
+
+"""
+
+ERROR_TIMEOUT = """⏱️ Processing took too long
+
+Your file might be:
+• Too complex to convert
+• Corrupted during upload
+• Temporarily unavailable
+
+Retry:
+• Wait 30 seconds and try again
+• Try a smaller file first
+
+"""
+
+ERROR_QUOTA = """📊 Daily limit reached
+
+You've used 3/3 free conversions today.
+
+Options:
+• Premium = Unlimited access
+• Wait until tomorrow (resets midnight)
+
+"""
+
 RECOMMENDATION_MESSAGES: List[str] = [
     "🌙 Tip: Compress large files to save space and time!",
     "✨ Suggestion: Split big PDFs for easier sharing.",

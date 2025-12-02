@@ -327,20 +327,27 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
     except Exception as e:
         logger.error(f"Error in file operation {operation}: {e}", exc_info=True)
         
-        error_message = "⚠️ Processing failed.\n\n"
+        error_msg = str(e).lower()
         
-        if "size" in str(e).lower():
-            error_message += "File is too large. Please use a smaller file."
-        elif "format" in str(e).lower() or "unsupported" in str(e).lower():
-            error_message += "Unsupported file format. Please check file type."
-        elif "corrupt" in str(e).lower() or "invalid" in str(e).lower():
-            error_message += "File appears to be corrupted or invalid."
+        if "size" in error_msg:
+            from utils.messages import ERROR_OVERSIZED
+            error_text = ERROR_OVERSIZED + "[  💎 Go Premium  ]  [  📤 Smaller File  ]  [  🏠 Back  ]"
+        elif "format" in error_msg or "unsupported" in error_msg:
+            from utils.messages import ERROR_UNSUPPORTED
+            error_text = ERROR_UNSUPPORTED + "[  📤 Try Different  ]  [  ❓ Help  ]  [  🏠 Menu  ]"
+        elif "corrupt" in error_msg or "invalid" in error_msg:
+            from utils.messages import ERROR_CORRUPTED
+            error_text = ERROR_CORRUPTED + "[  📤 Try Again  ]  [  🏠 Back  ]"
+        elif "password" in error_msg or "protected" in error_msg:
+            from utils.messages import ERROR_CORRUPTED_PDF
+            error_text = ERROR_CORRUPTED_PDF + "[  📤 Send Unprotected  ]  [  🏠 Back  ]"
+        elif "timeout" in error_msg or "slow" in error_msg:
+            from utils.messages import ERROR_TIMEOUT
+            error_text = ERROR_TIMEOUT + "[  🔄 Retry  ]  [  📤 Different  ]  [  🏠 Back  ]"
         else:
-            error_message += "An error occurred while processing your file."
+            error_text = "❌ Processing failed\n\nTry again or contact support if persistent.\n\n[  🔄 Retry  ]  [  🏠 Back  ]"
         
-        error_message += "\n\nIf the problem persists, contact @DocuLunaSupport"
-        
-        await callback.message.edit_text(error_message)
+        await callback.message.edit_text(error_text)
 
 
 async def convert_file(bot: Bot, file_id: str, file_name: str, user_id: int = None) -> str:

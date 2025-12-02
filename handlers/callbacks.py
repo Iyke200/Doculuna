@@ -161,13 +161,13 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
         )
 
         builder = InlineKeyboardBuilder()
-        builder.button(text="📄 PDF ➡️ Word", callback_data="pdf_to_word")
-        builder.button(text="📝 Word ➡️ PDF", callback_data="word_to_pdf")
+        builder.button(text="📄 PDF ↔️ Word", callback_data="pdf_to_word")
+        builder.button(text="🖼️ Image → PDF", callback_data="image_to_pdf")
         builder.button(text="🧩 Merge PDFs", callback_data="merge_pdf")
         builder.button(text="✂️ Split PDF", callback_data="split_pdf")
-        builder.button(text="🗜️ Compress PDF", callback_data="compress_pdf")
-        builder.button(text="📝 Text ➡️ PDF", callback_data="text_to_pdf")
-        builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
+        builder.button(text="🗜️ Compress", callback_data="compress_pdf")
+        builder.button(text="🔤 Text → PDF", callback_data="text_to_pdf")
+        builder.button(text="⬅️ Back", callback_data="back_to_menu")
         builder.adjust(2, 2, 2, 1)
 
         await callback.message.edit_text(process_text, reply_markup=builder.as_markup())

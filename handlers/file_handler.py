@@ -244,33 +244,42 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             is_premium = user_data.get('is_premium', False) if user_data else False
             
             # Build success message with gamification info
-            success_text = "✅ Done! Your document is ready 🎉\n"
+            from handlers.tool_instructions import format_file_size, get_operation_name
             
-            # Add XP info
+            success_text = "✅ Done! Your document is ready 🎉\n\n"
+            
+            # Add operation details
+            success_text += f"📊 <b>{get_operation_name(operation_type)}</b>\n"
+            success_text += f"├ File: {file_name}\n"
+            duration = time.time() - start_time
+            success_text += f"├ Time: {duration:.1f}s\n"
+            success_text += f"└ Size: {format_file_size(file_size)}\n"
+            
+            # Add gamification rewards
             xp_gained = gamification_result.get("xp_gained", 0)
             if xp_gained > 0:
                 success_text += f"\n⚡ +{xp_gained} XP earned!"
             
-            # Add streak info
             if gamification_result.get("streak_increased"):
-                success_text += f" | 🔥 {gamification_result.get('streak', 1)} day streak!"
+                streak = gamification_result.get('streak', 1)
+                success_text += f" | 🔥 {streak} day streak!"
             
             # Show level up message
             if gamification_result.get("leveled_up"):
                 new_level = gamification_result.get("new_level", 1)
                 new_rank = gamification_result.get("new_rank", "")
-                success_text += f"\n\n🎊 Level Up! You're now Level {new_level} - {new_rank}"
+                success_text += f"\n\n🎊 <b>Level Up!</b> You're now Level {new_level} - {new_rank}"
             
             if not is_premium:
                 remaining = max(0, FREE_USAGE_LIMIT - usage_today)
-                success_text += f"\n\n📊 Usage Today: {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)"
+                success_text += f"\n\n📊 <b>Usage Today:</b> {usage_today}/{FREE_USAGE_LIMIT} ({remaining} remaining)"
                 
                 if remaining == 0:
-                    success_text += "\n\n💎 Upgrade to Premium for unlimited processing!"
+                    success_text += "\n💎 <i>Upgrade to Premium for unlimited!</i>"
                 elif remaining == 1:
-                    success_text += "\n\n⚠️ Last free use for today!"
+                    success_text += "\n⚠️ <i>Last free use for today!</i>"
             
-            success_text += "\n\nDownload your file below 👇"
+            success_text += "\n\n<b>Download your file below 👇</b>"
             
             # Add gamification messages
             for msg in gamification_result.get("messages", []):
@@ -300,13 +309,37 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             except Exception as e:
                 logger.warning(f"Could not get recommendation: {e}")
             
-            # Add ending message
-            username = callback.from_user.first_name or "there"
-            success_text += f"\n\n✅ Done, {username}! What's next? I'm still here 🔥"
             
             document = FSInputFile(result_file_path)
             await callback.message.answer_document(document)
-            await callback.message.edit_text(success_text)
+            await callback.message.edit_text(success_text, parse_mode="HTML")
+            
+            # Show next action buttons
+            try:
+                builder = InlineKeyboardBuilder()
+                if operation_type in ["convert", "pdf_to_word", "word_to_pdf"]:
+                    builder.button(text="🗜️ Compress", callback_data="compress_pdf")
+                    builder.button(text="↩️ Again", callback_data=operation_type)
+                elif operation_type == "compress_pdf":
+                    builder.button(text="📤 Share", url="https://t.me/share/url")
+                    builder.button(text="🏠 Done", callback_data="back_to_menu")
+                elif operation_type in ["merge_pdf"]:
+                    builder.button(text="🗜️ Compress", callback_data="compress_pdf")
+                    builder.button(text="🏠 Done", callback_data="back_to_menu")
+                elif operation_type in ["split_pdf"]:
+                    builder.button(text="↩️ Split Again", callback_data="split_pdf")
+                    builder.button(text="🏠 Back", callback_data="back_to_menu")
+                else:
+                    builder.button(text="🔄 Another", callback_data="process_document")
+                    builder.button(text="🏠 Menu", callback_data="back_to_menu")
+                builder.adjust(2)
+                await callback.message.answer(
+                    "💡 <b>What's next?</b>\n\nChoose an action or process another file!",
+                    reply_markup=builder.as_markup(),
+                    parse_mode="HTML"
+                )
+            except:
+                pass
             
             try:
                 os.remove(result_file_path)

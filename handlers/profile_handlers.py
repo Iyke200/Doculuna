@@ -65,25 +65,23 @@ async def format_profile_message(user_id: int, username: Optional[str] = None) -
     
     display_name = f"@{username}" if username else f"User {user_id}"
     
-    message = f"""🌙 <b>DocuLuna Profile</b>
+    message = f"""🌙 <b>Your DocuLuna Profile</b>
 
-👤 <b>{display_name}</b>
+👤 <b>{display_name}</b> | Rank: {profile.get('rank', '🌑 New Moon')}
 
-📊 <b>Stats:</b>
-├ {profile.get('rank', '🌑 New Moon')}
-├ Level: {profile.get('level', 1)}
-├ XP: {current_xp}/{next_level_xp}
-│  {progress_bar}
-├ 🌙 Moons: {profile.get('moons', 0)}
-├ 🔥 Streak: {profile.get('streak', 0)} days
-└ 📄 Documents: {history_count}
+<b>📈 Progression:</b>
+├ Level: <code>{profile.get('level', 1)}</code> | XP: <code>{current_xp}/{next_level_xp}</code>
+├ {progress_bar}
+├ 🌙 Moons: <b>{profile.get('moons', 0)}</b>
+├ 🔥 Streak: <b>{profile.get('streak', 0)}</b> days
+└ 📄 Docs: <b>{history_count}</b>
 
-🏆 <b>Achievements:</b>
+<b>🏆 Top Achievements:</b>
 {badges_text}
 
 📅 Last active: {last_activity_text}
 
-<i>Use /recommend for personalized tips!</i>"""
+💡 <i>Tip: /recommend shows personalized suggestions!</i>"""
     
     return message
 

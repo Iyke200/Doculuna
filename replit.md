@@ -8,6 +8,19 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
+## Recent Changes (December 2, 2025) - UI/UX Specification Implementation
+- **Complete Production UI/UX Specification Deployed:**
+  - ✅ **Error Handling Templates:** 6 context-aware error templates (corrupted, unsupported, oversized, password-protected, timeout, quota) with clear explanations, solutions, and action buttons
+  - ✅ **Success Message Templates:** Operation-specific success messages with metrics (time, size, file details) + gamification rewards display + next-action suggestions
+  - ✅ **Tool-Specific Instructions:** Pre-operation guidance for each tool (PDF↔Word, Image→PDF, Merge, Split, Compress) explaining limits, timing, quality assurance
+  - ✅ **Feature Suggestion System:** Smart "What's next?" prompts after each operation with context-appropriate next actions (compress, split, share, retry)
+  - ✅ **Enhanced Profile Display:** Redesigned `/profile` command with visual progress bars, rank display, achievement showcase, and streamlined formatting
+  - ✅ **Menu & Navigation Updates:** Consistent use of WELCOME_MSG, improved button layouts (2×3 grids), persistent Wallet access, shortened button text with arrow notation
+  - ✅ **Next-Action Buttons:** Context-aware buttons after operations (Convert→Compress/Again, Compress→Share/Done, Split→Again/Back, Merge→Compress/Done)
+  - ✅ **Smart Microcopy:** All messages maintain lunar-themed personality with action-focused tone, emoji optimization, and professional formatting
+  - ✅ **Tool Instructions Module:** New `handlers/tool_instructions.py` with utility functions for showing instructions, formatting file sizes, and getting operation names
+  - ✅ **Specification Document:** Complete 600+ line UI/UX specification in `DOCULUNA_UIUX_SPECIFICATION.md` with 9 implementation sections
+
 ## Recent Changes (December 1, 2025)
 - **Complete Gamification System Integration:** Fully initialized and integrated gamification engine with real-time updates:
   - ✅ **XP & Leveling System:** Users earn XP from operations (convert: 50 XP, compress: 40 XP, merge: 60 XP, split: 55 XP, OCR: 65 XP, image_to_pdf: 45 XP). Levels calculated from total XP with square root progression formula: level = sqrt(xp/100) + 1
@@ -24,43 +37,6 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
   - ✅ **Asynchronous Architecture:** All gamification operations use aiosqlite for non-blocking async DB access. Executor runs bot with full async integration via aiogram polling
   - ✅ **Error Handling:** Comprehensive try-catch blocks in all modules. Database initialization auto-creates tables. Fallback messages for errors. All operations log to doculuna.log
 
-## Recent Changes (November 5, 2025)
-- **Admin Panel Data Accuracy Improvements:** Implemented comprehensive fixes to ensure real-time data accuracy in the admin panel:
-  - Added automatic cache invalidation when user data changes (new signups, premium updates, expiring subscriptions)
-  - Implemented hourly background task to automatically expire premium subscriptions with proper error handling
-  - Enhanced user activity tracking by updating `last_active` timestamp on all tool usage and data updates
-  - All database operations now trigger admin cache refresh ensuring panel always shows current data
-  - Cache TTL reduced to 5 seconds for better responsiveness while maintaining performance
-- **Admin Panel Schema Fix:** Fixed critical database schema mismatch where admin panel queries expected `created_at` and `last_active` columns that were missing from the users table. The database had `joined_at` instead. Added proper migration in `database/db.py` to add both columns with SQLite-compatible default handling (two-step: add column, then backfill values). Data from `joined_at` was migrated to `created_at` to preserve user registration history. This fix resolves admin panel user listing errors and ensures accurate user statistics display.
-
-## Previous Changes (November 2, 2025)
-- **User Registration Fix:** Fixed `create_user` function to properly store `first_name` field, resolving admin panel user display issues
-- **Production Webhook Mode:** Implemented comprehensive webhook mode for Render deployment with proper webhook registration, health checks, and async server setup
-- **Render Deployment Config:** Added `render.yaml` for infrastructure-as-code deployment and comprehensive `RENDER_DEPLOYMENT.md` guide
-- **Health Check Endpoints:** Added `/health` and `/` endpoints for Render's health monitoring
-- **Environment Detection:** Bot automatically switches between polling (development) and webhook (production) based on `ENVIRONMENT` variable
-- **Webhook Management:** Automatic webhook deletion for polling mode and proper webhook URL registration for production
-
-## Previous Changes (October 30, 2025)
-- **Main Menu Wallet Access:** Added "🏦 Wallet" button to /start menu for easy access to wallet features
-- **Referral Link Fix:** Fixed "username not found" error by implementing dynamic bot.get_me() instead of hardcoded username
-- **Watermark Enhancement:** Enabled watermarking for image-to-PDF conversions for free users
-- **Feature Verification:** All wallet, referral, withdrawal, and leaderboard features tested and confirmed operational
-
-## Previous Changes (October 28, 2025)
-- **Complete Wallet System:** Implemented comprehensive wallet management with balance tracking, total earnings display, and referral code generation (format: DOCU{user_id}).
-- **Referral Tracking System:** New users using referral links are automatically tracked; referrers earn ₦150 for weekly plans and ₦350 for monthly plans when referred users purchase premium.
-- **Withdrawal Flow with FSM:** Multi-step withdrawal process collecting amount, account name, bank name, and account number with ₦2,000 minimum threshold and validation.
-- **Admin Withdrawal Management:** Admins receive instant notifications for withdrawal requests with inline approve/reject buttons; approval deducts from wallet, rejection keeps balance intact.
-- **Referral Statistics:** Users can view complete referral stats including total referrals, completed/pending status, total earned, and shareable referral link.
-- **Weekly Leaderboard:** Dynamic leaderboard showing top 10 referrers by total earnings to encourage engagement.
-- **Withdrawal History:** Users can view their past withdrawal requests with status indicators (pending, approved, rejected).
-- **Database Schema Updates:** Added `wallets`, `referral_relationships` tables with proper foreign keys and constraints preventing duplicate referrals.
-- **Pricing Corrections:** Fixed premium plan pricing to ₦1,000 (weekly) and ₦3,500 (monthly) with corresponding referral rewards.
-- **Integration Points:** Referral rewards automatically credited in `activate_premium()` function; start handler tracks referrals from /start commands.
-- **Watermark System:** Integrated comprehensive watermarking for all free user document operations (PDF/Word conversion, Image to PDF, PDF/DOCX compression) using utils/watermark.py with bottom-center text placement, gray color, and low opacity.
-- **Bot Status:** All wallet, referral, withdrawal, and watermark features tested and running successfully with proper error handling and security controls.
-
 ## System Architecture
 
 ### Core Design Principles
@@ -72,13 +48,12 @@ The bot is built with a focus on modularity, scalability, and ease of use. It em
 - **Mode Detection:** Automatically switches based on `ENVIRONMENT` variable (production/development)
 - **Health Monitoring:** Includes `/health` and `/` endpoints for platform health checks
 
-### UI/UX Decisions
-The user interface is designed to be direct and functional. Key UX flows include:
-- A clear welcome message with inline buttons for core functionalities (Process, Premium, Account, Help).
-- Concise premium plan displays and account overviews.
-- Direct file processing with clear conversion options.
-- User-friendly rate limiting with reminders and upgrade prompts.
-- Specific error messages for better user guidance.
+### UI/UX Architecture
+- **Error Routing:** Intelligent error detection routes to context-aware templates with solutions
+- **Success Flow:** Operation → Metrics → Gamification → Smart Suggestions → Next Actions
+- **Menu Navigation:** Persistent main menu with WELCOME_MSG + consistent button layouts
+- **Profile Display:** Visual progress bars + lunar ranks + achievement showcase + activity tracking
+- **Feature Discovery:** Smart recommendations surface tool usage patterns to maximize feature adoption
 
 ### Technical Implementation & Feature Specifications
 - **Document Processing:** Full support for PDF ↔ Word conversion (preserving layout), Image → PDF conversion (A4 sizing), and file compression for PDF/DOCX (medium quality). All tools include robust error handling and validation.
@@ -96,6 +71,8 @@ The user interface is designed to be direct and functional. Key UX flows include
 ### System Design Choices
 - **Modular Handlers:** Command and callback handlers are organized into separate files (`start.py`, `file_handler.py`, `admin.py`, etc.) for maintainability.
 - **Dedicated Tool Utilities:** Document processing logic is encapsulated in a `tools/` directory (e.g., `pdf_to_word.py`, `compress.py`), promoting reusability and clear separation of concerns.
+- **Message Templates:** Centralized message system in `utils/messages.py` with specification-compliant templates for errors, success, recommendations, and tool instructions.
+- **Tool Instructions Module:** New `handlers/tool_instructions.py` provides reusable utilities for showing pre-operation guidance and formatting operation data.
 - **Configuration Management:** `config.py` centralizes premium plans and payment settings.
 - **Asynchronous Operations:** Leverages `aiogram` and `aiofiles` for non-blocking I/O, improving bot responsiveness.
 - **Automatic Migrations:** Database schema updates are handled automatically to accommodate new features like usage tracking and referral systems.
@@ -115,3 +92,37 @@ The user interface is designed to be direct and functional. Key UX flows include
 - **aiohttp:** For asynchronous HTTP requests, often used internally by `aiogram` and other libraries.
 - **cryptography:** For security-related utilities.
 - **psutil:** For system monitoring (e.g., resource usage).
+
+## File Structure
+```
+/
+├── main.py (Bot initialization & async dispatcher)
+├── config.py (Plans, settings, constants)
+├── handlers/
+│   ├── start.py (Welcome + /start command)
+│   ├── callbacks.py (Menu navigation & routing)
+│   ├── file_handler.py (File processing + success/error messages)
+│   ├── gamification.py (XP, levels, ranks, achievements)
+│   ├── smart_recommendation.py (Personalized suggestions)
+│   ├── profile_handlers.py (/profile, /recommend, /history)
+│   ├── admin.py (Admin panel & controls)
+│   ├── wallet.py (Balance & earnings management)
+│   ├── referrals.py (Referral tracking & rewards)
+│   ├── tool_instructions.py (Pre-op guidance utilities)
+│   └── [...other handlers]
+├── tools/
+│   ├── pdf_to_word.py (PDF ↔ Word conversion)
+│   ├── compress.py (File compression)
+│   ├── image_to_pdf.py (Image conversion)
+│   ├── merge_pdf.py (PDF merging)
+│   ├── split_pdf.py (PDF splitting)
+│   └── [...other tools]
+├── utils/
+│   ├── messages.py (Message templates & UI copy)
+│   ├── watermark.py (Watermark generation)
+│   └── [...other utilities]
+├── database/
+│   └── db.py (Database initialization & queries)
+├── DOCULUNA_UIUX_SPECIFICATION.md (Complete UI/UX spec)
+└── replit.md (This file)
+```

@@ -55,6 +55,7 @@ def import_handlers():
         from handlers.wallet import register_wallet_handlers
         from handlers.admin_withdrawals import register_admin_withdrawal_handlers
         from handlers.profile_handlers import register_profile_handlers
+        from handlers.shortcuts import register_shortcuts
         from handlers.gamification import gamification_engine
         from handlers.smart_recommendation import smart_recommendation
         from handlers.history import init_history_db
@@ -77,6 +78,7 @@ def import_handlers():
             "register_wallet_handlers": register_wallet_handlers,
             "register_admin_withdrawal_handlers": register_admin_withdrawal_handlers,
             "register_profile_handlers": register_profile_handlers,
+            "register_shortcuts": register_shortcuts,
             "gamification_engine": gamification_engine,
             "smart_recommendation": smart_recommendation,
             "init_history_db": init_history_db,
@@ -134,6 +136,7 @@ def register_handlers():
     handlers["register_paystack_handlers"](dp)
     handlers["register_profile_handlers"](dp)  # Profile, recommend, history handlers
     handlers["register_file_handlers"](dp)  # File handlers with gamification
+    handlers["register_shortcuts"](dp)  # Quick-access commands
     handlers["register_callback_handlers"](dp)  # General callback handler last
 
     logger.info("✓ All handlers registered")

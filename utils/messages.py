@@ -177,6 +177,175 @@ RECOMMENDATION_MESSAGES: List[str] = [
     "📚 Scholar hint: Merge related PDFs into one master doc."
 ]
 
+SUCCESS_CONVERSION = """✅ Conversion complete!
+
+📊 Conversion Details:
+├ Type: {operation_type}
+├ File: {filename}
+├ Time: {duration}s
+└ Size: {size_info}
+
+🎯 Luna suggests:
+• 🗜️ Compress to save space
+• ✂️ Split if it's too long
+• 📊 View statistics
+
+"""
+
+SUCCESS_COMPRESSION = """✅ Compressed!
+
+💾 Space Saved:
+├ Original: {original_size}
+├ Compressed: {new_size}
+└ Saved: {percent_saved}%
+
+Quality: High ✓
+
+Next steps:
+• 📤 Share online
+• ✂️ Split pages
+• 📊 Your stats
+
+"""
+
+SUCCESS_MERGE = """✅ PDFs merged!
+
+📄 Merged File:
+├ Pages: {page_count}
+├ Size: {file_size}
+└ Time: {duration}s
+
+Next actions:
+• 🗜️ Compress this file
+• ✂️ Split specific pages
+• 📊 View progress
+
+"""
+
+SUCCESS_SPLIT = """✅ PDF split!
+
+📄 Your pages:
+{page_info}
+
+Ready to download or continue editing!
+
+"""
+
+SUCCESS_IMAGE_PDF = """✅ PDF created!
+
+📖 PDF Details:
+├ Pages: {page_count}
+├ Format: Standard letter
+├ Size: {file_size}
+└ Time: {duration}s
+
+What now?
+• 🗜️ Make it smaller
+• ✂️ Rearrange pages
+• 📊 View stats
+
+"""
+
+TOOL_INSTRUCTION_PDF_WORD = """📄 PDF to Word Conversion
+
+Send any PDF file. I'll convert it to an editable Word document.
+
+Size limit: 50 MB (free) / Unlimited (premium)
+Time: Usually 5-10 seconds
+Quality: Layout preserved ✓
+
+Send your PDF or [⬅️ Back]
+"""
+
+TOOL_INSTRUCTION_WORD_PDF = """📝 Word to PDF
+
+Send any Word document (.docx or .doc). I'll convert it to PDF.
+
+Size limit: 50 MB (free) / Unlimited (premium)
+Time: Usually 3-8 seconds
+Quality: Formatting preserved ✓
+
+Send your file or [⬅️ Back]
+"""
+
+TOOL_INSTRUCTION_IMAGE_PDF = """🖼️ Images to PDF
+
+Send 1-20 images. I'll combine them into a single PDF.
+
+Supported: JPG, PNG, GIF, WebP
+Size limit: 50 MB total (free)
+Time: 5-15 seconds per image
+
+Send your images or [⬅️ Back]
+"""
+
+TOOL_INSTRUCTION_MERGE = """🧩 Merge PDFs
+
+Send multiple PDFs to combine them.
+
+How it works:
+1. Send first PDF
+2. Send 2nd, 3rd, etc.
+3. Tap "Done" when finished
+4. I'll merge them instantly
+
+Send first PDF or [⬅️ Back]
+"""
+
+TOOL_INSTRUCTION_SPLIT = """✂️ Split PDF
+
+Send a PDF. Choose which pages to extract.
+
+Options:
+• All pages (full copy)
+• Specific range (pages 1-5)
+• Custom selection
+
+Send your PDF or [⬅️ Back]
+"""
+
+TOOL_INSTRUCTION_COMPRESS = """🗜️ Compress PDF
+
+Send a PDF. I'll shrink it by 50-80%.
+
+• Keeps high quality ✓
+• Perfect for sharing
+• Reduces storage space
+
+Send your PDF or [⬅️ Back]
+"""
+
+FEATURE_SUGGESTION_AFTER_CONVERT = """💡 What's next?
+
+🗜️ Compress (save 70%)  •  ✂️ Split pages  •  📤 Share online
+
+[  🗜️ Compress  ]  [  ↩️ Again  ]  [  ❌ Skip  ]
+"""
+
+FEATURE_SUGGESTION_AFTER_COMPRESS = """💡 Perfect for sharing!
+
+📤 It's way smaller now!
+Ideal for: Email • Chat • Cloud • Sharing
+
+[  📤 Share  ]  [  📥 Download  ]  [  🏠 Done  ]
+"""
+
+FEATURE_SUGGESTION_AFTER_MERGE = """💡 Merged successfully!
+
+What's next?
+🗜️ Compress  •  ✂️ Rearrange  •  🏠 Done
+
+[  🗜️ Compress  ]  [  ↩️ Merge Again  ]  [  🏠 Menu  ]
+"""
+
+FEATURE_SUGGESTION_AFTER_SPLIT = """💡 Pages extracted!
+
+Ready to:
+📥 Download all  •  ✂️ Split more  •  🏠 Done
+
+[  📥 Download  ]  [  ↩️ Split Again  ]  [  🏠 Back  ]
+"""
+
 def get_random_welcome() -> str:
     """Get a random welcome message."""
     return random.choice(WELCOME_MESSAGES)

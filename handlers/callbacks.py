@@ -92,22 +92,30 @@ async def handle_my_account(callback: CallbackQuery, state: FSMContext) -> None:
 async def handle_help(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle 'Help' button."""
     try:
-        help_text = (
-            "📖 How to Use DocuLuna\n\n"
-            "1️⃣ Send or upload a file (PDF, Word, or Image)\n"
-            "2️⃣ Choose what you want to do (convert, merge, split, compress)\n"
-            "3️⃣ Wait a few seconds while I process your file ⏳\n"
-            "4️⃣ Get your clean, ready-to-use document instantly!\n\n"
-            "⚙️ Free Plan: 3 uses per day\n"
-            "💎 Premium Plan: Unlimited + Faster + Referral Bonuses\n\n"
-            "💬 Need help or have a question?\n"
-            "Contact @DocuLunaSupport"
-        )
+        help_text = """📖 <b>How to Use DocuLuna</b>
+
+<b>The Process:</b>
+1️⃣ Send or upload a file (PDF, Word, Image)
+2️⃣ Choose what to do (convert, merge, compress)
+3️⃣ Wait a few seconds ⏳
+4️⃣ Download your result!
+
+<b>Plans:</b>
+⚙️ <b>Free:</b> 3 uses/day • Watermarked files
+💎 <b>Premium:</b> Unlimited • Watermark-free • Faster • Referral $$$
+
+<b>Supported Formats:</b>
+📄 PDF  •  📝 Word  •  🖼️ Images  •  📝 Text
+
+<b>Questions?</b>
+💬 Contact @DocuLunaSupport
+📧 Check pinned messages for FAQs
+"""
         
         builder = InlineKeyboardBuilder()
-        builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
+        builder.button(text="⬅️ Back", callback_data="back_to_menu")
         
-        await callback.message.edit_text(help_text, reply_markup=builder.as_markup())
+        await callback.message.edit_text(help_text, reply_markup=builder.as_markup(), parse_mode="HTML")
         await callback.answer()
         
     except Exception as e:
@@ -119,26 +127,16 @@ async def handle_back_to_menu(callback: CallbackQuery, state: FSMContext) -> Non
     first_name = callback.from_user.first_name or "there"
     
     try:
-        welcome_text = (
-            f"👋 Hello {first_name}!\n\n"
-            "Welcome to DocuLuna Bot 🌙 — your intelligent digital assistant for all document tasks.\n\n"
-            "✨ With me, you can easily:\n"
-            "• 📄 Convert between PDF ↔️ Word\n"
-            "• 📝 Convert Text to PDF\n"
-            "• 🖼️ Turn Images into PDF\n"
-            "• 📊 Merge or Split PDF files\n"
-            "• 🗜️ Compress large documents quickly\n\n"
-            "🎁 You currently have 3 free uses per day.\n"
-            "Upgrade to Premium for unlimited access, faster speed, and earn up to ₦500 with our referral system!\n\n"
-            "Choose an option below 👇"
-        )
+        from utils.messages import WELCOME_MSG
+        welcome_text = f"👋 Welcome back, {first_name}!\n\n{WELCOME_MSG}"
         
         builder = InlineKeyboardBuilder()
         builder.button(text="📂 Process Document", callback_data="process_document")
         builder.button(text="💎 Go Premium", callback_data="go_premium")
+        builder.button(text="🏦 Wallet", callback_data="wallet")
         builder.button(text="👤 My Account", callback_data="my_account")
         builder.button(text="❓ Help", callback_data="help")
-        builder.adjust(2, 2)
+        builder.adjust(2, 2, 1)
         
         await callback.message.edit_text(welcome_text, reply_markup=builder.as_markup())
         await callback.answer()
@@ -165,9 +163,9 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
         builder.button(text="🖼️ Image → PDF", callback_data="image_to_pdf")
         builder.button(text="🧩 Merge PDFs", callback_data="merge_pdf")
         builder.button(text="✂️ Split PDF", callback_data="split_pdf")
-        builder.button(text="🗜️ Compress", callback_data="compress_pdf")
+        builder.button(text="🗜️ Compress PDF", callback_data="compress_pdf")
         builder.button(text="🔤 Text → PDF", callback_data="text_to_pdf")
-        builder.button(text="⬅️ Back", callback_data="back_to_menu")
+        builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
         builder.adjust(2, 2, 2, 1)
 
         await callback.message.edit_text(process_text, reply_markup=builder.as_markup())

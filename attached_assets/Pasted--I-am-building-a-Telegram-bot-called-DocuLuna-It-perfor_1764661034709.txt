@@ -1,0 +1,209 @@
+
+I am building a Telegram bot called **DocuLuna**. It performs:
+ 
+ 
+- Text to PDF
+ 
+- PDF to Word
+ 
+- Word to PDF
+ 
+- Image to PDF
+ 
+- PDF compression
+ 
+- Other PDF and document manipulation tasks
+ 
+
+ 
+I want a **complete, detailed, production-level UI/UX and branding specification** for DocuLuna. Follow these **strict UI/UX principles**:
+ 
+ 
+1. Clarity and simplicity
+ 
+2. Fast response perception
+ 
+3. Predictable button actions
+ 
+4. Friendly, short microcopy
+ 
+5. Minimal visual clutter
+ 
+6. Consistent visual language
+ 
+7. Accessibility for all users
+ 
+8. Error messages that clearly explain the problem and solution
+ 
+9. Smooth onboarding flow
+ 
+10. Delightful micro-interactions
+ 
+11. Anticipation of the user's next action
+ 
+12. Reduced cognitive load
+ 
+13. Back, Cancel, Undo options everywhere
+ 
+
+ 
+Now **produce the following items in structured sections**:
+ 
+### 1. UI/UX BLUEPRINT
+ 
+ 
+- Step-by-step interaction maps for every feature
+ 
+- Explanation of how each screen or message flows into the next
+ 
+- Logic for user actions, states, and transitions
+ 
+
+ 
+### 2. TELEGRAM INTERFACE DESIGN
+ 
+ 
+- Inline keyboard layouts for every tool
+ 
+- Button text, button grouping, and navigation rules
+ 
+- Persistent menu logic
+ 
+- File upload flow for each format
+ 
+
+ 
+### 3. MICROCOPY PACKAGE
+ 
+For every step, generate:
+ 
+ 
+- What the bot says
+ 
+- What buttons appear
+ 
+- Short, clean phrasing
+ 
+- Emojis that fit the brand
+ 
+
+ 
+### 4. ERROR HANDLING SYSTEM
+ 
+Provide templates for:
+ 
+ 
+- corrupted files
+ 
+- unsupported formats
+ 
+- oversized files
+ 
+- password-protected documents
+ 
+- slow processing issues
+ 
+- invalid user actions
+ 
+
+ 
+Each error must include:
+ 
+ 
+- simple explanation
+ 
+- solution or alternative action
+ 
+- back button
+ 
+
+ 
+### 5. SUCCESS MESSAGE TEMPLATES
+ 
+For all features, include:
+ 
+ 
+- confirmation message
+ 
+- file delivery text
+ 
+- recommended next actions (compress, rename, share, convert again, etc.)
+ 
+
+ 
+### 6. ONBOARDING FLOW
+ 
+Produce:
+ 
+ 
+- welcome message
+ 
+- intro explanation
+ 
+- quick start buttons
+ 
+- feature showcase
+ 
+- first-time user path
+ 
+
+ 
+### 7. FEATURE SUGGESTION ENGINE
+ 
+After each action, propose intelligent next steps. Example: after converting Word→PDF, suggest:
+ 
+ 
+- compress PDF
+ 
+- rename PDF
+ 
+- split PDF
+ 
+- merge with another file
+ 
+
+ 
+Do this for each DocuLuna tool.
+ 
+### 8. BRANDING & PERSONALITY SYSTEM (No vague descriptions)
+ 
+Create:
+ 
+ 
+- DocuLuna’s personality (tone, attitude, formality level)
+ 
+- rules for sentence style
+ 
+- approved emoji list for success, error, wait, progress
+ 
+- button naming style guide
+ 
+- color and spacing philosophy
+ 
+- message-length limits
+ 
+- consistency rules for every text output
+ 
+- how the bot should “feel” during interactions
+ 
+
+ 
+### 9. DESIGN PHILOSOPHY SUMMARY
+ 
+A final section that explains how all components stay consistent.
+  
+### Output format requirement:
+ 
+ 
+- Use clear headings
+ 
+- Use numbered sections
+ 
+- Use bullet points
+ 
+- No long paragraphs
+ 
+- Everything should be implementation-ready and unambiguous
+ 
+
+  

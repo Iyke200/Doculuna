@@ -8,7 +8,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Usage limits for freemium model
-FREE_USAGE_LIMIT = 0  # Number of free uses per day
+FREE_USAGE_LIMIT = 3 # Number of free uses per day
 PREMIUM_USAGE_LIMIT = 999999  # Unlimited
 REFERRAL_BONUS = 1  # Extra uses per successful referral
 

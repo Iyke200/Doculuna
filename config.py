@@ -54,6 +54,16 @@ PREMIUM_PLANS = {
     },
 }
 
+# Marketing settings - PRODUCTION REFERRAL SYSTEM
+REFERRAL_REWARD_USES = 1
+REFERRAL_REWARDS = {
+    "monthly": 350,  # 350 NGN for referring monthly premium user
+    "weekly": 150,   # 150 NGN for referring weekly premium user
+}
+MINIMUM_WITHDRAWAL_AMOUNT = 2000  # Minimum amount for withdrawal in NGN
+WELCOME_SERIES_ENABLED = True
+RETENTION_CAMPAIGN_ENABLED = True
+
 # Directories
 TEMP_DIR = "data/temp"
 PAYMENTS_DIR = "payments"

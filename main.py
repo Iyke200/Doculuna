@@ -41,6 +41,7 @@ def import_handlers():
     """Import handler registration functions."""
     try:
         from database.db import init_db, expire_premium_statuses
+        from handlers.manual_payments import register_manual_payment_handlers
         from handlers.start import register_start_handlers
         from handlers.referrals import register_referral_handlers
         from handlers.premium import register_premium_handlers
@@ -82,6 +83,7 @@ def import_handlers():
             "gamification_engine": gamification_engine,
             "smart_recommendation": smart_recommendation,
             "init_history_db": init_history_db,
+            "register_manual_payment_handlers": register_manual_payment_handlers,
             "ADMIN_USER_IDS": ADMIN_USER_IDS,
         }
     except Exception as e:
@@ -123,6 +125,7 @@ def register_handlers():
     
     # Register all handlers using their registration functions
     # Order matters: specific handlers first, then general ones
+    handlers["register_manual_payment_handlers"](dp)
     handlers["register_start_handlers"](dp)  # Onboarding callbacks first
     handlers["register_referral_handlers"](dp)
     handlers["register_premium_handlers"](dp)
@@ -169,7 +172,8 @@ async def start_bot_clean():
 
     # Register handlers and get handler functions
     handlers = register_handlers()
-
+    # register_manual_payment_handlers(dp) # registered via register_handlers
+    
     # Initialize database
     logger.info("Initializing database...")
     await handlers["init_db"]()

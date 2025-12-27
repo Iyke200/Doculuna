@@ -120,17 +120,17 @@ CREATE TABLE IF NOT EXISTS referral_relationships (
     FOREIGN KEY (referred_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS payment_transactions (
-    transaction_id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    amount REAL NOT NULL,
-    currency TEXT NOT NULL,
-    gateway TEXT NOT NULL,
-    status TEXT NOT NULL,
-    metadata TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    webhook_received INTEGER DEFAULT 0,
-    retry_count INTEGER DEFAULT 0,
+CREATE TABLE IF NOT EXISTS manual_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount INTEGER,
+    plan_type TEXT,
+    payment_method TEXT,
+    payer_name TEXT,
+    tx_id TEXT,
+    screenshot_path TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );

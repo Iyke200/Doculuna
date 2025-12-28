@@ -59,8 +59,14 @@ class TextToPDF:
             # pdf.add_font('DejaVu', '', 'path/to/DejaVuSans.ttf', uni=True)
             # pdf.set_font('DejaVu', size=font_size)
             
-            # Use multi_cell for text wrapping; handles basic Unicode if using uni=True font
-            pdf.multi_cell(0, 10, input_text)
+            # Use multi_cell for text wrapping
+            try:
+                # Replace unsupported characters for latin-1 if using default helvetica
+                clean_text = input_text.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 10, clean_text)
+            except Exception as e:
+                logger.warning(f"Text encoding issue: {e}")
+                pdf.multi_cell(0, 10, input_text.encode('ascii', 'ignore').decode('ascii'))
             
             pdf.output(output_path)
             

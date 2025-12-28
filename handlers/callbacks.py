@@ -1,7 +1,7 @@
 # callbacks.py - Updated with new UX flow
 import logging
 from datetime import datetime, date
-from aiogram import Dispatcher
+from aiogram import Dispatcher, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder

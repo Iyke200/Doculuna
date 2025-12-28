@@ -206,6 +206,10 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         elif operation == "image_to_pdf":
             result_file_path = await image_to_pdf(callback.bot, file_id, file_name, user_id)
             operation_type = "image_to_pdf"
+        elif operation == "ocr_file":
+            from tools.ocr import perform_ocr
+            result_file_path = await perform_ocr(callback.bot, file_id, file_name, user_id)
+            operation_type = "ocr"
         elif operation in ["merge_pdfs", "merge_pdf", "split_pdf", "split_pdfs"]:
             # Merge/split are handled in callbacks.py
             from handlers.callbacks import handle_merge_pdf_callback, handle_split_pdf_callback
@@ -682,8 +686,9 @@ async def handle_media_group(message: types.Message, state: FSMContext):
         builder = InlineKeyboardBuilder()
         builder.button(text="📄 Image to PDF (Bulk)", callback_data="bulk_image_to_pdf")
         builder.button(text="🧩 Merge (Bulk)", callback_data="bulk_merge")
+        builder.button(text="🔍 OCR (Bulk)", callback_data="bulk_ocr")
         builder.button(text="🗑️ Clear", callback_data="clear_bulk")
-        builder.adjust(2, 1)
+        builder.adjust(2, 1, 1)
         
         await message.answer(
             f"📦 <b>Bulk Media Received!</b> ({len(bulk_files)} items)\n"
@@ -728,9 +733,32 @@ async def handle_bulk_operation(callback: types.CallbackQuery, state: FSMContext
                 await callback.message.answer("⚠️ Need at least 2 PDFs to merge.")
             else:
                 from tools.merge import PDFMerger
-                # Implementation simplified for bulk flow
-                # Reusing existing logic would be better but keeping it focused for Fast Mode
-                await callback.message.answer("🧩 Merging logic for bulk is being finalized. Try single merge for now!")
+                output_path = tempfile.mktemp(suffix=".pdf")
+                # Download all PDFs
+                pdf_paths = []
+                for p_info in pdfs:
+                    f = await callback.bot.get_file(p_info['file_id'])
+                    p = tempfile.mktemp(suffix=".pdf")
+                    await callback.bot.download_file(f.file_path, p)
+                    pdf_paths.append(p)
+                
+                try:
+                    PDFMerger.merge_pdfs(pdf_paths, output_path)
+                    doc = FSInputFile(output_path)
+                    await callback.message.answer_document(doc, caption="✅ PDFs merged successfully!")
+                    os.remove(output_path)
+                finally:
+                    for p in pdf_paths:
+                        if os.path.exists(p): os.remove(p)
+        
+        elif callback.data == "bulk_ocr":
+            from tools.ocr import perform_ocr
+            for f_info in bulk_files:
+                res = await perform_ocr(callback.bot, f_info['file_id'], f_info['file_name'], user_id)
+                if res:
+                    doc = FSInputFile(res)
+                    await callback.message.answer_document(doc, caption=f"🔍 OCR: {f_info['file_name']}")
+                    os.remove(res)
 
     except Exception as e:
         logger.error(f"Bulk op error: {e}")
@@ -745,7 +773,7 @@ def register_file_handlers(dp: Dispatcher):
     dp.message.register(handle_media_group, lambda m: m.media_group_id is not None)
     dp.callback_query.register(handle_file_operation, lambda c: c.data in [
         "convert_file", "merge_pdfs", "split_pdf", "compress_file", 
-        "compress_image", "image_to_pdf"
+        "compress_image", "image_to_pdf", "ocr_file"
     ])
     dp.callback_query.register(handle_bulk_operation, lambda c: c.data.startswith("bulk_") or c.data == "clear_bulk")
-    logger.info("✓ File handlers registered with gamification and bulk support")
+    logger.info("✓ File handlers registered with gamification, bulk, and OCR support")

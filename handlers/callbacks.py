@@ -13,6 +13,7 @@ from tools.merge import register_merge_pdf, handle_merge_pdf_callback
 from tools.split import register_split_pdf, handle_split_pdf_callback
 from tools.compress import register_compress_pdf, handle_compress_pdf_callback
 from tools.text_to_pdf import register_text_to_pdf, handle_text_to_pdf_callback
+from handlers.file_handler import handle_file_operation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -164,9 +165,10 @@ async def handle_process_document(callback: CallbackQuery, state: FSMContext) ->
         builder.button(text="🧩 Merge PDFs", callback_data="merge_pdf")
         builder.button(text="✂️ Split PDF", callback_data="split_pdf")
         builder.button(text="🗜️ Compress PDF", callback_data="compress_pdf")
+        builder.button(text="🔍 OCR Document", callback_data="ocr_file")
         builder.button(text="🔤 Text → PDF", callback_data="text_to_pdf")
         builder.button(text="⬅️ Back to Menu", callback_data="back_to_menu")
-        builder.adjust(2, 2, 2, 1)
+        builder.adjust(2, 2, 2, 1, 1)
 
         await callback.message.edit_text(process_text, reply_markup=builder.as_markup())
         await callback.answer()
@@ -234,6 +236,7 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
         "split_pdf": handle_split_pdf_callback,
         "compress_pdf": handle_compress_pdf_callback,
         "text_to_pdf": handle_text_to_pdf_callback,
+        "ocr_file": handle_file_operation,
     }
     
     handler = handlers.get(callback_data)

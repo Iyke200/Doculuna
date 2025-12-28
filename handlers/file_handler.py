@@ -30,7 +30,8 @@ logger = logging.getLogger(__name__)
 
 # Initialize watermark manager
 watermark_manager = WatermarkManager()
-WATERMARK_TEXT = "Processed with DocuLuna - Upgrade for Watermark-Free"
+from config import WATERMARK_SETTINGS
+WATERMARK_TEXT = WATERMARK_SETTINGS["text"]
 
 # XP rewards for different operations
 XP_REWARDS = {
@@ -584,18 +585,19 @@ async def image_to_pdf(bot: Bot, file_id: str, file_name: str, user_id: int = No
 async def add_watermark_to_pdf(pdf_path: str):
     """Add watermark to PDF using comprehensive watermark system."""
     try:
+        from config import WATERMARK_SETTINGS
         # Read PDF file
         with open(pdf_path, 'rb') as f:
             pdf_data = f.read()
         
-        # Configure watermark for bottom of page
+        # Configure watermark from settings
         config = WatermarkConfig(
-            text=WATERMARK_TEXT,
-            position="bottom-center",
-            opacity=0.4,
-            font_size=9,
-            font_color=(128, 128, 128),
-            rotation=0
+            text=WATERMARK_SETTINGS["text"],
+            position=WATERMARK_SETTINGS["position"],
+            opacity=WATERMARK_SETTINGS["opacity"],
+            font_size=WATERMARK_SETTINGS["font_size"],
+            font_color=WATERMARK_SETTINGS["font_color"],
+            rotation=WATERMARK_SETTINGS["rotation"]
         )
         
         # Add watermark

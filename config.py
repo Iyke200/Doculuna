@@ -31,6 +31,16 @@ FREE_USAGE_LIMIT = 3
 PREMIUM_USAGE_LIMIT = 999999
 REFERRAL_BONUS = 1
 
+# Watermark Configuration
+WATERMARK_SETTINGS = {
+    "text": "Processed with DocuLuna - Upgrade for Watermark-Free",
+    "position": "bottom-center",
+    "opacity": 0.4,
+    "font_size": 9,
+    "font_color": (128, 128, 128),
+    "rotation": 0
+}
+
 # Database configuration
 DB_PATH = "database/doculuna.db"
 DATABASE_URL = "database/doculuna.db"

@@ -246,9 +246,9 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             from database.db import get_user_data
             from config import FREE_USAGE_LIMIT
             
-            user_data = await get_user_data(user_id)
-            usage_today = user_data.get('usage_today', 0) if user_data else 0
-            is_premium = user_data.get('is_premium', False) if user_data else False
+            user_data_db = await get_user_data(user_id)
+            usage_today = user_data_db.get('usage_today', 0) if user_data_db else 0
+            is_premium = user_data_db.get('is_premium', False) if user_data_db else False
             
             # Build success message with gamification info
             from handlers.tool_instructions import format_file_size, get_operation_name
@@ -303,7 +303,7 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             # Get smart recommendation with exact format
             try:
                 from handlers.smart_recommendation import smart_recommendation
-                username = callback.from_user.first_name or "there"
+                username = callback.from_user.first_name if callback.from_user else "there"
                 recommendation = await smart_recommendation.analyze_and_suggest(user_id)
                 if recommendation and recommendation.get("message"):
                     action = recommendation['message'].split('\n')[0] if recommendation['message'] else "process more files"
@@ -318,8 +318,9 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
             
             
             document = FSInputFile(result_file_path)
-            await callback.message.answer_document(document)
-            await callback.message.edit_text(success_text, parse_mode="HTML")
+            if callback.message:
+                await callback.message.answer_document(document)
+                await callback.message.edit_text(success_text, parse_mode="HTML")
             
             # Show next action buttons
             try:
@@ -340,11 +341,12 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
                     builder.button(text="🔄 Another", callback_data="process_document")
                     builder.button(text="🏠 Menu", callback_data="back_to_menu")
                 builder.adjust(2)
-                await callback.message.answer(
-                    "💡 <b>What's next?</b>\n\nChoose an action or process another file!",
-                    reply_markup=builder.as_markup(),
-                    parse_mode="HTML"
-                )
+                if callback.message:
+                    await callback.message.answer(
+                        "💡 <b>What's next?</b>\n\nChoose an action or process another file!",
+                        reply_markup=builder.as_markup(),
+                        parse_mode="HTML"
+                    )
             except:
                 pass
             

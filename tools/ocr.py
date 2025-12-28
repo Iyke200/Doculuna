@@ -25,7 +25,7 @@ async def perform_ocr(bot, file_id, file_name, user_id=None):
         if file_name.lower().endswith('.pdf'):
             doc = fitz.open(input_path)
             for page in doc:
-                extracted_text += page.get_text()
+                extracted_text += page.get_text() # type: ignore
             doc.close()
         else:
             # For images, we'd normally use pytesseract

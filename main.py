@@ -105,7 +105,7 @@ async def error_callback(event: ErrorEvent) -> None:
                 )
             except:
                 pass
-        elif update and hasattr(update, 'callback_query') and update.callback_query:
+        elif update and hasattr(update, 'callback_query') and update.callback_query and update.callback_query.message:
             try:
                 await update.callback_query.message.answer(
                     "❌ An unexpected error occurred. Please try again later."

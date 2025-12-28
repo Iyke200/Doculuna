@@ -216,8 +216,9 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
     if callback_data == "show_recommendations":
         try:
             from handlers.profile_handlers import cmd_recommend
-            # Create a fake message object for the recommend command
-            await cmd_recommend(callback.message)
+            if callback.message:
+                # Create a fake message object for the recommend command
+                await cmd_recommend(callback.message)
         except Exception as e:
             logger.error(f"Error in show_recommendations: {e}")
             await callback.answer("Error loading recommendations", show_alert=True)

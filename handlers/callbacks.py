@@ -245,6 +245,38 @@ async def callback_query_router(callback: CallbackQuery, state: FSMContext) -> N
     else:
         await callback.answer("Unknown action", show_alert=True)
 
+async def handle_text_to_pdf_callback(callback, state: FSMContext) -> None:
+    """Handle Text to PDF callback."""
+    from aiogram.fsm.state import StatesGroup, State
+    class TextToPDFState(StatesGroup):
+        waiting_for_text = State()
+        
+    await state.set_state(TextToPDFState.waiting_for_text)
+    text = (
+        "📄 <b>Text to PDF Converter</b>\n\n"
+        "Please send the text you'd like to convert to PDF 👇"
+    )
+    await callback.message.edit_text(text, parse_mode="HTML")
+    await callback.answer()
+
+async def process_text_to_pdf(message: types.Message, state: FSMContext):
+    """Process the received text for PDF conversion."""
+    text_content = message.text
+    if not text_content:
+        await message.reply("⚠️ Please send valid text.")
+        return
+        
+    await state.update_data(text_content=text_content)
+    
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Generate PDF", callback_data="text_to_pdf")
+    builder.button(text="❌ Cancel", callback_data="back_to_menu")
+    
+    await message.reply("Text received! Ready to convert?", reply_markup=builder.as_markup())
+
 def register_callback_handlers(dp: Dispatcher) -> None:
     """Register all callback handlers."""
     dp.callback_query.register(callback_query_router)
+    # Register text processing for the state
+    from aiogram import F
+    dp.message.register(process_text_to_pdf, lambda m: m.text and not m.text.startswith("/"))

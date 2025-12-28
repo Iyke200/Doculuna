@@ -206,10 +206,13 @@ async def handle_file_operation(callback: types.CallbackQuery, state: FSMContext
         elif operation == "image_to_pdf":
             result_file_path = await image_to_pdf(callback.bot, file_id, file_name, user_id)
             operation_type = "image_to_pdf"
-        elif operation == "ocr_file":
-            from tools.ocr import perform_ocr
-            result_file_path = await perform_ocr(callback.bot, file_id, file_name, user_id)
-            operation_type = "ocr"
+        elif operation == "text_to_pdf":
+            from tools.text_to_pdf import TextToPDF
+            # We assume user_id is the text to convert for now, or get it from state
+            text_content = user_data.get('text_content', "Default Text")
+            result_file_path = tempfile.mktemp(suffix=".pdf")
+            TextToPDF.text_to_pdf(text_content, result_file_path)
+            operation_type = "text_to_pdf"
         elif operation in ["merge_pdfs", "merge_pdf", "split_pdf", "split_pdfs"]:
             # Merge/split are handled in callbacks.py
             from handlers.callbacks import handle_merge_pdf_callback, handle_split_pdf_callback
@@ -773,7 +776,7 @@ def register_file_handlers(dp: Dispatcher):
     dp.message.register(handle_media_group, lambda m: m.media_group_id is not None)
     dp.callback_query.register(handle_file_operation, lambda c: c.data in [
         "convert_file", "merge_pdfs", "split_pdf", "compress_file", 
-        "compress_image", "image_to_pdf", "ocr_file"
+        "compress_image", "image_to_pdf", "ocr_file", "text_to_pdf"
     ])
     dp.callback_query.register(handle_bulk_operation, lambda c: c.data.startswith("bulk_") or c.data == "clear_bulk")
     logger.info("✓ File handlers registered with gamification, bulk, and OCR support")

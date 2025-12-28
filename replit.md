@@ -8,18 +8,12 @@ DocuLuna is a production-grade Telegram bot designed for professional document p
 - **Simple Messages** - Concise, action-focused messaging without excessive emojis or fluff
 - **Smooth Experience** - Users should get to work immediately without setup friction
 
-## Recent Changes (December 2, 2025) - UI/UX Specification Implementation
-- **Complete Production UI/UX Specification Deployed:**
-  - ✅ **Error Handling Templates:** 6 context-aware error templates (corrupted, unsupported, oversized, password-protected, timeout, quota) with clear explanations, solutions, and action buttons
-  - ✅ **Success Message Templates:** Operation-specific success messages with metrics (time, size, file details) + gamification rewards display + next-action suggestions
-  - ✅ **Tool-Specific Instructions:** Pre-operation guidance for each tool (PDF↔Word, Image→PDF, Merge, Split, Compress) explaining limits, timing, quality assurance
-  - ✅ **Feature Suggestion System:** Smart "What's next?" prompts after each operation with context-appropriate next actions (compress, split, share, retry)
-  - ✅ **Enhanced Profile Display:** Redesigned `/profile` command with visual progress bars, rank display, achievement showcase, and streamlined formatting
-  - ✅ **Menu & Navigation Updates:** Consistent use of WELCOME_MSG, improved button layouts (2×3 grids), persistent Wallet access, shortened button text with arrow notation
-  - ✅ **Next-Action Buttons:** Context-aware buttons after operations (Convert→Compress/Again, Compress→Share/Done, Split→Again/Back, Merge→Compress/Done)
-  - ✅ **Smart Microcopy:** All messages maintain lunar-themed personality with action-focused tone, emoji optimization, and professional formatting
-  - ✅ **Tool Instructions Module:** New `handlers/tool_instructions.py` with utility functions for showing instructions, formatting file sizes, and getting operation names
-  - ✅ **Specification Document:** Complete 600+ line UI/UX specification in `DOCULUNA_UIUX_SPECIFICATION.md` with 9 implementation sections
+## Recent Changes (December 28, 2025)
+- ✅ **Bulk Processing Implementation:** Added MediaGroup handling for batch file uploads. Support for Bulk Image-to-PDF, Bulk PDF Merge, and Bulk OCR.
+- ✅ **OCR Integration:** New tool `tools/ocr.py` for text extraction from PDFs and images. Added "🔍 OCR Document" to the processing menu.
+- ✅ **Text to PDF Fix:** Resolved FSM state issues and encoding bugs in `tools/text_to_pdf.py`. Improved Unicode support with fallback encoding.
+- ✅ **Watermark Centralization:** Moved all watermark settings (text, opacity, position) to `config.py` for easier customization.
+- ✅ **Stability & Debugging:** Fixed multiple LSP errors, enhanced `NoneType` checks in handlers, and improved global error reporting in `main.py`.
 
 ## Recent Changes (December 1, 2025)
 - **Complete Gamification System Integration:** Fully initialized and integrated gamification engine with real-time updates:
